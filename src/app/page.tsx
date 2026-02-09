@@ -1,9 +1,8 @@
-
 "use client";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Wifi, ClipboardCheck, ShieldCheck, FileText } from "lucide-react";
+import { Wifi, ClipboardCheck, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import { PlaceHolderImages } from "@/lib/placeholder-images";
@@ -49,7 +48,7 @@ export default function Home() {
                 Transformando la Gestión de Órdenes de Trabajo
               </h1>
               <p className="text-xl text-muted-foreground mb-8">
-                Digitaliza tus formularios, captura firmas en tiempo real y genera reportes profesionales al instante. La eficiencia que tu red necesita.
+                Digitaliza tus formularios, captura firmas en tiempo real y gestiona tu equipo de red con eficiencia total.
               </p>
               <div className="flex gap-4">
                 <Link href="/login">
@@ -65,7 +64,7 @@ export default function Home() {
         <section className="py-24 bg-white">
           <div className="container mx-auto px-4">
             <h2 className="text-3xl font-headline font-bold text-center mb-16">Características Clave</h2>
-            <div className="grid md:grid-cols-4 gap-8">
+            <div className="grid md:grid-cols-3 gap-8">
               {[
                 {
                   icon: <ClipboardCheck className="h-8 w-8 text-primary" />,
@@ -81,11 +80,6 @@ export default function Home() {
                   icon: <ShieldCheck className="h-8 w-8 text-primary" />,
                   title: "Firma Digital",
                   desc: "Captura el consentimiento de técnicos y clientes de forma segura."
-                },
-                {
-                  icon: <FileText className="h-8 w-8 text-primary" />,
-                  title: "Generación de PDF",
-                  desc: "Exporta reportes técnicos con diseño profesional con un solo clic."
                 }
               ].map((feature, i) => (
                 <Card key={i} className="border-none shadow-lg hover:shadow-xl transition-shadow bg-background">
