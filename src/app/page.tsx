@@ -50,13 +50,6 @@ export default function Home() {
               <p className="text-xl text-muted-foreground mb-8">
                 Digitaliza tus formularios, captura firmas en tiempo real y gestiona tu equipo de red con eficiencia total.
               </p>
-              <div className="flex gap-4">
-                <Link href="/login">
-                  <Button size="lg" className="bg-primary hover:bg-primary/90">
-                    Comenzar Ahora
-                  </Button>
-                </Link>
-              </div>
             </div>
           </div>
         </section>

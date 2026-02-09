@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect } from "react";
@@ -12,8 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SignaturePad } from "@/components/SignaturePad";
 import { useToast } from "@/hooks/use-toast";
-import { generateWorkOrderPDF } from "@/lib/pdf-generator";
-import { ArrowLeft, Save, FileDown, Camera, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, Save, Camera, CheckCircle2 } from "lucide-react";
 import Link from "next/link";
 
 export default function NewWorkOrder() {
@@ -54,15 +52,8 @@ export default function NewWorkOrder() {
     setTimeout(() => {
       toast({ title: "Orden Guardada", description: "La orden ha sido sincronizada con éxito." });
       setLoading(false);
+      router.push("/dashboard");
     }, 1500);
-  };
-
-  const handleDownloadPDF = () => {
-    if (!formData.clientData.name) {
-      toast({ variant: "destructive", title: "Faltan Datos", description: "Completa la información del cliente antes de generar el PDF." });
-      return;
-    }
-    generateWorkOrderPDF({ ...formData, folio });
   };
 
   return (
@@ -78,9 +69,6 @@ export default function NewWorkOrder() {
             <h1 className="font-headline font-bold text-xl text-primary">Nueva Orden de Trabajo</h1>
           </div>
           <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={handleDownloadPDF} className="gap-2 hidden md:flex">
-              <FileDown className="h-4 w-4" /> PDF
-            </Button>
             <Button size="sm" onClick={handleSubmit} disabled={loading} className="bg-primary hover:bg-primary/90 gap-2">
               <Save className="h-4 w-4" /> {loading ? "Guardando..." : "Finalizar"}
             </Button>
@@ -241,7 +229,7 @@ export default function NewWorkOrder() {
           </div>
 
           <div className="flex justify-center pt-6">
-            <Button size="lg" className="bg-primary hover:bg-primary/90 w-full md:w-auto px-12 h-12 text-lg gap-2 shadow-lg">
+            <Button type="submit" size="lg" className="bg-primary hover:bg-primary/90 w-full md:w-auto px-12 h-12 text-lg gap-2 shadow-lg">
               <CheckCircle2 /> Finalizar y Enviar
             </Button>
           </div>
