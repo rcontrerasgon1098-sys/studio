@@ -1,21 +1,27 @@
+
 "use client";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Plus, FileText, Search, Settings, LogOut, LayoutDashboard } from "lucide-react";
+import { Plus, FileText, Search, Settings, LogOut, LayoutDashboard, Eye, Download } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
+import { generateWorkOrderPDF } from "@/lib/pdf-generator";
 
 const MOCK_ORDERS = [
-  { id: 1, folio: 10245, client: "Juan Pérez", date: "2024-05-15", status: "Completed" },
-  { id: 2, folio: 10246, client: "María García", date: "2024-05-16", status: "Completed" },
-  { id: 3, folio: 10247, client: "Empresa ABC", date: "2024-05-16", status: "Completed" },
+  { id: "10245", folio: 10245, client: "Juan Pérez", date: "2024-05-15", status: "Completed" },
+  { id: "10246", folio: 10246, client: "María García", date: "2024-05-16", status: "Completed" },
+  { id: "10247", folio: 10247, client: "Empresa ABC", date: "2024-05-16", status: "Completed" },
 ];
 
 export default function Dashboard() {
   const [orders] = useState(MOCK_ORDERS);
+
+  const handleDownload = (order: any) => {
+    generateWorkOrderPDF(order);
+  };
 
   return (
     <div className="min-h-screen bg-background flex">
@@ -108,9 +114,22 @@ export default function Dashboard() {
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right">
-                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                        <FileText className="h-4 w-4" />
-                      </Button>
+                      <div className="flex justify-end gap-2">
+                        <Link href={`/work-orders/${order.id}`}>
+                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0" title="Visualizar">
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                        </Link>
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="h-8 w-8 p-0" 
+                          title="Descargar PDF"
+                          onClick={() => handleDownload(order)}
+                        >
+                          <Download className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}

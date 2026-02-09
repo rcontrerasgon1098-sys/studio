@@ -22,7 +22,7 @@ export const generateWorkOrderPDF = (data: any) => {
   
   doc.setFontSize(10);
   doc.setTextColor(100, 100, 100);
-  doc.text(`Fecha: ${new Date().toLocaleDateString()}`, 15, 62);
+  doc.text(`Fecha: ${data.date || new Date().toLocaleDateString()}`, 15, 62);
   doc.text(`Estado: COMPLETADA`, 15, 67);
 
   // Client Info
@@ -34,8 +34,8 @@ export const generateWorkOrderPDF = (data: any) => {
 
   doc.setTextColor(0, 0, 0);
   doc.setFontSize(10);
-  doc.text(`Nombre: ${data.clientData.name}`, 15, 90);
-  doc.text(`Contacto: ${data.clientData.contact}`, 15, 97);
+  doc.text(`Nombre: ${data.client || data.clientData?.name}`, 15, 90);
+  doc.text(`Contacto: ${data.contact || data.clientData?.contact || "N/A"}`, 15, 97);
 
   // Specs
   doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
@@ -43,10 +43,10 @@ export const generateWorkOrderPDF = (data: any) => {
   doc.line(15, 112, 195, 112);
 
   doc.setTextColor(0, 0, 0);
-  doc.text(`Tipo de Señal: ${data.specs.signalType}`, 15, 120);
-  doc.text(`Certificación: ${data.specs.isCert ? "Sí" : "No"}`, 15, 127);
-  doc.text(`Planos: ${data.specs.isPlan ? "Sí" : "No"}`, 15, 134);
-  doc.text(`Edificio/Piso: ${data.specs.location || "N/A"}`, 15, 141);
+  doc.text(`Tipo de Señal: ${data.specs?.signalType || "Simple"}`, 15, 120);
+  doc.text(`Certificación: ${data.specs?.isCert ? "Sí" : "No"}`, 15, 127);
+  doc.text(`Planos: ${data.specs?.isPlan ? "Sí" : "No"}`, 15, 134);
+  doc.text(`Edificio/Piso: ${data.specs?.location || "N/A"}`, 15, 141);
 
   // Description
   doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
@@ -58,12 +58,12 @@ export const generateWorkOrderPDF = (data: any) => {
   doc.text(splitDesc, 15, 165);
 
   // Signatures
-  if (data.signatures.techUrl) {
+  if (data.signatures?.techUrl) {
     doc.text("Firma Técnico", 15, 230);
     doc.addImage(data.signatures.techUrl, "PNG", 15, 235, 60, 30);
   }
 
-  if (data.signatures.clientUrl) {
+  if (data.signatures?.clientUrl) {
     doc.text("Firma Cliente", 130, 230);
     doc.addImage(data.signatures.clientUrl, "PNG", 130, 235, 60, 30);
   }
