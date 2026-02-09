@@ -1,4 +1,3 @@
-
 "use client";
 
 import { Button } from "@/components/ui/button";
@@ -10,9 +9,9 @@ import Link from "next/link";
 import { useState } from "react";
 
 const MOCK_ORDERS = [
-  { id: 1, folio: 10245, client: "Juan Pérez", date: "2024-05-15", status: "Completed", type: "Triple" },
-  { id: 2, folio: 10246, client: "María García", date: "2024-05-16", status: "Completed", type: "Simple" },
-  { id: 3, folio: 10247, client: "Empresa ABC", date: "2024-05-16", status: "Completed", type: "Doble" },
+  { id: 1, folio: 10245, client: "Juan Pérez", date: "2024-05-15", status: "Completed" },
+  { id: 2, folio: 10246, client: "María García", date: "2024-05-16", status: "Completed" },
+  { id: 3, folio: 10247, client: "Empresa ABC", date: "2024-05-16", status: "Completed" },
 ];
 
 export default function Dashboard() {
@@ -93,7 +92,6 @@ export default function Dashboard() {
                   <TableHead>Folio</TableHead>
                   <TableHead>Cliente</TableHead>
                   <TableHead>Fecha</TableHead>
-                  <TableHead>Tipo Señal</TableHead>
                   <TableHead>Estado</TableHead>
                   <TableHead className="text-right">Acciones</TableHead>
                 </TableRow>
@@ -104,7 +102,6 @@ export default function Dashboard() {
                     <TableCell className="font-medium">#{order.folio}</TableCell>
                     <TableCell>{order.client}</TableCell>
                     <TableCell>{order.date}</TableCell>
-                    <TableCell>{order.type}</TableCell>
                     <TableCell>
                       <Badge className="bg-accent/20 text-primary border-none hover:bg-accent/30">
                         {order.status}
