@@ -10,33 +10,36 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    function isOwner(userId) {
-      return isSignedIn() && request.auth.uid == userId;
-    }
-
     function isAdmin() {
       return isSignedIn() && exists(/databases/$(database)/documents/roles_admin/$(request.auth.uid));
     }
 
-    // Permitir a los administradores lectura global para evitar errores en consultas de grupo
-    match /{document=**} {
-      allow read: if isAdmin();
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
     }
 
+    // REGLA GLOBAL PARA ADMINISTRADORES: Acceso total a cualquier ruta
+    // Esto previene errores de "Missing or insufficient permissions" en la raíz (/)
+    match /{document=**} {
+      allow read, write: if isAdmin();
+    }
+
+    // Regla para perfiles de usuario
     match /users/{userId} {
       allow get: if isSignedIn();
       allow list: if isAdmin();
-      allow create: if isOwner(userId);
-      allow update: if isOwner(userId);
+      allow create: if isOwner(userId) || isAdmin();
+      allow update: if isOwner(userId) || isAdmin();
       allow delete: if isAdmin();
     }
 
-    // Regla explícita para consultas de grupo de órdenes de trabajo
+    // Regla específica para consultas de grupo (collectionGroup) de órdenes de trabajo
     match /{path=**}/work_orders/{workOrderId} {
       allow list: if isAdmin();
       allow get: if isSignedIn();
     }
 
+    // Órdenes de trabajo por técnico
     match /users/{userId}/work_orders/{workOrderId} {
       allow get, list: if isOwner(userId) || isAdmin();
       
@@ -44,21 +47,23 @@ service cloud.firestore {
                     && request.resource.data.technicianId == userId;
       
       allow update: if (isOwner(userId) || isAdmin())
-                    && request.resource.data.technicianId == resource.data.technicianId;
+                    && (request.resource.data.technicianId == resource.data.technicianId || isAdmin());
       
-      allow delete: if isOwner(userId) || isAdmin();
+      allow delete: if isAdmin();
     }
 
+    // Gestión de Clientes
     match /clients/{clientId} {
       allow get, list: if isSignedIn();
       allow create, update, delete: if isAdmin();
     }
 
+    // Registro de Roles Administrativos
     match /roles_admin/{userId} {
       allow get: if isSignedIn();
       allow list: if isAdmin();
-      allow create: if isOwner(userId); 
-      allow update, delete: if false; 
+      allow create: if isOwner(userId) || isAdmin(); 
+      allow update, delete: if isAdmin(); 
     }
   }
 }

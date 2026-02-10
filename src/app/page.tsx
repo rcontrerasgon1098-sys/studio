@@ -56,7 +56,7 @@ export default function Home() {
           )}
           <div className="container mx-auto px-4 relative z-10 text-center">
             <div className="max-w-4xl mx-auto space-y-8">
-              <h1 className="text-3xl md:text-5xl font-black tracking-tighter text-primary mb-8 leading-[0.9]">
+              <h1 className="text-2xl md:text-4xl font-black tracking-tighter text-primary mb-8 leading-[0.9]">
                 Ordenes de Trabajo <br />
                 <span className="text-accent">Digital</span>
               </h1>

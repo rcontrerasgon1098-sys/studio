@@ -12,9 +12,8 @@ import { PlaceHolderImages } from "@/lib/placeholder-images";
 import { ArrowLeft, LogIn, ShieldCheck, Eye, EyeOff } from "lucide-react";
 import Link from "next/link";
 import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword } from "firebase/auth";
-import { doc } from "firebase/firestore";
+import { doc, setDoc } from "firebase/firestore";
 import { useFirestore } from "@/firebase";
-import { setDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -68,7 +67,7 @@ export default function LoginPage() {
             user = createCredential.user;
           } catch (createError: any) {
             if (createError.code === 'auth/email-already-in-use') {
-              throw new Error("El usuario ya existe con otra contraseña. Por favor, use las credenciales correctas.");
+              throw new Error("El usuario ya existe con otra contraseña.");
             }
             throw createError;
           }
@@ -78,25 +77,27 @@ export default function LoginPage() {
       }
 
       if (user && db) {
+        // IMPORTANTE: Esperar a que el documento se escriba antes de redirigir
         const adminDocRef = doc(db, "roles_admin", user.uid);
-        setDocumentNonBlocking(adminDocRef, {
+        await setDoc(adminDocRef, {
           email: adminEmail,
           role: "administrator",
-          setupDate: new Date().toISOString()
+          setupDate: new Date().toISOString(),
+          isActive: true
         }, { merge: true });
 
         toast({ 
           title: "Configuración Exitosa", 
-          description: "Acceso admin@icsa.com preparado correctamente." 
+          description: "Rol de administrador asignado. Entrando..." 
         });
         
-        setTimeout(() => router.push("/dashboard"), 1000);
+        router.push("/dashboard");
       }
     } catch (error: any) {
       toast({ 
         variant: "destructive", 
         title: "Error de Configuración", 
-        description: error.message || "No se pudo preparar la cuenta de administrador."
+        description: error.message || "No se pudo preparar la cuenta."
       });
       setSetupLoading(false);
     }
@@ -201,12 +202,6 @@ export default function LoginPage() {
               <ShieldCheck size={18} />
               {setupLoading ? "Configurando..." : "Configurar Acceso Demo Admin"}
             </Button>
-
-            <div className="pt-4">
-              <p className="text-center text-[10px] text-muted-foreground font-medium opacity-60 px-8">
-                Haga clic en el botón de configuración demo si es la primera vez que accede. Esto creará el usuario admin@icsa.com automáticamente.
-              </p>
-            </div>
           </form>
         </CardContent>
       </Card>
