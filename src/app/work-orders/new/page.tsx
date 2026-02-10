@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from "react";
@@ -31,7 +32,6 @@ export default function NewWorkOrder() {
 
   const clientsQuery = useMemoFirebase(() => {
     if (!db) return null;
-    // Se corrige el ordenamiento por el campo correcto: nombreCliente
     return query(collection(db, "clients"), orderBy("nombreCliente", "asc"));
   }, [db]);
 
@@ -52,7 +52,7 @@ export default function NewWorkOrder() {
     techSignatureUrl: "",
     clientSignatureUrl: "",
     sketchImageUrl: "",
-    status: "Completed"
+    status: "Pending" // Cambiado a Pending por defecto
   });
 
   useEffect(() => {
@@ -66,10 +66,9 @@ export default function NewWorkOrder() {
   }, [user, isUserLoading, router]);
 
   const handleSelectClient = (client: any) => {
-    // Se corrige la asignación de campos usando las propiedades correctas del cliente
     setFormData({
       ...formData,
-      clientName: client.nombreCliente,
+      clientName: client.nombreCliente || "",
       clientContact: client.emailClientes || client.telefonoCliente || "",
       clientId: client.id,
       location: client.direccionCliente || ""
@@ -97,21 +96,16 @@ export default function NewWorkOrder() {
       return;
     }
 
-    if (!formData.techSignatureUrl || !formData.clientSignatureUrl) {
-      toast({ 
-        variant: "destructive", 
-        title: "Firmas Requeridas", 
-        description: "Por favor captura ambas firmas antes de continuar." 
-      });
-      setLoading(false);
-      return;
-    }
+    // Determinamos el estado final basado en las firmas
+    const hasBothSignatures = formData.techSignatureUrl && formData.clientSignatureUrl;
+    const finalStatus = hasBothSignatures ? "Completed" : "Pending";
 
     const orderId = doc(collection(db, "temp")).id;
     const workOrderData = {
       ...formData,
       id: orderId,
       folio: folio,
+      status: finalStatus,
       technicianId: user.uid,
       technicianEmail: user.email,
       startDate: new Date().toISOString(),
@@ -122,7 +116,12 @@ export default function NewWorkOrder() {
     
     try {
       setDocumentNonBlocking(orderRef, workOrderData, { merge: true });
-      toast({ title: "Orden Guardada", description: "La orden ha sido sincronizada con éxito." });
+      toast({ 
+        title: finalStatus === "Completed" ? "Orden Completada" : "Orden Guardada (Pendiente)", 
+        description: finalStatus === "Completed" 
+          ? "La orden se ha finalizado correctamente con ambas firmas." 
+          : "La orden se guardó como pendiente debido a la falta de firmas."
+      });
       router.push("/dashboard");
     } catch (error) {
       setLoading(false);
@@ -145,8 +144,8 @@ export default function NewWorkOrder() {
             <h1 className="font-bold text-lg md:text-xl text-primary truncate max-w-[180px] md:max-w-none">Nueva OT #{folio}</h1>
           </div>
           <div className="flex gap-2">
-            <Button size="sm" onClick={handleSubmit} disabled={loading} className="bg-primary hover:bg-primary/90 h-10 px-4 md:px-6">
-              <Save className="h-4 w-4 md:mr-2" /> <span className="hidden md:inline">{loading ? "Guardando..." : "Finalizar"}</span>
+            <Button size="sm" onClick={handleSubmit} disabled={loading} className="bg-primary hover:bg-primary/90 h-10 px-4 md:px-6 font-bold">
+              <Save className="h-4 w-4 md:mr-2" /> <span className="hidden md:inline">{loading ? "Guardando..." : "Guardar Orden"}</span>
             </Button>
           </div>
         </div>
