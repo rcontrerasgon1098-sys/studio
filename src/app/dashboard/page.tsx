@@ -9,7 +9,7 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Input } from "@/components/ui/input";
 import { 
   Plus, FileText, Search, Settings, LogOut, LayoutDashboard, 
-  Eye, Download, Menu, Users, TrendingUp, BarChart3
+  Eye, Download, Menu, TrendingUp, BarChart3
 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
@@ -17,7 +17,7 @@ import { useRouter } from "next/navigation";
 import { generateWorkOrderPDF } from "@/lib/pdf-generator";
 import { PlaceHolderImages } from "@/lib/placeholder-images";
 import { useUser, useFirestore, useCollection, useMemoFirebase } from "@/firebase";
-import { collection, query, orderBy, getFirestore } from "firebase/firestore";
+import { collection, query, orderBy } from "firebase/firestore";
 import { getAuth, signOut } from "firebase/auth";
 
 export default function Dashboard() {
@@ -35,7 +35,7 @@ export default function Dashboard() {
     }
   }, [user, isUserLoading, router]);
 
-  // Simplificamos: Mostramos todas las órdenes de la colección raíz
+  // Consulta todas las órdenes de la colección raíz 'ordenes'
   const ordersQuery = useMemoFirebase(() => {
     if (!db || !user) return null;
     return query(collection(db, "ordenes"), orderBy("folio", "desc"));

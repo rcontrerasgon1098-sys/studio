@@ -1,11 +1,11 @@
 "use client";
 
-import { use, useState, useEffect } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { use, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Download, Printer, User, Calendar, MapPin, ClipboardCheck, Info, FileText } from "lucide-react";
+import { ArrowLeft, Download, Printer, User, Calendar, MapPin, ClipboardCheck, Info } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import { generateWorkOrderPDF } from "@/lib/pdf-generator";
@@ -14,23 +14,18 @@ import { doc } from "firebase/firestore";
 
 export default function WorkOrderView({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
-  const router = useRouter();
-  const searchParams = useSearchParams();
   const { user } = useUser();
   const db = useFirestore();
-  
-  // Si es admin, puede que la ruta necesite el techId del query param si no es suya
-  const techId = searchParams.get('techId') || user?.uid;
 
   const orderRef = useMemoFirebase(() => {
-    if (!db || !techId || !id) return null;
-    return doc(db, "users", techId, "work_orders", id);
-  }, [db, techId, id]);
+    if (!db || !id) return null;
+    return doc(db, "ordenes", id);
+  }, [db, id]);
 
   const { data: order, isLoading } = useDoc(orderRef);
 
-  if (isLoading) return <div className="p-20 text-center text-primary font-black animate-pulse">CARGANDO ORDEN ICSA...</div>;
-  if (!order) return <div className="p-20 text-center text-muted-foreground font-bold">Orden no encontrada.</div>;
+  if (isLoading) return <div className="p-20 text-center text-primary font-black animate-pulse bg-background min-h-screen">CARGANDO ORDEN ICSA...</div>;
+  if (!order) return <div className="p-20 text-center text-muted-foreground font-bold bg-background min-h-screen">Orden no encontrada.</div>;
 
   return (
     <div className="min-h-screen bg-background pb-12">
@@ -61,7 +56,7 @@ export default function WorkOrderView({ params }: { params: Promise<{ id: string
             {order.status === 'Completed' ? 'COMPLETADA' : 'PENDIENTE'}
           </Badge>
           <div className="text-[10px] text-muted-foreground flex items-center gap-1.5 font-bold uppercase tracking-widest">
-            <Calendar className="h-3 w-3" /> {new Date(order.startDate).toLocaleDateString()}
+            <Calendar className="h-3 w-3" /> {order.startDate ? new Date(order.startDate).toLocaleDateString() : "N/A"}
           </div>
         </div>
 
@@ -77,7 +72,7 @@ export default function WorkOrderView({ params }: { params: Promise<{ id: string
               </div>
             </CardHeader>
             <CardContent className="p-4 pt-0">
-               <p className="text-xs text-muted-foreground">{order.clientContact}</p>
+               <p className="text-xs text-muted-foreground">{order.clientContact || "Sin contacto"}</p>
             </CardContent>
           </Card>
 

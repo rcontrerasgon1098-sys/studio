@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -87,16 +87,17 @@ export default function NewWorkOrder() {
     e.preventDefault();
     if (!user || !db) return;
     
-    if (!formData.clientId) {
+    setLoading(true);
+
+    if (!formData.clientName) {
       toast({ 
         variant: "destructive", 
         title: "Cliente Requerido", 
-        description: "Debe seleccionar un cliente de la lista. Si el cliente no existe, contacte a un administrador." 
+        description: "Por favor seleccione o ingrese el nombre del cliente." 
       });
+      setLoading(false);
       return;
     }
-
-    setLoading(true);
 
     if (!formData.techSignatureUrl || !formData.clientSignatureUrl) {
       toast({ 
@@ -119,7 +120,8 @@ export default function NewWorkOrder() {
       endDate: new Date().toISOString(),
     };
 
-    const orderRef = doc(db, "users", user.uid, "work_orders", orderId);
+    // Guardamos en la colección raíz 'ordenes' para que sea accesible fácilmente
+    const orderRef = doc(db, "ordenes", orderId);
     
     try {
       setDocumentNonBlocking(orderRef, workOrderData, { merge: true });
@@ -131,7 +133,7 @@ export default function NewWorkOrder() {
     }
   };
 
-  if (isUserLoading) return <div className="min-h-screen flex items-center justify-center font-black animate-pulse">IDENTIFICANDO TÉCNICO...</div>;
+  if (isUserLoading) return <div className="min-h-screen flex items-center justify-center font-black animate-pulse bg-background">IDENTIFICANDO TÉCNICO...</div>;
 
   return (
     <div className="min-h-screen bg-background pb-20 md:pb-12">
@@ -177,71 +179,57 @@ export default function NewWorkOrder() {
               </div>
             </CardHeader>
             <CardContent className="pt-6 space-y-6">
-              <Alert variant="default" className="bg-primary/5 border-primary/20">
-                <AlertCircle className="h-4 w-4 text-primary" />
-                <AlertTitle className="text-primary font-bold">Aviso de Privacidad</AlertTitle>
-                <AlertDescription className="text-xs text-primary/70">
-                  Solo los administradores pueden registrar nuevos clientes. Seleccione un cliente de la lista autorizada.
-                </AlertDescription>
-              </Alert>
-
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2 flex flex-col">
-                  <Label htmlFor="clientName" className="font-bold mb-1">Buscar Cliente Autorizado</Label>
-                  <Popover open={openClientSearch} onOpenChange={setOpenClientSearch}>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        role="combobox"
-                        aria-expanded={openClientSearch}
-                        className={cn(
-                          "w-full justify-between h-14 text-base font-bold bg-white border-2",
-                          formData.clientId ? "border-accent text-primary" : "border-primary/20"
-                        )}
-                      >
-                        {formData.clientName || "Seleccionar Cliente..."}
-                        <Search className="ml-2 h-5 w-5 shrink-0 opacity-50" />
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0">
-                      <Command>
-                        <CommandInput placeholder="Filtrar clientes..." />
-                        <CommandList>
-                          <CommandEmpty className="p-4 text-center text-sm text-muted-foreground">
-                            No se encontró el cliente. <br/> 
-                            <span className="font-bold text-primary mt-2 block">Solicite el registro al Admin.</span>
-                          </CommandEmpty>
-                          <CommandGroup>
-                            {clients?.map((client) => (
-                              <CommandItem
-                                key={client.id}
-                                value={client.name}
-                                onSelect={() => handleSelectClient(client)}
-                                className="py-3"
-                              >
-                                <Check
-                                  className={cn(
-                                    "mr-2 h-4 w-4",
-                                    formData.clientId === client.id ? "opacity-100" : "opacity-0"
-                                  )}
-                                />
-                                <div className="flex flex-col">
-                                  <span className="font-bold">{client.name}</span>
-                                  <span className="text-[10px] text-muted-foreground">{client.contact}</span>
-                                </div>
-                              </CommandItem>
-                            ))}
-                          </CommandGroup>
-                        </CommandList>
-                      </Command>
-                    </PopoverContent>
-                  </Popover>
+                  <Label htmlFor="clientName" className="font-bold mb-1">Cliente / Empresa</Label>
+                  <div className="flex gap-2">
+                    <Input 
+                      placeholder="Nombre del cliente..." 
+                      value={formData.clientName}
+                      onChange={e => setFormData({...formData, clientName: e.target.value})}
+                      className="h-14 text-base font-bold"
+                    />
+                    <Popover open={openClientSearch} onOpenChange={setOpenClientSearch}>
+                      <PopoverTrigger asChild>
+                        <Button variant="outline" size="icon" className="h-14 w-14 shrink-0">
+                          <Search className="h-5 w-5" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="end">
+                        <Command>
+                          <CommandInput placeholder="Buscar cliente..." />
+                          <CommandList>
+                            <CommandEmpty className="p-4 text-sm">No hay clientes guardados.</CommandEmpty>
+                            <CommandGroup>
+                              {clients?.map((client) => (
+                                <CommandItem
+                                  key={client.id}
+                                  value={client.name}
+                                  onSelect={() => handleSelectClient(client)}
+                                  className="py-3"
+                                >
+                                  <div className="flex flex-col">
+                                    <span className="font-bold">{client.name}</span>
+                                    <span className="text-[10px] text-muted-foreground">{client.contact}</span>
+                                  </div>
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
+                  </div>
                 </div>
                 <div className="space-y-2">
-                  <Label className="font-bold">Información de Contacto</Label>
-                  <div className="h-14 bg-muted/30 border-2 border-dashed rounded-md flex items-center px-4 text-primary font-medium italic">
-                    {formData.clientContact || "Seleccione un cliente para ver el contacto"}
-                  </div>
+                  <Label htmlFor="contact" className="font-bold">Contacto / Teléfono</Label>
+                  <Input 
+                    id="contact" 
+                    placeholder="Email o Teléfono" 
+                    value={formData.clientContact}
+                    onChange={e => setFormData({...formData, clientContact: e.target.value})}
+                    className="h-14 text-base"
+                  />
                 </div>
               </div>
             </CardContent>
