@@ -10,7 +10,7 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Input } from "@/components/ui/input";
 import { 
   Plus, FileText, Search, Settings, LogOut, LayoutDashboard, 
-  Eye, Download, Menu, TrendingUp, BarChart3, Users, UserRound
+  Eye, Download, Menu, TrendingUp, Users, UserRound, Shield
 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
@@ -243,7 +243,7 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* Listado de Órdenes (Visible en Dashboard y pestaña Órdenes) */}
+        {/* Listado de Órdenes */}
         {(activeTab === "dashboard" || activeTab === "orders") && (
           <Card className="shadow-xl border-none bg-white mb-8">
             <CardHeader className="flex flex-col md:flex-row items-start md:items-center justify-between border-b pb-6 mb-4 gap-4 px-8">
@@ -297,11 +297,6 @@ export default function Dashboard() {
                         </TableCell>
                       </TableRow>
                     ))}
-                    {filteredOrders.length === 0 && (
-                      <TableRow>
-                        <TableCell colSpan={5} className="text-center py-10 text-muted-foreground italic">No se encontraron órdenes.</TableCell>
-                      </TableRow>
-                    )}
                   </TableBody>
                 </Table>
               </div>
@@ -391,8 +386,9 @@ export default function Dashboard() {
                 <Table>
                   <TableHeader>
                     <TableRow className="bg-muted/40">
-                      <TableHead className="font-bold py-4">ID Personal</TableHead>
+                      <TableHead className="font-bold py-4">ID</TableHead>
                       <TableHead className="font-bold py-4">Nombre Completo</TableHead>
+                      <TableHead className="font-bold py-4">Rol</TableHead>
                       <TableHead className="font-bold py-4">RUT</TableHead>
                       <TableHead className="font-bold py-4">Email / Celular</TableHead>
                       <TableHead className="text-right font-bold py-4">Acciones</TableHead>
@@ -403,6 +399,11 @@ export default function Dashboard() {
                       <TableRow key={p.id} className="hover:bg-muted/20 transition-colors">
                         <TableCell className="font-black text-primary text-xs">{p.id_t}</TableCell>
                         <TableCell className="font-bold">{p.nombre_t}</TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className={`gap-1 border-primary/20 text-primary ${p.rol_t === 'Administrador' ? 'bg-primary/5' : ''}`}>
+                            <Shield className="h-3 w-3" /> {p.rol_t}
+                          </Badge>
+                        </TableCell>
                         <TableCell className="text-xs">{p.rut_t}</TableCell>
                         <TableCell>
                           <div className="flex flex-col text-xs">
@@ -417,11 +418,6 @@ export default function Dashboard() {
                         </TableCell>
                       </TableRow>
                     ))}
-                    {filteredPersonnel.length === 0 && (
-                      <TableRow>
-                        <TableCell colSpan={5} className="text-center py-10 text-muted-foreground italic">No se encontró personal registrado.</TableCell>
-                      </TableRow>
-                    )}
                   </TableBody>
                 </Table>
               </div>

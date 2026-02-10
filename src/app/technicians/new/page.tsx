@@ -7,8 +7,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Save, User, Hash, Mail, Phone, ShieldCheck } from "lucide-react";
+import { ArrowLeft, Save, User, Hash, Mail, Phone, ShieldCheck, UserCog } from "lucide-react";
 import Link from "next/link";
 import { useUser, useFirestore } from "@/firebase";
 import { collection, doc } from "firebase/firestore";
@@ -27,7 +28,8 @@ export default function NewTechnician() {
     nombre_t: "",
     rut_t: "",
     email_t: "",
-    cel_t: ""
+    cel_t: "",
+    rol_t: "Técnico"
   });
 
   useEffect(() => {
@@ -42,11 +44,11 @@ export default function NewTechnician() {
     
     setLoading(true);
 
-    if (!formData.nombre_t || !formData.rut_t || !formData.email_t) {
+    if (!formData.nombre_t || !formData.rut_t || !formData.email_t || !formData.rol_t) {
       toast({ 
         variant: "destructive", 
         title: "Campos Requeridos", 
-        description: "Nombre, RUT y Email son obligatorios." 
+        description: "Nombre, RUT, Email y Rol son obligatorios." 
       });
       setLoading(false);
       return;
@@ -119,18 +121,37 @@ export default function NewTechnician() {
                   />
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="rut_t" className="font-bold flex items-center gap-2">
-                    <Hash className="h-4 w-4 text-primary" /> RUT
-                  </Label>
-                  <Input 
-                    id="rut_t"
-                    placeholder="Ej: 15.678.123-K" 
-                    value={formData.rut_t}
-                    onChange={e => setFormData({...formData, rut_t: e.target.value})}
-                    className="h-12"
-                    required
-                  />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="rut_t" className="font-bold flex items-center gap-2">
+                      <Hash className="h-4 w-4 text-primary" /> RUT
+                    </Label>
+                    <Input 
+                      id="rut_t"
+                      placeholder="Ej: 15.678.123-K" 
+                      value={formData.rut_t}
+                      onChange={e => setFormData({...formData, rut_t: e.target.value})}
+                      className="h-12"
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="rol_t" className="font-bold flex items-center gap-2">
+                      <UserCog className="h-4 w-4 text-primary" /> Rol en la Empresa
+                    </Label>
+                    <Select 
+                      value={formData.rol_t} 
+                      onValueChange={v => setFormData({...formData, rol_t: v})}
+                    >
+                      <SelectTrigger className="h-12">
+                        <SelectValue placeholder="Seleccionar rol" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Administrador">Administrador</SelectItem>
+                        <SelectItem value="Técnico">Técnico</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
