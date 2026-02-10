@@ -11,7 +11,8 @@ import { Input } from "@/components/ui/input";
 import { 
   Plus, FileText, Search, Settings, LogOut, LayoutDashboard, 
   Eye, Download, Menu, TrendingUp, Users, UserRound, Shield,
-  Pencil, Trash2, PieChart as PieChartIcon, BarChart as BarChartIcon
+  Pencil, Trash2, PieChart as PieChartIcon, BarChart as BarChartIcon,
+  Briefcase
 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
@@ -107,6 +108,21 @@ export default function Dashboard() {
       const dayName = new Date(date).toLocaleDateString('es-ES', { weekday: 'short' });
       return { day: dayName, ordenes: count };
     });
+  }, [orders]);
+
+  // Nuevo gráfico: Clientes con más servicios
+  const clientOrdersData = useMemo(() => {
+    if (!orders) return [];
+    const counts: Record<string, number> = {};
+    orders.forEach(o => {
+      const name = o.clientName || "Sin Nombre";
+      counts[name] = (counts[name] || 0) + 1;
+    });
+    
+    return Object.entries(counts)
+      .map(([name, count]) => ({ name, ordenes: count }))
+      .sort((a, b) => b.ordenes - a.ordenes)
+      .slice(0, 5); // Top 5
   }, [orders]);
 
   // Filtrados
@@ -314,47 +330,70 @@ export default function Dashboard() {
         )}
 
         {activeTab === "analytics" && (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-            <Card className="shadow-xl border-none bg-white">
-              <CardHeader className="border-b pb-4 mb-4 flex flex-row items-center gap-2">
-                <PieChartIcon className="h-5 w-5 text-primary" />
-                <div>
-                  <CardTitle className="text-lg font-bold text-primary">Estado de Órdenes</CardTitle>
-                  <CardDescription>Distribución de cumplimiento</CardDescription>
-                </div>
-              </CardHeader>
-              <CardContent className="h-[400px] flex items-center justify-center">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={orderStatsData}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={80}
-                      outerRadius={120}
-                      paddingAngle={5}
-                      dataKey="value"
-                    >
-                      {orderStatsData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} />
-                      ))}
-                    </Pie>
-                    <RechartsTooltip />
-                    <Legend verticalAlign="bottom" height={36}/>
-                  </PieChart>
-                </ResponsiveContainer>
-              </CardContent>
-            </Card>
+          <div className="space-y-8 mb-8">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              <Card className="shadow-xl border-none bg-white">
+                <CardHeader className="border-b pb-4 mb-4 flex flex-row items-center gap-2">
+                  <PieChartIcon className="h-5 w-5 text-primary" />
+                  <div>
+                    <CardTitle className="text-lg font-bold text-primary">Estado de Órdenes</CardTitle>
+                    <CardDescription>Distribución de cumplimiento</CardDescription>
+                  </div>
+                </CardHeader>
+                <CardContent className="h-[350px] flex items-center justify-center">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={orderStatsData}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={80}
+                        outerRadius={110}
+                        paddingAngle={5}
+                        dataKey="value"
+                      >
+                        {orderStatsData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.color} />
+                        ))}
+                      </Pie>
+                      <RechartsTooltip />
+                      <Legend verticalAlign="bottom" height={36}/>
+                    </PieChart>
+                  </ResponsiveContainer>
+                </CardContent>
+              </Card>
+
+              <Card className="shadow-xl border-none bg-white">
+                <CardHeader className="border-b pb-4 mb-4 flex flex-row items-center gap-2">
+                  <BarChartIcon className="h-5 w-5 text-primary" />
+                  <div>
+                    <CardTitle className="text-lg font-bold text-primary">Servicios por Cliente</CardTitle>
+                    <CardDescription>Top clientes con más solicitudes</CardDescription>
+                  </div>
+                </CardHeader>
+                <CardContent className="h-[350px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={clientOrdersData} layout="vertical">
+                      <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} opacity={0.1} />
+                      <XAxis type="number" hide />
+                      <YAxis dataKey="name" type="category" axisLine={false} tickLine={false} width={120} style={{ fontSize: '10px', fontWeight: 'bold' }} />
+                      <RechartsTooltip cursor={{fill: 'transparent'}} />
+                      <Bar dataKey="ordenes" fill="hsl(var(--primary))" radius={[0, 4, 4, 0]} barSize={30} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </CardContent>
+              </Card>
+            </div>
 
             <Card className="shadow-xl border-none bg-white">
               <CardHeader className="border-b pb-4 mb-4 flex flex-row items-center gap-2">
-                <BarChartIcon className="h-5 w-5 text-primary" />
+                <TrendingUp className="h-5 w-5 text-accent" />
                 <div>
                   <CardTitle className="text-lg font-bold text-primary">Actividad Semanal</CardTitle>
-                  <CardDescription>Órdenes creadas en los últimos 7 días</CardDescription>
+                  <CardDescription>Carga de trabajo en los últimos 7 días</CardDescription>
                 </div>
               </CardHeader>
-              <CardContent className="h-[400px]">
+              <CardContent className="h-[300px]">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={weeklyOrdersData}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.1} />
