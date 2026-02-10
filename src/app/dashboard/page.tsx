@@ -36,40 +36,38 @@ export default function Dashboard() {
     }
   }, [user, isUserLoading, router]);
 
-  const adminDocRef = useMemoFirebase(() => {
+  // Obtenemos el perfil del usuario para verificar el rol
+  const userDocRef = useMemoFirebase(() => {
     if (!db || !user) return null;
-    return doc(db, "roles_admin", user.uid);
+    return doc(db, "users", user.uid);
   }, [db, user]);
 
-  const { data: adminRoleDoc, isLoading: isRoleLoading } = useDoc(adminDocRef);
+  const { data: userProfile, isLoading: isProfileLoading } = useDoc(userDocRef);
 
   useEffect(() => {
-    if (!isRoleLoading && adminRoleDoc) {
-      setIsAdmin(true);
-    } else if (!isRoleLoading) {
-      setIsAdmin(false);
+    if (!isProfileLoading && userProfile) {
+      setIsAdmin(userProfile.rol === 'admin');
     }
-  }, [adminRoleDoc, isRoleLoading]);
+  }, [userProfile, isProfileLoading]);
 
   const techOrdersQuery = useMemoFirebase(() => {
-    if (!db || !user || isAdmin || isRoleLoading) return null;
+    if (!db || !user || isAdmin || isProfileLoading) return null;
     return query(
       collection(db, "users", user.uid, "work_orders"),
       orderBy("folio", "desc")
     );
-  }, [db, user, isAdmin, isRoleLoading]);
+  }, [db, user, isAdmin, isProfileLoading]);
 
   const adminOrdersQuery = useMemoFirebase(() => {
-    if (!db || !isAdmin || isRoleLoading) return null;
-    // Solo permitimos esta consulta si ya sabemos que es admin para evitar errores de permisos
+    if (!db || !isAdmin || isProfileLoading) return null;
     return query(collectionGroup(db, "work_orders"), orderBy("folio", "desc"));
-  }, [db, isAdmin, isRoleLoading]);
+  }, [db, isAdmin, isProfileLoading]);
 
   const { data: techOrders } = useCollection(techOrdersQuery);
   const { data: allOrders } = useCollection(adminOrdersQuery);
 
   const orders = isAdmin ? allOrders : techOrders;
-  const isLoading = isUserLoading || isRoleLoading;
+  const isLoading = isUserLoading || isProfileLoading;
 
   const filteredOrders = useMemo(() => {
     if (!orders) return [];

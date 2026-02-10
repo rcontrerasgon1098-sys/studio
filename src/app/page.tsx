@@ -1,4 +1,3 @@
-
 "use client";
 
 import { Button } from "@/components/ui/button";
@@ -41,7 +40,7 @@ export default function Home() {
       </header>
 
       <main className="flex-1">
-        <section className="relative h-[calc(100vh-96px)] min-h-[500px] flex items-start justify-center pt-24 md:pt-32 overflow-hidden">
+        <section className="relative h-[calc(100vh-96px)] min-h-[500px] flex items-start justify-center pt-40 md:pt-48 overflow-hidden">
           {heroImage && (
             <div className="absolute inset-0 z-0">
               <Image
@@ -56,8 +55,8 @@ export default function Home() {
             </div>
           )}
           <div className="container mx-auto px-4 relative z-10 text-center">
-            <div className="max-w-4xl mx-auto space-y-8">
-              <h1 className="text-5xl md:text-7xl font-black tracking-tighter text-primary leading-[0.85]">
+            <div className="max-w-4xl mx-auto space-y-12">
+              <h1 className="text-6xl md:text-7xl font-black tracking-tighter text-primary leading-[0.85]">
                 Ordenes de Trabajo <br />
                 <span className="text-accent">Digital</span>
               </h1>

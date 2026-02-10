@@ -1,24 +1,26 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    /**
-     * ICSA WORKFLOW SECURITY RULES
-     */
-
+    
+    // Funciones de ayuda
     function isSignedIn() {
       return request.auth != null;
     }
 
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
     function isAdmin() {
-      return isSignedIn() && exists(/databases/$(database)/documents/roles_admin/$(request.auth.uid));
+      return isSignedIn() && getUserData().rol == 'admin';
     }
 
-    function isOwner(userId) {
-      return isSignedIn() && request.auth.uid == userId;
+    function isActive() {
+      return isSignedIn() && getUserData().activo == true;
     }
 
-    // Regla de acceso total para administradores (Incluye consultas de grupo)
+    // Regla de acceso total para administradores
+    // Esto permite que consultas de grupo (collectionGroup) funcionen sin errores
     match /{document=**} {
       allow read, write: if isAdmin();
     }
@@ -27,34 +29,27 @@ service cloud.firestore {
     match /users/{userId} {
       allow get: if isSignedIn();
       allow list: if isAdmin();
-      allow create: if isOwner(userId) || isAdmin();
-      allow update: if isOwner(userId) || isAdmin();
+      allow create: if isSignedIn(); // Permitir creación inicial en login
+      allow update: if isAdmin();
       allow delete: if isAdmin();
     }
 
-    // Órdenes de trabajo (Acceso por dueño o Admin)
+    // Órdenes de trabajo
     match /users/{userId}/work_orders/{workOrderId} {
-      allow get, list: if isOwner(userId) || isAdmin();
-      allow create: if isOwner(userId);
-      allow update: if isOwner(userId) || isAdmin();
+      allow get, list: if (isSignedIn() && request.auth.uid == userId && isActive()) || isAdmin();
+      allow create: if isSignedIn() && request.auth.uid == userId && isActive();
+      allow update: if (isSignedIn() && request.auth.uid == userId && isActive()) || isAdmin();
       allow delete: if isAdmin();
     }
 
-    // Regla específica para consultas globales (collectionGroup) de órdenes
+    // Regla para consultas globales (collectionGroup) de órdenes
     match /{path=**}/work_orders/{workOrderId} {
       allow list, get: if isAdmin();
     }
 
     // Clientes
     match /clients/{clientId} {
-      allow get, list: if isSignedIn();
-      allow create, update, delete: if isAdmin();
-    }
-
-    // Roles Administrativos
-    match /roles_admin/{userId} {
-      allow get: if isSignedIn();
-      allow list: if isAdmin();
+      allow get, list: if isSignedIn() && isActive();
       allow create, update, delete: if isAdmin();
     }
   }

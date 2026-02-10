@@ -34,14 +34,16 @@ export default function LoginPage() {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 
-      // Si es el correo designado como admin, aseguramos sus permisos en cada entrada
-      if (email === "admin@icsa.com") {
-        await setDoc(doc(db, "roles_admin", user.uid), {
-          email: email,
-          role: "admin",
-          updatedAt: new Date().toISOString()
-        }, { merge: true });
-      }
+      // Aseguramos que el perfil del usuario exista con los campos necesarios para las reglas
+      // Si es admin@icsa.com, forzamos el rol admin
+      const isSystemAdmin = email === "admin@icsa.com";
+      
+      await setDoc(doc(db, "users", user.uid), {
+        email: email,
+        rol: isSystemAdmin ? "admin" : "tecnico",
+        activo: true,
+        lastLogin: new Date().toISOString()
+      }, { merge: true });
 
       toast({ title: "Bienvenido", description: "Acceso concedido al portal ICSA." });
       router.push("/dashboard");
