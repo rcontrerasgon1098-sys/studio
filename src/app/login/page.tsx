@@ -9,6 +9,8 @@ import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
 import Image from "next/image";
 import { PlaceHolderImages } from "@/lib/placeholder-images";
+import { ArrowLeft } from "lucide-react";
+import Link from "next/link";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -40,7 +42,16 @@ export default function LoginPage() {
       <div className="absolute -bottom-32 -right-32 w-96 h-96 bg-accent/20 rounded-full blur-[100px]" />
       
       <Card className="w-full max-w-lg shadow-[0_20px_50px_rgba(0,0,0,0.1)] border-none bg-white/95 backdrop-blur-xl relative z-10 p-4">
-        <CardHeader className="text-center space-y-6 pt-10">
+        <div className="absolute top-6 left-6">
+          <Link href="/">
+            <Button variant="ghost" size="sm" className="gap-2 text-muted-foreground hover:text-primary transition-colors">
+              <ArrowLeft size={18} />
+              <span className="font-bold">Volver</span>
+            </Button>
+          </Link>
+        </div>
+        
+        <CardHeader className="text-center space-y-6 pt-16">
           {logoImage && (
             <div className="mx-auto relative w-56 h-56 mb-4 transition-transform hover:scale-110 duration-500 drop-shadow-xl">
               <Image
