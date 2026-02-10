@@ -6,8 +6,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Plus, FileText, Search, Settings, LogOut, LayoutDashboard, Eye, Download } from "lucide-react";
 import Link from "next/link";
+import Image from "next/image";
 import { useState } from "react";
 import { generateWorkOrderPDF } from "@/lib/pdf-generator";
+import { PlaceHolderImages } from "@/lib/placeholder-images";
 
 const MOCK_ORDERS = [
   { id: "10245", folio: 10245, client: "Juan Pérez", date: "2024-05-15", status: "Completed" },
@@ -17,6 +19,7 @@ const MOCK_ORDERS = [
 
 export default function Dashboard() {
   const [orders] = useState(MOCK_ORDERS);
+  const logoImage = PlaceHolderImages.find(img => img.id === "icsa-logo");
 
   const handleDownload = (order: any) => {
     generateWorkOrderPDF(order);
@@ -27,7 +30,16 @@ export default function Dashboard() {
       {/* Sidebar */}
       <aside className="w-64 bg-primary text-white p-6 hidden md:flex flex-col">
         <div className="flex items-center gap-2 mb-10">
-          <div className="w-8 h-8 bg-white text-primary rounded flex items-center justify-center font-bold">I</div>
+          {logoImage && (
+            <div className="relative w-8 h-8 bg-white rounded flex items-center justify-center overflow-hidden">
+              <Image
+                src={logoImage.imageUrl}
+                alt="Logo"
+                fill
+                className="object-contain p-1"
+              />
+            </div>
+          )}
           <div className="flex flex-col leading-none">
             <span className="font-bold text-base">ICSA</span>
             <span className="text-[10px] font-normal opacity-80">ingeniería comunicaciones S.A.</span>

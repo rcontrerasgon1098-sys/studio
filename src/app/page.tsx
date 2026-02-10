@@ -9,18 +9,26 @@ import { PlaceHolderImages } from "@/lib/placeholder-images";
 
 export default function Home() {
   const heroImage = PlaceHolderImages.find(img => img.id === "hero-tech");
+  const logoImage = PlaceHolderImages.find(img => img.id === "icsa-logo");
 
   return (
     <div className="min-h-screen bg-background">
       <header className="sticky top-0 z-50 w-full border-b bg-white/80 backdrop-blur-md">
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center text-white font-bold text-xl">
-              I
-            </div>
+            {logoImage && (
+              <div className="relative w-10 h-10">
+                <Image
+                  src={logoImage.imageUrl}
+                  alt="ICSA Logo"
+                  fill
+                  className="object-contain"
+                />
+              </div>
+            )}
             <div className="flex flex-col leading-tight">
               <span className="font-headline font-bold text-xl text-primary">ICSA</span>
-              <span className="text-xs font-normal text-muted-foreground">ingeniería comunicaciones S.A.</span>
+              <span className="text-[10px] font-normal text-muted-foreground">ingeniería comunicaciones S.A.</span>
             </div>
           </div>
           <nav>

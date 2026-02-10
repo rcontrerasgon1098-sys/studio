@@ -7,7 +7,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Label } from "@/components/ui/label";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
-import { Wifi } from "lucide-react";
+import Image from "next/image";
+import { PlaceHolderImages } from "@/lib/placeholder-images";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -15,6 +16,7 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
+  const logoImage = PlaceHolderImages.find(img => img.id === "icsa-logo");
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -36,12 +38,19 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md shadow-2xl border-none">
         <CardHeader className="text-center space-y-2">
-          <div className="mx-auto bg-primary w-12 h-12 rounded-xl flex items-center justify-center text-white mb-2">
-            <Wifi className="h-7 w-7" />
-          </div>
+          {logoImage && (
+            <div className="mx-auto relative w-16 h-16 mb-2">
+              <Image
+                src={logoImage.imageUrl}
+                alt="ICSA Logo"
+                fill
+                className="object-contain"
+              />
+            </div>
+          )}
           <CardTitle className="text-2xl font-headline font-bold text-primary flex flex-col items-center gap-1">
             ICSA
-            <span className="text-sm font-normal text-muted-foreground block">ingeniería comunicaciones S.A.</span>
+            <span className="text-xs font-normal text-muted-foreground block">ingeniería comunicaciones S.A.</span>
           </CardTitle>
           <CardDescription>Ingresa tus credenciales para acceder</CardDescription>
         </Header>
