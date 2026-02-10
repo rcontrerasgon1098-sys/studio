@@ -100,13 +100,14 @@ export const generateWorkOrderPDF = async (data: any) => {
     doc.text("BOSQUEJO / FOTO", 15, 205);
     doc.line(15, 207, 195, 207);
     try {
-        doc.addImage(data.sketchImageUrl, "JPEG", 15, 210, 80, 45);
+        // Render at a high resolution aspect ratio
+        doc.addImage(data.sketchImageUrl, "JPEG", 15, 210, 80, 45, undefined, 'FAST');
     } catch(e) {
         console.error("No se pudo cargar la imagen del bosquejo", e);
     }
   }
 
-  // Signatures at the bottom
+  // Signatures at the bottom - Optimized for quality
   const sigY = 265;
   doc.setFontSize(8);
   doc.setTextColor(100, 100, 100);
@@ -115,10 +116,23 @@ export const generateWorkOrderPDF = async (data: any) => {
   if (data.techName || data.techRut || data.techSignatureUrl) {
     doc.text("VALIDACIÓN TÉCNICO ICSA", 15, sigY - 12);
     doc.setTextColor(0,0,0);
-    doc.text(`Nombre: ${data.techName || "N/A"}`, 15, sigY - 7);
+    doc.setFont("helvetica", "bold");
+    doc.text(`${data.techName || "N/A"}`, 15, sigY - 7);
+    doc.setFont("helvetica", "normal");
     doc.text(`RUT: ${data.techRut || "N/A"}`, 15, sigY - 2);
+    
     if (data.techSignatureUrl) {
-      try { doc.addImage(data.techSignatureUrl, "PNG", 15, sigY, 50, 20); } catch(e) {}
+      try { 
+        // Use a box for better framing
+        doc.setDrawColor(240, 240, 240);
+        doc.rect(15, sigY, 60, 25);
+        doc.addImage(data.techSignatureUrl, "PNG", 17, sigY + 2, 56, 21, undefined, 'FAST'); 
+      } catch(e) {
+        console.error("Error rendering tech signature", e);
+      }
+    } else {
+      doc.setTextColor(150, 150, 150);
+      doc.text("(Pendiente de firma)", 15, sigY + 10);
     }
   }
 
@@ -127,12 +141,29 @@ export const generateWorkOrderPDF = async (data: any) => {
   if (data.clientReceiverName || data.clientReceiverRut || data.clientSignatureUrl) {
     doc.text("VALIDACIÓN RECEPCIÓN TERRENO", 130, sigY - 12);
     doc.setTextColor(0,0,0);
-    doc.text(`Nombre: ${data.clientReceiverName || "N/A"}`, 130, sigY - 7);
+    doc.setFont("helvetica", "bold");
+    doc.text(`${data.clientReceiverName || "N/A"}`, 130, sigY - 7);
+    doc.setFont("helvetica", "normal");
     doc.text(`RUT: ${data.clientReceiverRut || "N/A"}`, 130, sigY - 2);
+    
     if (data.clientSignatureUrl) {
-      try { doc.addImage(data.clientSignatureUrl, "PNG", 130, sigY, 50, 20); } catch(e) {}
+      try { 
+        doc.setDrawColor(240, 240, 240);
+        doc.rect(130, sigY, 60, 25);
+        doc.addImage(data.clientSignatureUrl, "PNG", 132, sigY + 2, 56, 21, undefined, 'FAST'); 
+      } catch(e) {
+        console.error("Error rendering client signature", e);
+      }
+    } else {
+      doc.setTextColor(150, 150, 150);
+      doc.text("(Pendiente de firma)", 130, sigY + 10);
     }
   }
+
+  // Footer text
+  doc.setFontSize(7);
+  doc.setTextColor(180, 180, 180);
+  doc.text("Documento generado digitalmente por el portal operativo ICSA.", 105, 290, { align: "center" });
 
   doc.save(`OT-${data.folio}-${data.clientName?.replace(/\s+/g, '_')}.pdf`);
 };
