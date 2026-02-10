@@ -13,7 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SignaturePad } from "@/components/SignaturePad";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Save, Camera, CheckCircle2, Clock, User as UserIcon, Search } from "lucide-react";
+import { ArrowLeft, Save, CheckCircle2 } from "lucide-react";
 import Link from "next/link";
 import { useUser, useFirestore, useDoc, useMemoFirebase } from "@/firebase";
 import { doc } from "firebase/firestore";
@@ -34,6 +34,7 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
   const { data: order, isLoading: isOrderLoading } = useDoc(orderRef);
 
   const [loading, setLoading] = useState(false);
+  const [isInitialized, setIsInitialized] = useState(false);
   const [formData, setFormData] = useState({
     clientName: "",
     clientContact: "",
@@ -52,7 +53,7 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
   });
 
   useEffect(() => {
-    if (order) {
+    if (order && !isInitialized) {
       if (order.status === "Completed") {
         toast({
           variant: "destructive",
@@ -79,8 +80,9 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
         sketchImageUrl: order.sketchImageUrl || "",
         status: order.status || "Pending"
       });
+      setIsInitialized(true);
     }
-  }, [order, id, router, toast]);
+  }, [order, id, router, toast, isInitialized]);
 
   useEffect(() => {
     if (!isUserLoading && !user) {
@@ -131,7 +133,7 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
     }
   };
 
-  if (isUserLoading || isOrderLoading) return <div className="min-h-screen flex items-center justify-center font-black animate-pulse bg-background">CARGANDO ORDEN...</div>;
+  if (isUserLoading || isOrderLoading) return <div className="min-h-screen flex items-center justify-center font-black animate-pulse bg-background text-primary">CARGANDO ORDEN...</div>;
   if (!order) return <div className="min-h-screen flex items-center justify-center">Orden no encontrada.</div>;
 
   return (
@@ -161,7 +163,7 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
               <div className="flex items-center justify-between">
                 <div className="space-y-1">
                   <CardTitle className="text-primary text-xl">Información del Cliente</CardTitle>
-                  <CardDescription className="text-xs">Editando orden creada el: {new Date(order.startDate).toLocaleDateString()}</CardDescription>
+                  <CardDescription className="text-xs">Editando orden creada el: {order.startDate ? new Date(order.startDate).toLocaleDateString() : "Fecha N/A"}</CardDescription>
                 </div>
                 <div className="flex flex-col items-end">
                   <Badge variant="outline" className="text-primary border-primary">PENDIENTE</Badge>
@@ -296,7 +298,7 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
           </div>
 
           <div className="fixed bottom-0 left-0 right-0 p-4 bg-white/80 backdrop-blur-md border-t md:relative md:bg-transparent md:border-none md:p-0">
-            <Button type="submit" size="lg" className="bg-primary hover:bg-primary/90 w-full h-14 text-lg font-black gap-3 shadow-xl active:scale-95 transition-all">
+            <Button type="submit" size="lg" className="bg-primary hover:bg-primary/90 w-full h-14 text-lg font-black gap-3 shadow-xl active:scale-95 transition-all" disabled={loading}>
               <CheckCircle2 size={24} /> {formData.techSignatureUrl && formData.clientSignatureUrl ? "Finalizar y Cerrar Orden" : "Actualizar Orden Pendiente"}
             </Button>
           </div>
