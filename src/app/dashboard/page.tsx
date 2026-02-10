@@ -264,19 +264,21 @@ export default function Dashboard() {
             <p className="text-muted-foreground font-medium">Panel Operativo de ICSA</p>
           </div>
           <div className="flex gap-2">
-            {activeTab === "clients" ? (
+            {activeTab === "clients" && (
               <Link href="/clients/new">
                 <Button className="bg-accent text-primary font-black hover:bg-accent/90 gap-3 h-14 px-8 text-lg shadow-xl">
                   <Plus size={24} /> Nuevo Cliente
                 </Button>
               </Link>
-            ) : activeTab === "personnel" ? (
+            )}
+            {activeTab === "personnel" && (
               <Link href="/technicians/new">
                 <Button className="bg-accent text-primary font-black hover:bg-accent/90 gap-3 h-14 px-8 text-lg shadow-xl">
                   <Plus size={24} /> Nuevo Personal
                 </Button>
               </Link>
-            ) : (
+            )}
+            {(activeTab === "dashboard" || activeTab === "orders") && (
               <Link href="/work-orders/new">
                 <Button className="bg-accent text-primary font-black hover:bg-accent/90 gap-3 h-14 px-8 text-lg shadow-xl">
                   <Plus size={24} /> Nueva Orden
