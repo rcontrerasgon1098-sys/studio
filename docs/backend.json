@@ -1,3 +1,4 @@
+
 {
   "entities": {
     "User": {
@@ -78,6 +79,24 @@
         "technicianId",
         "status"
       ]
+    },
+    "Client": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Client",
+      "type": "object",
+      "description": "Represents a client in the system.",
+      "properties": {
+        "id": { "type": "string" },
+        "razonSocial": { "type": "string" },
+        "nombreCliente": { "type": "string" },
+        "rutCliente": { "type": "string" },
+        "direccionCliente": { "type": "string" },
+        "comunaCliente": { "type": "string" },
+        "telefonoCliente": { "type": "string" },
+        "emailClientes": { "type": "string" },
+        "estadoCliente": { "type": "string", "enum": ["Activo", "Inactivo"] }
+      },
+      "required": ["nombreCliente", "rutCliente", "estadoCliente"]
     }
   },
   "auth": {
@@ -91,35 +110,26 @@
         "path": "/users/{userId}",
         "definition": {
           "entityName": "User",
-          "schema": {
-            "$ref": "#/backend/entities/User"
-          },
-          "description": "Stores user profiles.",
-          "params": [
-            {
-              "name": "userId",
-              "description": "The unique identifier for the user."
-            }
-          ]
+          "schema": { "$ref": "#/backend/entities/User" },
+          "description": "Stores user profiles."
         }
       },
       {
         "path": "/ordenes/{orderId}",
         "definition": {
           "entityName": "WorkOrder",
-          "schema": {
-            "$ref": "#/backend/entities/WorkOrder"
-          },
-          "description": "Stores all work orders in a flat root collection for easy access.",
-          "params": [
-            {
-              "name": "orderId",
-              "description": "The unique identifier for the work order."
-            }
-          ]
+          "schema": { "$ref": "#/backend/entities/WorkOrder" },
+          "description": "Stores all work orders."
+        }
+      },
+      {
+        "path": "/clients/{clientId}",
+        "definition": {
+          "entityName": "Client",
+          "schema": { "$ref": "#/backend/entities/Client" },
+          "description": "Stores client information."
         }
       }
-    ],
-    "reasoning": "Simplified structure using a root 'ordenes' collection to ensure all authenticated users can access the list of work orders as requested."
+    ]
   }
 }

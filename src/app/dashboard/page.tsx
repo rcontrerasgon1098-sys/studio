@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
@@ -9,7 +10,7 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Input } from "@/components/ui/input";
 import { 
   Plus, FileText, Search, Settings, LogOut, LayoutDashboard, 
-  Eye, Download, Menu, TrendingUp, BarChart3
+  Eye, Download, Menu, TrendingUp, BarChart3, Users
 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
@@ -35,13 +36,21 @@ export default function Dashboard() {
     }
   }, [user, isUserLoading, router]);
 
-  // Consulta todas las órdenes de la colección raíz 'ordenes'
+  // Consulta todas las órdenes
   const ordersQuery = useMemoFirebase(() => {
-    if (!db || !user) return null;
+    if (!db) return null;
     return query(collection(db, "ordenes"), orderBy("folio", "desc"));
-  }, [db, user]);
+  }, [db]);
 
   const { data: orders, isLoading: isOrdersLoading } = useCollection(ordersQuery);
+
+  // Consulta todos los clientes
+  const clientsQuery = useMemoFirebase(() => {
+    if (!db) return null;
+    return query(collection(db, "clients"), orderBy("nombreCliente", "asc"));
+  }, [db]);
+
+  const { data: clients, isLoading: isClientsLoading } = useCollection(clientsQuery);
 
   const filteredOrders = useMemo(() => {
     if (!orders) return [];
@@ -50,6 +59,14 @@ export default function Dashboard() {
       o.clientName?.toLowerCase().includes(searchTerm.toLowerCase())
     );
   }, [orders, searchTerm]);
+
+  const filteredClients = useMemo(() => {
+    if (!clients) return [];
+    return clients.filter(c => 
+      c.nombreCliente?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+      c.rutCliente?.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }, [clients, searchTerm]);
 
   const handleLogout = async () => {
     const auth = getAuth();
@@ -61,7 +78,7 @@ export default function Dashboard() {
     <div className="flex flex-col h-full py-8">
       <div className="flex flex-col items-center mb-12 px-6">
         {logoImage && (
-          <div className="relative w-28 h-28 bg-white rounded-2xl flex items-center justify-center overflow-hidden shadow-2xl mb-4 p-2">
+          <div className="relative w-24 h-24 bg-white rounded-2xl flex items-center justify-center overflow-hidden shadow-2xl mb-4 p-2">
             <Image src={logoImage.imageUrl} alt="Logo" fill className="object-contain p-2" />
           </div>
         )}
@@ -84,6 +101,13 @@ export default function Dashboard() {
           onClick={() => setActiveTab("orders")}
         >
           <FileText size={20} /> Órdenes
+        </Button>
+        <Button 
+          variant={activeTab === "clients" ? "secondary" : "ghost"} 
+          className={`w-full justify-start gap-3 h-12 font-semibold ${activeTab === "clients" ? "bg-white/10 text-white border-none" : "text-white/80 hover:bg-white/10"}`}
+          onClick={() => setActiveTab("clients")}
+        >
+          <Users size={20} /> Clientes
         </Button>
         <Button variant="ghost" className="w-full justify-start gap-3 hover:bg-white/10 h-12 text-white/80 font-medium">
           <Settings size={20} /> Ajustes
@@ -127,121 +151,193 @@ export default function Dashboard() {
       <main className="flex-1 p-4 md:p-10 overflow-y-auto">
         <header className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
           <div>
-            <h1 className="text-3xl font-black text-primary tracking-tight">Portal de Gestión</h1>
+            <h1 className="text-3xl font-black text-primary tracking-tight">
+              {activeTab === "clients" ? "Gestión de Clientes" : "Portal de Gestión"}
+            </h1>
             <p className="text-muted-foreground font-medium">Panel Operativo de ICSA</p>
           </div>
-          <Link href="/work-orders/new">
-            <Button className="bg-accent text-primary font-black hover:bg-accent/90 gap-3 h-14 px-8 text-lg shadow-xl">
-              <Plus size={24} /> Nueva Orden
-            </Button>
-          </Link>
+          <div className="flex gap-2">
+            {activeTab === "clients" ? (
+              <Link href="/clients/new">
+                <Button className="bg-accent text-primary font-black hover:bg-accent/90 gap-3 h-14 px-8 text-lg shadow-xl">
+                  <Plus size={24} /> Nuevo Cliente
+                </Button>
+              </Link>
+            ) : (
+              <Link href="/work-orders/new">
+                <Button className="bg-accent text-primary font-black hover:bg-accent/90 gap-3 h-14 px-8 text-lg shadow-xl">
+                  <Plus size={24} /> Nueva Orden
+                </Button>
+              </Link>
+            )}
+          </div>
         </header>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-8">
-          <Card className="shadow-md border-none bg-white">
-            <CardHeader className="pb-2 p-6 flex flex-row items-center justify-between">
-              <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Total Órdenes</p>
-              <FileText className="h-4 w-4 text-primary opacity-30" />
-            </CardHeader>
-            <CardContent className="p-6 pt-0">
-              <p className="text-4xl font-black text-primary">{orders?.length || 0}</p>
-            </CardContent>
-          </Card>
-          <Card className="shadow-md border-none bg-white">
-            <CardHeader className="pb-2 p-6 flex flex-row items-center justify-between">
-              <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Completadas</p>
-              <TrendingUp className="h-4 w-4 text-accent opacity-30" />
-            </CardHeader>
-            <CardContent className="p-6 pt-0">
-              <p className="text-4xl font-black text-accent">
-                {orders?.filter(o => o.status === "Completed").length || 0}
-              </p>
-            </CardContent>
-          </Card>
-          <Card className="shadow-md border-none bg-white">
-            <CardHeader className="pb-2 p-6 flex flex-row items-center justify-between">
-              <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Pendientes</p>
-              <BarChart3 className="h-4 w-4 text-primary opacity-30" />
-            </CardHeader>
-            <CardContent className="p-6 pt-0">
-              <p className="text-4xl font-black text-primary/40">
-                {(orders?.length || 0) - (orders?.filter(o => o.status === "Completed").length || 0)}
-              </p>
-            </CardContent>
-          </Card>
-        </div>
+        {activeTab === "dashboard" && (
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-8">
+            <Card className="shadow-md border-none bg-white">
+              <CardHeader className="pb-2 p-6 flex flex-row items-center justify-between">
+                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Total Órdenes</p>
+                <FileText className="h-4 w-4 text-primary opacity-30" />
+              </CardHeader>
+              <CardContent className="p-6 pt-0">
+                <p className="text-4xl font-black text-primary">{orders?.length || 0}</p>
+              </CardContent>
+            </Card>
+            <Card className="shadow-md border-none bg-white">
+              <CardHeader className="pb-2 p-6 flex flex-row items-center justify-between">
+                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Completadas</p>
+                <TrendingUp className="h-4 w-4 text-accent opacity-30" />
+              </CardHeader>
+              <CardContent className="p-6 pt-0">
+                <p className="text-4xl font-black text-accent">
+                  {orders?.filter(o => o.status === "Completed").length || 0}
+                </p>
+              </CardContent>
+            </Card>
+            <Card className="shadow-md border-none bg-white">
+              <CardHeader className="pb-2 p-6 flex flex-row items-center justify-between">
+                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Clientes Activos</p>
+                <Users className="h-4 w-4 text-primary opacity-30" />
+              </CardHeader>
+              <CardContent className="p-6 pt-0">
+                <p className="text-4xl font-black text-primary/40">
+                  {clients?.filter(c => c.estadoCliente === "Activo").length || 0}
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+        )}
 
-        <Card className="shadow-xl border-none bg-white">
-          <CardHeader className="flex flex-col md:flex-row items-start md:items-center justify-between border-b pb-6 mb-4 gap-4 px-8">
-            <CardTitle className="text-xl font-bold text-primary">Listado de Órdenes</CardTitle>
-            <div className="relative w-full md:w-80">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
-              <Input 
-                placeholder="Buscar folio o cliente..." 
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 h-10 bg-background border-none rounded-xl w-full text-sm"
-              />
-            </div>
-          </CardHeader>
-          <CardContent className="px-8 pb-8">
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow className="bg-muted/40">
-                    <TableHead className="font-bold py-4">Folio</TableHead>
-                    <TableHead className="font-bold py-4">Cliente</TableHead>
-                    <TableHead className="font-bold py-4">Fecha</TableHead>
-                    <TableHead className="font-bold py-4">Estado</TableHead>
-                    <TableHead className="text-right font-bold py-4">Acciones</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredOrders.map((order) => (
-                    <TableRow key={order.id} className="hover:bg-muted/20 transition-colors">
-                      <TableCell className="font-black text-primary">#{order.folio}</TableCell>
-                      <TableCell className="font-bold">{order.clientName}</TableCell>
-                      <TableCell className="text-xs text-muted-foreground">
-                        {order.startDate ? new Date(order.startDate).toLocaleDateString() : "N/A"}
-                      </TableCell>
-                      <TableCell>
-                        <Badge className={`${order.status === 'Completed' ? 'bg-accent/15 text-primary' : 'bg-primary/10 text-primary'} border-none text-[10px] px-2 py-0.5`}>
-                          {order.status === 'Completed' ? 'Completado' : 'Pendiente'}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
-                          <Link href={`/work-orders/${order.id}`}>
-                            <Button variant="ghost" size="icon" className="h-9 w-9">
-                              <Eye className="h-5 w-5" />
+        {(activeTab === "dashboard" || activeTab === "orders") && (
+          <Card className="shadow-xl border-none bg-white mb-8">
+            <CardHeader className="flex flex-col md:flex-row items-start md:items-center justify-between border-b pb-6 mb-4 gap-4 px-8">
+              <CardTitle className="text-xl font-bold text-primary">Listado de Órdenes</CardTitle>
+              {activeTab === "orders" && (
+                <div className="relative w-full md:w-80">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                  <Input 
+                    placeholder="Buscar folio o cliente..." 
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10 h-10 bg-background border-none rounded-xl w-full text-sm"
+                  />
+                </div>
+              )}
+            </CardHeader>
+            <CardContent className="px-8 pb-8">
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-muted/40">
+                      <TableHead className="font-bold py-4">Folio</TableHead>
+                      <TableHead className="font-bold py-4">Cliente</TableHead>
+                      <TableHead className="font-bold py-4">Fecha</TableHead>
+                      <TableHead className="font-bold py-4">Estado</TableHead>
+                      <TableHead className="text-right font-bold py-4">Acciones</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredOrders.map((order) => (
+                      <TableRow key={order.id} className="hover:bg-muted/20 transition-colors">
+                        <TableCell className="font-black text-primary">#{order.folio}</TableCell>
+                        <TableCell className="font-bold">{order.clientName}</TableCell>
+                        <TableCell className="text-xs text-muted-foreground">
+                          {order.startDate ? new Date(order.startDate).toLocaleDateString() : "N/A"}
+                        </TableCell>
+                        <TableCell>
+                          <Badge className={`${order.status === 'Completed' ? 'bg-accent/15 text-primary' : 'bg-primary/10 text-primary'} border-none text-[10px] px-2 py-0.5`}>
+                            {order.status === 'Completed' ? 'Completado' : 'Pendiente'}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-2">
+                            <Link href={`/work-orders/${order.id}`}>
+                              <Button variant="ghost" size="icon" className="h-9 w-9">
+                                <Eye className="h-5 w-5" />
+                              </Button>
+                            </Link>
+                            <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => generateWorkOrderPDF(order)}>
+                              <Download className="h-5 w-5" />
                             </Button>
-                          </Link>
-                          <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => generateWorkOrderPDF(order)}>
-                            <Download className="h-5 w-5" />
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {activeTab === "clients" && (
+          <Card className="shadow-xl border-none bg-white">
+            <CardHeader className="flex flex-col md:flex-row items-start md:items-center justify-between border-b pb-6 mb-4 gap-4 px-8">
+              <CardTitle className="text-xl font-bold text-primary">Listado de Clientes</CardTitle>
+              <div className="relative w-full md:w-80">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                <Input 
+                  placeholder="Buscar nombre o RUT..." 
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10 h-10 bg-background border-none rounded-xl w-full text-sm"
+                />
+              </div>
+            </CardHeader>
+            <CardContent className="px-8 pb-8">
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-muted/40">
+                      <TableHead className="font-bold py-4">RUT</TableHead>
+                      <TableHead className="font-bold py-4">Nombre / Razón Social</TableHead>
+                      <TableHead className="font-bold py-4">Email / Teléfono</TableHead>
+                      <TableHead className="font-bold py-4">Estado</TableHead>
+                      <TableHead className="text-right font-bold py-4">Acciones</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredClients.map((client) => (
+                      <TableRow key={client.id} className="hover:bg-muted/20 transition-colors">
+                        <TableCell className="font-bold text-primary">{client.rutCliente}</TableCell>
+                        <TableCell>
+                          <div className="flex flex-col">
+                            <span className="font-bold">{client.nombreCliente}</span>
+                            <span className="text-[10px] text-muted-foreground">{client.razonSocial}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex flex-col text-xs">
+                            <span>{client.emailClientes}</span>
+                            <span className="text-muted-foreground">{client.telefonoCliente}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge className={`${client.estadoCliente === 'Activo' ? 'bg-accent/15 text-primary' : 'bg-destructive/10 text-destructive'} border-none text-[10px] px-2 py-0.5`}>
+                            {client.estadoCliente}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button variant="ghost" size="icon" className="h-9 w-9">
+                            <Eye className="h-5 w-5" />
                           </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                  {filteredOrders.length === 0 && !isOrdersLoading && (
-                    <TableRow>
-                      <TableCell colSpan={5} className="text-center py-10 text-muted-foreground italic">
-                        No se encontraron órdenes.
-                      </TableCell>
-                    </TableRow>
-                  )}
-                  {isOrdersLoading && (
-                    <TableRow>
-                      <TableCell colSpan={5} className="text-center py-10 text-primary animate-pulse">
-                        Cargando información...
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </div>
-          </CardContent>
-        </Card>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                    {filteredClients.length === 0 && !isClientsLoading && (
+                      <TableRow>
+                        <TableCell colSpan={5} className="text-center py-10 text-muted-foreground italic">
+                          No se encontraron clientes.
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </main>
     </div>
   );
