@@ -45,13 +45,13 @@ service cloud.firestore {
 
     match /clients/{clientId} {
       allow get, list: if isSignedIn();
-      allow create, update, delete: if isSignedIn(); // Permitir a técnicos crear clientes sobre la marcha
+      allow create, update, delete: if isAdmin(); // El técnico jamás podrá crear contactos nuevos de cliente
     }
 
     match /roles_admin/{userId} {
       allow get: if isSignedIn();
       allow list: if isAdmin();
-      allow create: if isOwner(userId); // Permitir creación por el dueño para habilitar el setup demo
+      allow create: if isOwner(userId); 
       allow update, delete: if false; 
     }
   }

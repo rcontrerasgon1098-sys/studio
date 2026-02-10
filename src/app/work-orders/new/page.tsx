@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
@@ -12,7 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SignaturePad } from "@/components/SignaturePad";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Save, Camera, CheckCircle2, Clock, User as UserIcon, Search, UserPlus } from "lucide-react";
+import { ArrowLeft, Save, Camera, CheckCircle2, Clock, User as UserIcon, Search, AlertCircle } from "lucide-react";
 import Link from "next/link";
 import { useUser, useFirestore, useCollection, useMemoFirebase } from "@/firebase";
 import { collection, doc, query, orderBy } from "firebase/firestore";
@@ -21,6 +20,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { cn } from "@/lib/utils";
 import { Check } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 export default function NewWorkOrder() {
   const router = useRouter();
@@ -44,7 +44,7 @@ export default function NewWorkOrder() {
   const [formData, setFormData] = useState({
     clientName: "",
     clientContact: "",
-    clientId: "generic_client",
+    clientId: "",
     signalType: "Simple",
     isCert: false,
     isPlan: false,
@@ -87,6 +87,15 @@ export default function NewWorkOrder() {
     e.preventDefault();
     if (!user || !db) return;
     
+    if (!formData.clientId) {
+      toast({ 
+        variant: "destructive", 
+        title: "Cliente Requerido", 
+        description: "Debe seleccionar un cliente de la lista. Si el cliente no existe, contacte a un administrador." 
+      });
+      return;
+    }
+
     setLoading(true);
 
     if (!formData.techSignatureUrl || !formData.clientSignatureUrl) {
@@ -114,10 +123,6 @@ export default function NewWorkOrder() {
     
     try {
       setDocumentNonBlocking(orderRef, workOrderData, { merge: true });
-      
-      // If client is new, we could potentially save it to the clients collection here
-      // but to keep it simple and denormalized as requested, we just save the order.
-      
       toast({ title: "Orden Guardada", description: "La orden ha sido sincronizada con éxito." });
       router.push("/dashboard");
     } catch (error) {
@@ -171,41 +176,40 @@ export default function NewWorkOrder() {
                 </div>
               </div>
             </CardHeader>
-            <CardContent className="pt-6 space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <CardContent className="pt-6 space-y-6">
+              <Alert variant="default" className="bg-primary/5 border-primary/20">
+                <AlertCircle className="h-4 w-4 text-primary" />
+                <AlertTitle className="text-primary font-bold">Aviso de Privacidad</AlertTitle>
+                <AlertDescription className="text-xs text-primary/70">
+                  Solo los administradores pueden registrar nuevos clientes. Seleccione un cliente de la lista autorizada.
+                </AlertDescription>
+              </Alert>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2 flex flex-col">
-                  <Label htmlFor="clientName" className="font-bold mb-1">Nombre del Cliente</Label>
+                  <Label htmlFor="clientName" className="font-bold mb-1">Buscar Cliente Autorizado</Label>
                   <Popover open={openClientSearch} onOpenChange={setOpenClientSearch}>
                     <PopoverTrigger asChild>
                       <Button
                         variant="outline"
                         role="combobox"
                         aria-expanded={openClientSearch}
-                        className="w-full justify-between h-12 text-base font-normal bg-white"
+                        className={cn(
+                          "w-full justify-between h-14 text-base font-bold bg-white border-2",
+                          formData.clientId ? "border-accent text-primary" : "border-primary/20"
+                        )}
                       >
-                        {formData.clientName || "Buscar o escribir cliente..."}
-                        <Search className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        {formData.clientName || "Seleccionar Cliente..."}
+                        <Search className="ml-2 h-5 w-5 shrink-0 opacity-50" />
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0">
                       <Command>
-                        <CommandInput placeholder="Buscar cliente existente..." />
+                        <CommandInput placeholder="Filtrar clientes..." />
                         <CommandList>
-                          <CommandEmpty>
-                            <div className="p-4 text-center">
-                              <p className="text-sm text-muted-foreground mb-2">No se encontró el cliente.</p>
-                              <Button 
-                                size="sm" 
-                                variant="outline" 
-                                className="w-full"
-                                onClick={() => {
-                                  setOpenClientSearch(false);
-                                  // El técnico puede escribir manualmente si no existe
-                                }}
-                              >
-                                <UserPlus className="mr-2 h-4 w-4" /> Crear nuevo
-                              </Button>
-                            </div>
+                          <CommandEmpty className="p-4 text-center text-sm text-muted-foreground">
+                            No se encontró el cliente. <br/> 
+                            <span className="font-bold text-primary mt-2 block">Solicite el registro al Admin.</span>
                           </CommandEmpty>
                           <CommandGroup>
                             {clients?.map((client) => (
@@ -213,15 +217,16 @@ export default function NewWorkOrder() {
                                 key={client.id}
                                 value={client.name}
                                 onSelect={() => handleSelectClient(client)}
+                                className="py-3"
                               >
                                 <Check
                                   className={cn(
                                     "mr-2 h-4 w-4",
-                                    formData.clientName === client.name ? "opacity-100" : "opacity-0"
+                                    formData.clientId === client.id ? "opacity-100" : "opacity-0"
                                   )}
                                 />
                                 <div className="flex flex-col">
-                                  <span>{client.name}</span>
+                                  <span className="font-bold">{client.name}</span>
                                   <span className="text-[10px] text-muted-foreground">{client.contact}</span>
                                 </div>
                               </CommandItem>
@@ -231,26 +236,12 @@ export default function NewWorkOrder() {
                       </Command>
                     </PopoverContent>
                   </Popover>
-                  {/* Manual input fallback if needed */}
-                  <Input 
-                    id="clientName" 
-                    placeholder="Escribir nombre manualmente si es nuevo" 
-                    value={formData.clientName}
-                    onChange={e => setFormData({...formData, clientName: e.target.value, clientId: "generic_client"})}
-                    required
-                    className="mt-2 h-10 text-sm border-dashed"
-                  />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="clientContact" className="font-bold">Contacto (Tel/Email)</Label>
-                  <Input 
-                    id="clientContact" 
-                    placeholder="Ej. 555-0123" 
-                    value={formData.clientContact}
-                    onChange={e => setFormData({...formData, clientContact: e.target.value})}
-                    required
-                    className="h-12 text-base"
-                  />
+                  <Label className="font-bold">Información de Contacto</Label>
+                  <div className="h-14 bg-muted/30 border-2 border-dashed rounded-md flex items-center px-4 text-primary font-medium italic">
+                    {formData.clientContact || "Seleccione un cliente para ver el contacto"}
+                  </div>
                 </div>
               </div>
             </CardContent>
