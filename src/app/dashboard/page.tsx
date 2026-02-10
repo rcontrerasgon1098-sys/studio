@@ -10,7 +10,8 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Input } from "@/components/ui/input";
 import { 
   Plus, FileText, Search, Settings, LogOut, LayoutDashboard, 
-  Eye, Download, Menu, TrendingUp, Users, UserRound, Shield
+  Eye, Download, Menu, TrendingUp, Users, UserRound, Shield,
+  Pencil, Trash2
 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
@@ -18,17 +19,31 @@ import { useRouter } from "next/navigation";
 import { generateWorkOrderPDF } from "@/lib/pdf-generator";
 import { PlaceHolderImages } from "@/lib/placeholder-images";
 import { useUser, useFirestore, useCollection, useMemoFirebase } from "@/firebase";
-import { collection, query, orderBy } from "firebase/firestore";
+import { collection, query, orderBy, doc } from "firebase/firestore";
 import { getAuth, signOut } from "firebase/auth";
+import { deleteDocumentNonBlocking } from "@/firebase/non-blocking-updates";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { useToast } from "@/hooks/use-toast";
 
 export default function Dashboard() {
   const { user, isUserLoading } = useUser();
   const db = useFirestore();
   const router = useRouter();
+  const { toast } = useToast();
   const logoImage = PlaceHolderImages.find(img => img.id === "icsa-logo");
   
   const [activeTab, setActiveTab] = useState("dashboard");
   const [searchTerm, setSearchTerm] = useState("");
+  const [deleteConfirm, setDeleteConfirm] = useState<{ id: string, type: 'clients' | 'personnel' | 'ordenes' } | null>(null);
 
   useEffect(() => {
     if (!isUserLoading && !user) {
@@ -84,6 +99,17 @@ export default function Dashboard() {
     const auth = getAuth();
     await signOut(auth);
     router.push("/login");
+  };
+
+  const handleDelete = () => {
+    if (!deleteConfirm || !db) return;
+    const docRef = doc(db, deleteConfirm.type, deleteConfirm.id);
+    deleteDocumentNonBlocking(docRef);
+    toast({
+      title: "Registro eliminado",
+      description: "El elemento ha sido removido del sistema."
+    });
+    setDeleteConfirm(null);
   };
 
   const SidebarContent = () => (
@@ -353,9 +379,21 @@ export default function Dashboard() {
                           </Badge>
                         </TableCell>
                         <TableCell className="text-right">
-                          <Button variant="ghost" size="icon" className="h-9 w-9">
-                            <Eye className="h-5 w-5" />
-                          </Button>
+                          <div className="flex justify-end gap-2">
+                            <Link href={`/clients/${client.id}/edit`}>
+                              <Button variant="ghost" size="icon" className="h-9 w-9 text-primary">
+                                <Pencil className="h-5 w-5" />
+                              </Button>
+                            </Link>
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              className="h-9 w-9 text-destructive"
+                              onClick={() => setDeleteConfirm({ id: client.id, type: 'clients' })}
+                            >
+                              <Trash2 className="h-5 w-5" />
+                            </Button>
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -412,9 +450,21 @@ export default function Dashboard() {
                           </div>
                         </TableCell>
                         <TableCell className="text-right">
-                          <Button variant="ghost" size="icon" className="h-9 w-9">
-                            <Eye className="h-5 w-5" />
-                          </Button>
+                          <div className="flex justify-end gap-2">
+                            <Link href={`/technicians/${p.id}/edit`}>
+                              <Button variant="ghost" size="icon" className="h-9 w-9 text-primary">
+                                <Pencil className="h-5 w-5" />
+                              </Button>
+                            </Link>
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              className="h-9 w-9 text-destructive"
+                              onClick={() => setDeleteConfirm({ id: p.id, type: 'personnel' })}
+                            >
+                              <Trash2 className="h-5 w-5" />
+                            </Button>
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -425,6 +475,23 @@ export default function Dashboard() {
           </Card>
         )}
       </main>
+
+      <AlertDialog open={!!deleteConfirm} onOpenChange={() => setDeleteConfirm(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Está absolutamente seguro?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta acción no se puede deshacer. Esto eliminará permanentemente el registro de la base de datos de ICSA.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} className="bg-destructive hover:bg-destructive/90">
+              Eliminar Permanentemente
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
