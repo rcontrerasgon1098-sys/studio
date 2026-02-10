@@ -207,7 +207,6 @@ export default function Dashboard() {
         <Filter size={16} /> Filtros
       </div>
       
-      {/* Filtro de Fecha */}
       <Popover>
         <PopoverTrigger asChild>
           <Button variant="outline" size="sm" className="h-10 bg-white border-primary/20 font-medium gap-2 text-xs">
@@ -238,7 +237,6 @@ export default function Dashboard() {
         </PopoverContent>
       </Popover>
 
-      {/* Filtro de Cliente */}
       <Select value={clientFilter} onValueChange={setClientFilter}>
         <SelectTrigger className="w-[180px] h-10 bg-white text-xs border-primary/20 font-medium">
           <SelectValue placeholder="Cliente" />
@@ -251,7 +249,6 @@ export default function Dashboard() {
         </SelectContent>
       </Select>
 
-      {/* Filtro de Estado */}
       <Select value={statusFilter} onValueChange={setStatusFilter}>
         <SelectTrigger className="w-[150px] h-10 bg-white text-xs border-primary/20 font-medium">
           <SelectValue placeholder="Estado" />
@@ -263,7 +260,6 @@ export default function Dashboard() {
         </SelectContent>
       </Select>
 
-      {/* Botón Limpiar */}
       <Button 
         variant="ghost" 
         size="sm" 
@@ -283,11 +279,11 @@ export default function Dashboard() {
         </CardTitle>
         <div className="relative w-full md:w-80">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
-          <input 
+          <Input 
             placeholder="Buscar por cliente o folio..." 
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10 pr-4 py-3 bg-background border rounded-xl w-full text-sm outline-none focus:ring-4 focus:ring-primary/10 transition-all"
+            className="pl-10 h-12 bg-background border-none rounded-xl w-full text-sm outline-none focus:ring-4 focus:ring-primary/10 transition-all"
           />
         </div>
       </CardHeader>
