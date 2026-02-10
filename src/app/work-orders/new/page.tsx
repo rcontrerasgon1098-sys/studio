@@ -39,7 +39,6 @@ export default function NewWorkOrder() {
 
   const { data: clients } = useCollection(clientsQuery);
 
-  // Consulta para obtener los datos del técnico logueado
   const techProfileQuery = useMemoFirebase(() => {
     if (!db || !user?.email) return null;
     return query(collection(db, "personnel"), where("email_t", "==", user.email));
@@ -69,7 +68,13 @@ export default function NewWorkOrder() {
   });
 
   useEffect(() => {
-    setFolio(Math.floor(Math.random() * 90000) + 10000);
+    // Nueva lógica de Folio: YYMM + 4 dígitos aleatorios
+    const now = new Date();
+    const year = now.getFullYear().toString().slice(-2);
+    const month = (now.getMonth() + 1).toString().padStart(2, '0');
+    const random = Math.floor(1000 + Math.random() * 9000);
+    const generatedFolio = parseInt(`${year}${month}${random}`);
+    setFolio(generatedFolio);
   }, []);
 
   useEffect(() => {
@@ -78,7 +83,6 @@ export default function NewWorkOrder() {
     }
   }, [user, isUserLoading, router]);
 
-  // Efecto para autocompletar datos del técnico incluyendo su firma guardada
   useEffect(() => {
     if (techProfiles && techProfiles.length > 0) {
       const tech = techProfiles[0];
@@ -89,7 +93,7 @@ export default function NewWorkOrder() {
         techSignatureUrl: prev.techSignatureUrl || tech.signatureUrl || ""
       }));
       
-      if (tech.signatureUrl) {
+      if (tech.signatureUrl && !formData.techSignatureUrl) {
         toast({
           title: "Firma cargada",
           description: "Se ha aplicado su firma digital guardada.",
@@ -97,7 +101,7 @@ export default function NewWorkOrder() {
         });
       }
     }
-  }, [techProfiles, toast]);
+  }, [techProfiles]);
 
   const handleSelectClient = (client: any) => {
     setFormData({
@@ -155,7 +159,6 @@ export default function NewWorkOrder() {
       return;
     }
 
-    // El RUT del receptor ahora es obligatorio para que el estado sea Completed
     const isValidationComplete = !!formData.techSignatureUrl && 
                                 !!formData.clientSignatureUrl && 
                                 !!formData.clientReceiverRut;
