@@ -22,7 +22,6 @@ export default function LoginPage() {
     e.preventDefault();
     setLoading(true);
 
-    // Mock login for demo purposes
     setTimeout(() => {
       if (email && password) {
         toast({ title: "Bienvenido", description: "Acceso concedido al panel técnico." });
@@ -36,15 +35,14 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4 relative overflow-hidden">
-      {/* Decorative background elements */}
-      <div className="absolute top-0 left-0 w-full h-1 bg-primary/20" />
-      <div className="absolute -top-24 -left-24 w-64 h-64 bg-primary/5 rounded-full blur-3xl" />
-      <div className="absolute -bottom-24 -right-24 w-64 h-64 bg-accent/10 rounded-full blur-3xl" />
+      <div className="absolute top-0 left-0 w-full h-2 bg-primary/30" />
+      <div className="absolute -top-32 -left-32 w-96 h-96 bg-primary/10 rounded-full blur-[100px]" />
+      <div className="absolute -bottom-32 -right-32 w-96 h-96 bg-accent/20 rounded-full blur-[100px]" />
       
-      <Card className="w-full max-w-md shadow-2xl border-none bg-white/90 backdrop-blur-sm relative z-10">
-        <CardHeader className="text-center space-y-4 pt-10">
+      <Card className="w-full max-w-lg shadow-[0_20px_50px_rgba(0,0,0,0.1)] border-none bg-white/95 backdrop-blur-xl relative z-10 p-4">
+        <CardHeader className="text-center space-y-6 pt-10">
           {logoImage && (
-            <div className="mx-auto relative w-32 h-32 mb-2 transition-transform hover:scale-105 duration-300">
+            <div className="mx-auto relative w-56 h-56 mb-4 transition-transform hover:scale-110 duration-500 drop-shadow-xl">
               <Image
                 src={logoImage.imageUrl}
                 alt="ICSA Logo"
@@ -54,18 +52,18 @@ export default function LoginPage() {
               />
             </div>
           )}
-          <div className="space-y-1">
-            <CardTitle className="text-3xl font-headline font-bold text-primary flex flex-col items-center leading-none">
+          <div className="space-y-2">
+            <CardTitle className="text-4xl font-headline font-black text-primary flex flex-col items-center leading-none tracking-tighter">
               ICSA
-              <span className="text-[10px] font-normal text-muted-foreground uppercase tracking-widest mt-1">ingeniería comunicaciones S.A.</span>
+              <span className="text-[12px] font-medium text-muted-foreground uppercase tracking-[0.3em] mt-2">ingeniería comunicaciones S.A.</span>
             </CardTitle>
-            <CardDescription className="text-base pt-2">Portal de Gestión Técnica</CardDescription>
+            <CardDescription className="text-lg pt-4 font-medium">Portal de Gestión Técnica</CardDescription>
           </div>
         </CardHeader>
-        <CardContent className="pb-10">
-          <form onSubmit={handleLogin} className="space-y-5">
+        <CardContent className="pb-12 pt-6">
+          <form onSubmit={handleLogin} className="space-y-6">
             <div className="space-y-2">
-              <Label htmlFor="email" className="text-sm font-semibold">Correo Electrónico</Label>
+              <Label htmlFor="email" className="text-sm font-bold ml-1">Correo Electrónico</Label>
               <Input
                 id="email"
                 type="email"
@@ -73,11 +71,11 @@ export default function LoginPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                className="h-12 bg-background border-muted focus:ring-primary"
+                className="h-14 bg-background border-muted focus:ring-primary text-lg"
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password" suppressHydrationWarning className="text-sm font-semibold">Contraseña</Label>
+              <Label htmlFor="password" suppressHydrationWarning className="text-sm font-bold ml-1">Contraseña</Label>
               <Input
                 id="password"
                 type="password"
@@ -85,14 +83,14 @@ export default function LoginPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                className="h-12 bg-background border-muted focus:ring-primary"
+                className="h-14 bg-background border-muted focus:ring-primary text-lg"
               />
             </div>
-            <Button type="submit" className="w-full bg-primary h-12 text-lg font-bold shadow-lg hover:shadow-xl transition-all" disabled={loading}>
-              {loading ? "Iniciando sesión..." : "Entrar al Portal"}
+            <Button type="submit" className="w-full bg-primary h-14 text-xl font-black shadow-xl hover:shadow-2xl transition-all hover:scale-[1.02] active:scale-95" disabled={loading}>
+              {loading ? "Verificando..." : "Entrar al Portal"}
             </Button>
-            <p className="text-center text-xs text-muted-foreground pt-2">
-              Si olvidaste tu acceso, contacta con soporte IT.
+            <p className="text-center text-xs text-muted-foreground pt-4 font-medium opacity-60">
+              Uso exclusivo para personal autorizado de ICSA.
             </p>
           </form>
         </CardContent>
