@@ -10,14 +10,16 @@ import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
 import Image from "next/image";
 import { PlaceHolderImages } from "@/lib/placeholder-images";
-import { ArrowLeft, LogIn } from "lucide-react";
+import { ArrowLeft, LogIn, ShieldCheck } from "lucide-react";
 import Link from "next/link";
-import { getAuth, signInWithEmailAndPassword } from "firebase/auth";
+import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword } from "firebase/auth";
+import { getFirestore, doc, setDoc } from "firebase/firestore";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [setupLoading, setSetupLoading] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
   const logoImage = PlaceHolderImages.find(img => img.id === "icsa-logo");
@@ -46,6 +48,49 @@ export default function LoginPage() {
     }
   };
 
+  const setupAdminAccount = async () => {
+    setSetupLoading(true);
+    const auth = getAuth();
+    const db = getFirestore();
+    const adminEmail = "admin@icsa.com";
+    const adminPassword = "admin123456";
+
+    try {
+      let userCredential;
+      try {
+        userCredential = await signInWithEmailAndPassword(auth, adminEmail, adminPassword);
+      } catch (e: any) {
+        if (e.code === 'auth/user-not-found' || e.code === 'auth/invalid-credential') {
+          userCredential = await createUserWithEmailAndPassword(auth, adminEmail, adminPassword);
+        } else {
+          throw e;
+        }
+      }
+
+      const user = userCredential.user;
+      await setDoc(doc(db, "roles_admin", user.uid), {
+        email: adminEmail,
+        role: "administrator",
+        setupDate: new Date().toISOString()
+      });
+
+      toast({ 
+        title: "Admin Configurado", 
+        description: "Cuenta admin@icsa.com lista con permisos totales." 
+      });
+      router.push("/dashboard");
+    } catch (error: any) {
+      console.error("Setup error:", error);
+      toast({ 
+        variant: "destructive", 
+        title: "Error de Configuración", 
+        description: error.message 
+      });
+    } finally {
+      setSetupLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4 relative overflow-hidden">
       <div className="absolute top-0 left-0 w-full h-2 bg-primary/30" />
@@ -57,14 +102,14 @@ export default function LoginPage() {
           <Link href="/">
             <Button variant="ghost" size="sm" className="gap-2 text-muted-foreground hover:text-primary transition-colors">
               <ArrowLeft size={18} />
-              <span className="font-bold">Volver</span>
+              <span className="font-bold text-xs">Volver</span>
             </Button>
           </Link>
         </div>
         
-        <CardHeader className="text-center space-y-4 pt-16">
+        <CardHeader className="text-center space-y-4 pt-16 pb-2">
           {logoImage && (
-            <div className="mx-auto relative w-48 h-48 transition-transform hover:scale-105 duration-500 drop-shadow-xl">
+            <div className="mx-auto relative w-56 h-56 transition-transform hover:scale-105 duration-500 drop-shadow-2xl">
               <Image
                 src={logoImage.imageUrl}
                 alt="ICSA Logo"
@@ -87,7 +132,7 @@ export default function LoginPage() {
         <CardContent className="pb-8 pt-4">
           <form onSubmit={handleAuth} className="space-y-5">
             <div className="space-y-2">
-              <Label htmlFor="email" className="text-sm font-bold ml-1">Correo Electrónico</Label>
+              <Label htmlFor="email" className="text-xs font-bold ml-1 uppercase opacity-60">Correo Electrónico</Label>
               <Input
                 id="email"
                 type="email"
@@ -95,11 +140,11 @@ export default function LoginPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                className="h-12 bg-background border-muted focus:ring-primary"
+                className="h-12 bg-background border-muted focus:ring-primary rounded-xl"
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password" suppressHydrationWarning className="text-sm font-bold ml-1">Contraseña</Label>
+              <Label htmlFor="password" suppressHydrationWarning className="text-xs font-bold ml-1 uppercase opacity-60">Contraseña</Label>
               <Input
                 id="password"
                 type="password"
@@ -107,17 +152,37 @@ export default function LoginPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                className="h-12 bg-background border-muted focus:ring-primary"
+                className="h-12 bg-background border-muted focus:ring-primary rounded-xl"
               />
             </div>
-            <Button type="submit" className="w-full bg-primary h-12 text-lg font-black shadow-lg transition-all active:scale-95" disabled={loading}>
+            <Button type="submit" className="w-full bg-primary h-14 text-lg font-black shadow-lg transition-all active:scale-95 rounded-xl" disabled={loading}>
               <LogIn className="mr-2" size={20} />
               {loading ? "Verificando..." : "Entrar al Portal"}
             </Button>
             
+            <div className="relative py-4">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t border-muted" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-white px-2 text-muted-foreground font-bold">Desarrollo</span>
+              </div>
+            </div>
+
+            <Button 
+              type="button" 
+              variant="outline" 
+              className="w-full border-dashed border-primary/40 text-primary font-bold h-12 rounded-xl gap-2"
+              onClick={setupAdminAccount}
+              disabled={setupLoading}
+            >
+              <ShieldCheck size={18} />
+              {setupLoading ? "Configurando..." : "Configurar Acceso Demo Admin"}
+            </Button>
+
             <div className="pt-4">
               <p className="text-center text-[10px] text-muted-foreground font-medium opacity-60 px-8">
-                El registro de nuevos técnicos debe ser realizado únicamente por un administrador autorizado.
+                El registro de nuevos técnicos debe ser realizado únicamente por un administrador autorizado desde el panel interno.
               </p>
             </div>
           </form>
