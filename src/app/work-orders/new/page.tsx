@@ -11,16 +11,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SignaturePad } from "@/components/SignaturePad";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Save, Camera, CheckCircle2, Clock, User as UserIcon, Search, AlertCircle } from "lucide-react";
+import { ArrowLeft, Save, Camera, CheckCircle2, Clock, User as UserIcon, Search } from "lucide-react";
 import Link from "next/link";
 import { useUser, useFirestore, useCollection, useMemoFirebase } from "@/firebase";
 import { collection, doc, query, orderBy } from "firebase/firestore";
 import { setDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
-import { cn } from "@/lib/utils";
-import { Check } from "lucide-react";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 export default function NewWorkOrder() {
   const router = useRouter();
@@ -32,15 +29,14 @@ export default function NewWorkOrder() {
   const [folio, setFolio] = useState(0);
   const [openClientSearch, setOpenClientSearch] = useState(false);
 
-  // Fetch existing clients for autocomplete
   const clientsQuery = useMemoFirebase(() => {
     if (!db) return null;
-    return query(collection(db, "clients"), orderBy("name", "asc"));
+    // Se corrige el ordenamiento por el campo correcto: nombreCliente
+    return query(collection(db, "clients"), orderBy("nombreCliente", "asc"));
   }, [db]);
 
   const { data: clients } = useCollection(clientsQuery);
 
-  // Form State
   const [formData, setFormData] = useState({
     clientName: "",
     clientContact: "",
@@ -70,16 +66,18 @@ export default function NewWorkOrder() {
   }, [user, isUserLoading, router]);
 
   const handleSelectClient = (client: any) => {
+    // Se corrige la asignación de campos usando las propiedades correctas del cliente
     setFormData({
       ...formData,
-      clientName: client.name,
-      clientContact: client.contact,
-      clientId: client.id
+      clientName: client.nombreCliente,
+      clientContact: client.emailClientes || client.telefonoCliente || "",
+      clientId: client.id,
+      location: client.direccionCliente || ""
     });
     setOpenClientSearch(false);
     toast({
       title: "Cliente Seleccionado",
-      description: `Se han cargado los datos de ${client.name}`
+      description: `Se han cargado los datos de ${client.nombreCliente}`
     });
   };
 
@@ -120,7 +118,6 @@ export default function NewWorkOrder() {
       endDate: new Date().toISOString(),
     };
 
-    // Guardamos en la colección raíz 'ordenes' para que sea accesible fácilmente
     const orderRef = doc(db, "ordenes", orderId);
     
     try {
@@ -204,13 +201,13 @@ export default function NewWorkOrder() {
                               {clients?.map((client) => (
                                 <CommandItem
                                   key={client.id}
-                                  value={client.name}
+                                  value={client.nombreCliente}
                                   onSelect={() => handleSelectClient(client)}
                                   className="py-3"
                                 >
                                   <div className="flex flex-col">
-                                    <span className="font-bold">{client.name}</span>
-                                    <span className="text-[10px] text-muted-foreground">{client.contact}</span>
+                                    <span className="font-bold">{client.nombreCliente}</span>
+                                    <span className="text-[10px] text-muted-foreground">{client.rutCliente}</span>
                                   </div>
                                 </CommandItem>
                               ))}
