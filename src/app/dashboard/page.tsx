@@ -8,11 +8,16 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { format } from "date-fns";
+import { es } from "date-fns/locale";
 import { 
-  Plus, FileText, Search, Settings, LogOut, LayoutDashboard, 
+  Plus, FileText, Search, LogOut, LayoutDashboard, 
   Eye, Download, Menu, TrendingUp, Users, UserRound, Shield,
   Pencil, Trash2, PieChart as PieChartIcon, BarChart as BarChartIcon,
-  Briefcase, Clock
+  Briefcase, Clock, Calendar as CalendarIcon, FilterX
 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
@@ -23,6 +28,7 @@ import { useUser, useFirestore, useCollection, useMemoFirebase } from "@/firebas
 import { collection, query, orderBy, doc } from "firebase/firestore";
 import { getAuth, signOut } from "firebase/auth";
 import { deleteDocumentNonBlocking } from "@/firebase/non-blocking-updates";
+import { cn } from "@/lib/utils";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -57,6 +63,8 @@ export default function Dashboard() {
   
   const [activeTab, setActiveTab] = useState("dashboard");
   const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [dateFilter, setDateFilter] = useState<Date | undefined>(undefined);
   const [deleteConfirm, setDeleteConfirm] = useState<{ id: string, type: 'clients' | 'personnel' | 'ordenes' } | null>(null);
   const [mountedDate, setMountedDate] = useState<Date | null>(null);
 
@@ -101,7 +109,6 @@ export default function Dashboard() {
   const weeklyOrdersData = useMemo(() => {
     if (!orders || !mountedDate) return [];
     
-    // Usar fecha local para el cálculo
     const today = new Date();
     const last7Days = Array.from({ length: 7 }, (_, i) => {
       const d = new Date(today);
@@ -144,11 +151,21 @@ export default function Dashboard() {
 
   const filteredOrders = useMemo(() => {
     if (!orders) return [];
-    return orders.filter(o => 
-      o.folio?.toString().includes(searchTerm) || 
-      o.clientName?.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-  }, [orders, searchTerm]);
+    return orders.filter(o => {
+      const matchesSearch = o.folio?.toString().includes(searchTerm) || 
+                            o.clientName?.toLowerCase().includes(searchTerm.toLowerCase());
+      
+      const matchesStatus = statusFilter === "all" || o.status === statusFilter;
+      
+      let matchesDate = true;
+      if (dateFilter && o.startDate) {
+        const orderDate = new Date(o.startDate);
+        matchesDate = orderDate.toDateString() === dateFilter.toDateString();
+      }
+      
+      return matchesSearch && matchesStatus && matchesDate;
+    });
+  }, [orders, searchTerm, statusFilter, dateFilter]);
 
   const filteredClients = useMemo(() => {
     if (!clients) return [];
@@ -183,6 +200,12 @@ export default function Dashboard() {
     setDeleteConfirm(null);
   };
 
+  const clearFilters = () => {
+    setSearchTerm("");
+    setStatusFilter("all");
+    setDateFilter(undefined);
+  };
+
   const SidebarContent = () => (
     <div className="flex flex-col h-full py-8">
       <div className="flex flex-col items-center mb-12 px-6">
@@ -199,36 +222,36 @@ export default function Dashboard() {
       <nav className="flex-1 space-y-2 px-4">
         <Button 
           variant={activeTab === "dashboard" ? "secondary" : "ghost"} 
-          className={`w-full justify-start gap-3 h-12 font-semibold ${activeTab === "dashboard" ? "bg-white/10 text-white border-none" : "text-white/80 hover:bg-white/10"}`}
-          onClick={() => { setActiveTab("dashboard"); setSearchTerm(""); }}
+          className={cn("w-full justify-start gap-3 h-12 font-semibold", activeTab === "dashboard" ? "bg-white/10 text-white border-none" : "text-white/80 hover:bg-white/10")}
+          onClick={() => { setActiveTab("dashboard"); clearFilters(); }}
         >
           <LayoutDashboard size={20} /> Inicio
         </Button>
         <Button 
           variant={activeTab === "orders" ? "secondary" : "ghost"} 
-          className={`w-full justify-start gap-3 h-12 font-semibold ${activeTab === "orders" ? "bg-white/10 text-white border-none" : "text-white/80 hover:bg-white/10"}`}
-          onClick={() => { setActiveTab("orders"); setSearchTerm(""); }}
+          className={cn("w-full justify-start gap-3 h-12 font-semibold", activeTab === "orders" ? "bg-white/10 text-white border-none" : "text-white/80 hover:bg-white/10")}
+          onClick={() => { setActiveTab("orders"); clearFilters(); }}
         >
           <FileText size={20} /> Órdenes
         </Button>
         <Button 
           variant={activeTab === "analytics" ? "secondary" : "ghost"} 
-          className={`w-full justify-start gap-3 h-12 font-semibold ${activeTab === "analytics" ? "bg-white/10 text-white border-none" : "text-white/80 hover:bg-white/10"}`}
-          onClick={() => { setActiveTab("analytics"); setSearchTerm(""); }}
+          className={cn("w-full justify-start gap-3 h-12 font-semibold", activeTab === "analytics" ? "bg-white/10 text-white border-none" : "text-white/80 hover:bg-white/10")}
+          onClick={() => { setActiveTab("analytics"); clearFilters(); }}
         >
           <PieChartIcon size={20} /> Reportes
         </Button>
         <Button 
           variant={activeTab === "clients" ? "secondary" : "ghost"} 
-          className={`w-full justify-start gap-3 h-12 font-semibold ${activeTab === "clients" ? "bg-white/10 text-white border-none" : "text-white/80 hover:bg-white/10"}`}
-          onClick={() => { setActiveTab("clients"); setSearchTerm(""); }}
+          className={cn("w-full justify-start gap-3 h-12 font-semibold", activeTab === "clients" ? "bg-white/10 text-white border-none" : "text-white/80 hover:bg-white/10")}
+          onClick={() => { setActiveTab("clients"); clearFilters(); }}
         >
           <Users size={20} /> Clientes
         </Button>
         <Button 
           variant={activeTab === "personnel" ? "secondary" : "ghost"} 
-          className={`w-full justify-start gap-3 h-12 font-semibold ${activeTab === "personnel" ? "bg-white/10 text-white border-none" : "text-white/80 hover:bg-white/10"}`}
-          onClick={() => { setActiveTab("personnel"); setSearchTerm(""); }}
+          className={cn("w-full justify-start gap-3 h-12 font-semibold", activeTab === "personnel" ? "bg-white/10 text-white border-none" : "text-white/80 hover:bg-white/10")}
+          onClick={() => { setActiveTab("personnel"); clearFilters(); }}
         >
           <UserRound size={20} /> Personal
         </Button>
@@ -421,16 +444,58 @@ export default function Dashboard() {
 
         {(activeTab === "dashboard" || activeTab === "orders") && (
           <Card className="shadow-xl border-none bg-white mb-8">
-            <CardHeader className="flex flex-col md:flex-row items-start md:items-center justify-between border-b pb-6 mb-4 gap-4 px-8">
-              <CardTitle className="text-xl font-bold text-primary">Listado de Órdenes</CardTitle>
-              <div className="relative w-full md:w-80">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
-                <Input 
-                  placeholder="Buscar folio o cliente..." 
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 h-10 bg-background border-none rounded-xl w-full text-sm"
-                />
+            <CardHeader className="flex flex-col items-stretch border-b pb-6 mb-4 gap-4 px-8">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-xl font-bold text-primary">Listado de Órdenes</CardTitle>
+                <Button variant="ghost" size="sm" onClick={clearFilters} className="text-muted-foreground hover:text-primary gap-2 h-8">
+                  <FilterX className="h-4 w-4" /> Limpiar Filtros
+                </Button>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                <div className="relative col-span-1 md:col-span-1">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                  <Input 
+                    placeholder="Buscar folio o cliente..." 
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10 h-10 bg-background border-none rounded-xl w-full text-sm"
+                  />
+                </div>
+                
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <SelectTrigger className="h-10 bg-background border-none rounded-xl">
+                    <SelectValue placeholder="Filtrar por estado" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos los estados</SelectItem>
+                    <SelectItem value="Pending">Pendientes</SelectItem>
+                    <SelectItem value="Completed">Completadas</SelectItem>
+                  </SelectContent>
+                </Select>
+
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "h-10 justify-start text-left font-normal bg-background border-none rounded-xl",
+                        !dateFilter && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {dateFilter ? format(dateFilter, "PPP", { locale: es }) : "Filtrar por fecha"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="end">
+                    <Calendar
+                      mode="single"
+                      selected={dateFilter}
+                      onSelect={setDateFilter}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
               </div>
             </CardHeader>
             <CardContent className="px-8 pb-8">
@@ -446,48 +511,56 @@ export default function Dashboard() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredOrders.map((order) => (
-                      <TableRow key={order.id} className="hover:bg-muted/20 transition-colors">
-                        <TableCell className="font-black text-primary">#{order.folio}</TableCell>
-                        <TableCell className="font-bold">{order.clientName}</TableCell>
-                        <TableCell className="text-xs text-muted-foreground">
-                          {order.startDate ? new Date(order.startDate).toLocaleDateString() : "N/A"}
-                        </TableCell>
-                        <TableCell>
-                          <Badge className={`${order.status === 'Completed' ? 'bg-accent/15 text-primary' : 'bg-primary/10 text-primary'} border-none text-[10px] px-2 py-0.5`}>
-                            {order.status === 'Completed' ? 'Completado' : 'Pendiente'}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex justify-end gap-2">
-                            <Link href={`/work-orders/${order.id}`}>
-                              <Button variant="ghost" size="icon" className="h-9 w-9" title="Ver detalle">
-                                <Eye className="h-5 w-5" />
-                              </Button>
-                            </Link>
-                            {order.status === "Pending" && (
-                              <Link href={`/work-orders/${order.id}/edit`}>
-                                <Button variant="ghost" size="icon" className="h-9 w-9 text-primary" title="Editar / Firmar">
-                                  <Pencil className="h-5 w-5" />
+                    {filteredOrders.length > 0 ? (
+                      filteredOrders.map((order) => (
+                        <TableRow key={order.id} className="hover:bg-muted/20 transition-colors">
+                          <TableCell className="font-black text-primary">#{order.folio}</TableCell>
+                          <TableCell className="font-bold">{order.clientName}</TableCell>
+                          <TableCell className="text-xs text-muted-foreground">
+                            {order.startDate ? new Date(order.startDate).toLocaleDateString() : "N/A"}
+                          </TableCell>
+                          <TableCell>
+                            <Badge className={cn("border-none text-[10px] px-2 py-0.5", order.status === 'Completed' ? 'bg-accent/15 text-primary' : 'bg-primary/10 text-primary')}>
+                              {order.status === 'Completed' ? 'Completado' : 'Pendiente'}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex justify-end gap-2">
+                              <Link href={`/work-orders/${order.id}`}>
+                                <Button variant="ghost" size="icon" className="h-9 w-9" title="Ver detalle">
+                                  <Eye className="h-5 w-5" />
                                 </Button>
                               </Link>
-                            )}
-                            <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => generateWorkOrderPDF(order)} title="Descargar PDF">
-                              <Download className="h-5 w-5" />
-                            </Button>
-                            <Button 
-                              variant="ghost" 
-                              size="icon" 
-                              className="h-9 w-9 text-destructive" 
-                              title="Eliminar orden"
-                              onClick={() => setDeleteConfirm({ id: order.id, type: 'ordenes' })}
-                            >
-                              <Trash2 className="h-5 w-5" />
-                            </Button>
-                          </div>
+                              {order.status === "Pending" && (
+                                <Link href={`/work-orders/${order.id}/edit`}>
+                                  <Button variant="ghost" size="icon" className="h-9 w-9 text-primary" title="Editar / Firmar">
+                                    <Pencil className="h-5 w-5" />
+                                  </Button>
+                                </Link>
+                              )}
+                              <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => generateWorkOrderPDF(order)} title="Descargar PDF">
+                                <Download className="h-5 w-5" />
+                              </Button>
+                              <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className="h-9 w-9 text-destructive" 
+                                title="Eliminar orden"
+                                onClick={() => setDeleteConfirm({ id: order.id, type: 'ordenes' })}
+                              >
+                                <Trash2 className="h-5 w-5" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    ) : (
+                      <TableRow>
+                        <TableCell colSpan={5} className="h-24 text-center font-medium text-muted-foreground">
+                          No se encontraron órdenes con los filtros aplicados.
                         </TableCell>
                       </TableRow>
-                    ))}
+                    )}
                   </TableBody>
                 </Table>
               </div>
@@ -538,7 +611,7 @@ export default function Dashboard() {
                           </div>
                         </TableCell>
                         <TableCell>
-                          <Badge className={`${client.estadoCliente === 'Activo' ? 'bg-accent/15 text-primary' : 'bg-destructive/10 text-destructive'} border-none text-[10px] px-2 py-0.5`}>
+                          <Badge className={cn("border-none text-[10px] px-2 py-0.5", client.estadoCliente === 'Activo' ? 'bg-accent/15 text-primary' : 'bg-destructive/10 text-destructive')}>
                             {client.estadoCliente}
                           </Badge>
                         </TableCell>
@@ -602,7 +675,7 @@ export default function Dashboard() {
                         <TableCell className="font-black text-primary text-xs">{p.id_t}</TableCell>
                         <TableCell className="font-bold">{p.nombre_t}</TableCell>
                         <TableCell>
-                          <Badge variant="outline" className={`gap-1 border-primary/20 text-primary ${p.rol_t === 'Administrador' ? 'bg-primary/5' : ''}`}>
+                          <Badge variant="outline" className={cn("gap-1 border-primary/20 text-primary", p.rol_t === 'Administrador' && 'bg-primary/5')}>
                             <Shield className="h-3 w-3" /> {p.rol_t}
                           </Badge>
                         </TableCell>
