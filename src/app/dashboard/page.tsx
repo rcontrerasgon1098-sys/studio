@@ -8,7 +8,8 @@ import { Badge } from "@/components/ui/badge";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { 
   Plus, FileText, Search, Settings, LogOut, LayoutDashboard, 
-  Eye, Download, Menu, Users, BarChart3, TrendingUp, UserPlus, EyeOff
+  Eye, Download, Menu, Users, BarChart3, TrendingUp, UserPlus, EyeOff,
+  Calendar as CalendarIcon, Filter, X, FilterX
 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
@@ -26,6 +27,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { format } from "date-fns";
+import { es } from "date-fns/locale";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export default function Dashboard() {
   const { user, isUserLoading } = useUser();
@@ -34,9 +40,14 @@ export default function Dashboard() {
   const logoImage = PlaceHolderImages.find(img => img.id === "icsa-logo");
   
   const [isAdmin, setIsAdmin] = useState(false);
-  const [activeTab, setActiveTab] = useState("dashboard"); // dashboard, technicians, orders
+  const [activeTab, setActiveTab] = useState("dashboard");
   const [showRegPassword, setShowRegPassword] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  
+  // Estados para Filtros
+  const [dateRange, setDateRange] = useState<{ from: Date | undefined; to: Date | undefined }>({ from: undefined, to: undefined });
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [clientFilter, setClientFilter] = useState<string>("all");
 
   // Redirigir si no hay usuario
   useEffect(() => {
@@ -45,7 +56,7 @@ export default function Dashboard() {
     }
   }, [user, isUserLoading, router]);
 
-  // Verificar rol de admin usando useDoc
+  // Verificar rol de admin
   const adminDocRef = useMemoFirebase(() => {
     if (!db || !user) return null;
     return doc(db, "roles_admin", user.uid);
@@ -79,14 +90,38 @@ export default function Dashboard() {
   const orders = isAdmin ? allOrders : techOrders;
   const isLoading = isUserLoading || isRoleLoading;
 
-  // Filtrado de órdenes
+  // Lista de clientes únicos para el filtro
+  const uniqueClients = useMemo(() => {
+    if (!orders) return [];
+    const clients = new Set(orders.map(o => o.clientName).filter(Boolean));
+    return Array.from(clients).sort();
+  }, [orders]);
+
+  // Filtrado avanzado de órdenes
   const filteredOrders = useMemo(() => {
     if (!orders) return [];
-    return orders.filter(o => 
-      o.folio.toString().includes(searchTerm) || 
-      o.clientName?.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-  }, [orders, searchTerm]);
+    return orders.filter(o => {
+      const matchesSearch = o.folio.toString().includes(searchTerm) || 
+                          o.clientName?.toLowerCase().includes(searchTerm.toLowerCase());
+      
+      const matchesStatus = statusFilter === "all" || o.status === statusFilter;
+      
+      const matchesClient = clientFilter === "all" || o.clientName === clientFilter;
+
+      const orderDate = new Date(o.startDate);
+      const matchesDate = (!dateRange.from || orderDate >= dateRange.from) && 
+                          (!dateRange.to || orderDate <= dateRange.to);
+
+      return matchesSearch && matchesStatus && matchesClient && matchesDate;
+    });
+  }, [orders, searchTerm, statusFilter, clientFilter, dateRange]);
+
+  const resetFilters = () => {
+    setSearchTerm("");
+    setDateRange({ from: undefined, to: undefined });
+    setStatusFilter("all");
+    setClientFilter("all");
+  };
 
   // Gráficas
   const chartData = useMemo(() => {
@@ -166,6 +201,80 @@ export default function Dashboard() {
 
   if (isLoading) return <div className="min-h-screen flex items-center justify-center text-primary font-black animate-pulse bg-background">CARGANDO ICSA...</div>;
 
+  const FilterSection = () => (
+    <div className="flex flex-wrap items-center gap-3 mb-6 bg-muted/20 p-4 rounded-xl border border-dashed border-primary/20">
+      <div className="flex items-center gap-2 text-primary font-bold text-xs uppercase tracking-wider mr-2">
+        <Filter size={16} /> Filtros
+      </div>
+      
+      {/* Filtro de Fecha */}
+      <Popover>
+        <PopoverTrigger asChild>
+          <Button variant="outline" size="sm" className="h-10 bg-white border-primary/20 font-medium gap-2 text-xs">
+            <CalendarIcon size={14} />
+            {dateRange.from ? (
+              dateRange.to ? (
+                <>
+                  {format(dateRange.from, "dd LLL", { locale: es })} - {format(dateRange.to, "dd LLL", { locale: es })}
+                </>
+              ) : (
+                format(dateRange.from, "dd LLL", { locale: es })
+              )
+            ) : (
+              <span>Filtrar por fecha</span>
+            )}
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-auto p-0" align="start">
+          <Calendar
+            initialFocus
+            mode="range"
+            defaultMonth={dateRange.from}
+            selected={{ from: dateRange.from, to: dateRange.to }}
+            onSelect={(range) => setDateRange({ from: range?.from, to: range?.to })}
+            numberOfMonths={2}
+            locale={es}
+          />
+        </PopoverContent>
+      </Popover>
+
+      {/* Filtro de Cliente */}
+      <Select value={clientFilter} onValueChange={setClientFilter}>
+        <SelectTrigger className="w-[180px] h-10 bg-white text-xs border-primary/20 font-medium">
+          <SelectValue placeholder="Cliente" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">Todos los clientes</SelectItem>
+          {uniqueClients.map(client => (
+            <SelectItem key={client} value={client}>{client}</SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+
+      {/* Filtro de Estado */}
+      <Select value={statusFilter} onValueChange={setStatusFilter}>
+        <SelectTrigger className="w-[150px] h-10 bg-white text-xs border-primary/20 font-medium">
+          <SelectValue placeholder="Estado" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">Todos los estados</SelectItem>
+          <SelectItem value="Completed">Completado</SelectItem>
+          <SelectItem value="Pending">Pendiente</SelectItem>
+        </SelectContent>
+      </Select>
+
+      {/* Botón Limpiar */}
+      <Button 
+        variant="ghost" 
+        size="sm" 
+        className="h-10 text-muted-foreground hover:text-primary gap-2"
+        onClick={resetFilters}
+      >
+        <FilterX size={16} /> Limpiar
+      </Button>
+    </div>
+  );
+
   const OrdersTable = () => (
     <Card className="shadow-xl border-none bg-white">
       <CardHeader className="flex flex-col md:flex-row items-start md:items-center justify-between border-b pb-6 mb-4 gap-4 px-4 md:px-8">
@@ -183,15 +292,17 @@ export default function Dashboard() {
         </div>
       </CardHeader>
       <CardContent className="px-2 md:px-8 pb-8">
+        <FilterSection />
         <div className="overflow-x-auto">
           <Table>
             <TableHeader className="bg-muted/40">
               <TableRow>
-                <TableHead className="font-bold py-4">Folio</TableHead>
-                <TableHead className="font-bold py-4">Cliente</TableHead>
-                <TableHead className="font-bold py-4 hidden sm:table-cell">Fecha</TableHead>
-                <TableHead className="font-bold py-4">Estado</TableHead>
-                <TableHead className="text-right font-bold py-4">Acciones</TableHead>
+                <TableHead className="font-bold py-4 text-xs">Folio</TableHead>
+                <TableHead className="font-bold py-4 text-xs">Cliente</TableHead>
+                <TableHead className="font-bold py-4 hidden sm:table-cell text-xs">Fecha</TableHead>
+                <TableHead className="font-bold py-4 hidden md:table-cell text-xs">Hora</TableHead>
+                <TableHead className="font-bold py-4 text-xs">Estado</TableHead>
+                <TableHead className="text-right font-bold py-4 text-xs">Acciones</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -201,6 +312,9 @@ export default function Dashboard() {
                   <TableCell className="font-bold text-xs md:text-sm max-w-[150px] truncate">{order.clientName}</TableCell>
                   <TableCell className="text-xs text-muted-foreground hidden sm:table-cell">
                     {new Date(order.startDate).toLocaleDateString()}
+                  </TableCell>
+                  <TableCell className="text-xs text-muted-foreground hidden md:table-cell">
+                    {new Date(order.startDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                   </TableCell>
                   <TableCell>
                     <Badge className={`${order.status === 'Completed' ? 'bg-accent/15 text-primary' : 'bg-primary/10 text-primary'} border-none text-[10px] md:text-xs px-2 py-0.5`}>
@@ -228,8 +342,8 @@ export default function Dashboard() {
               ))}
               {filteredOrders.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center py-20 text-muted-foreground italic font-medium">
-                    No se encontraron órdenes registradas.
+                  <TableCell colSpan={6} className="text-center py-20 text-muted-foreground italic font-medium">
+                    No se encontraron órdenes con los filtros aplicados.
                   </TableCell>
                 </TableRow>
               )}
