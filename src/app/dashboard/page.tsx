@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
@@ -16,8 +15,8 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { generateWorkOrderPDF } from "@/lib/pdf-generator";
 import { PlaceHolderImages } from "@/lib/placeholder-images";
-import { useUser, useFirestore, useCollection, useMemoFirebase } from "@/firebase";
-import { collection, collectionGroup, query, orderBy, doc, getDoc } from "firebase/firestore";
+import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc } from "@/firebase";
+import { collection, collectionGroup, query, orderBy, doc } from "firebase/firestore";
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell 
@@ -32,56 +31,52 @@ export default function Dashboard() {
   const { user, isUserLoading } = useUser();
   const db = useFirestore();
   const router = useRouter();
-  const { toast } = useToast();
   const logoImage = PlaceHolderImages.find(img => img.id === "icsa-logo");
   
   const [isAdmin, setIsAdmin] = useState(false);
-  const [checkingRole, setCheckingRole] = useState(true);
   const [activeTab, setActiveTab] = useState("dashboard");
   const [showRegPassword, setShowRegPassword] = useState(false);
 
-  // Verificar rol de admin
+  // Redirigir si no hay usuario
   useEffect(() => {
-    if (isUserLoading) return;
-    
-    if (!user) {
+    if (!isUserLoading && !user) {
       router.push("/login");
-      return;
     }
+  }, [user, isUserLoading, router]);
 
-    const checkRole = async () => {
-      try {
-        const adminDoc = await getDoc(doc(db, "roles_admin", user.uid));
-        setIsAdmin(adminDoc.exists());
-      } catch (e) {
-        console.error("Error checking role:", e);
-      } finally {
-        setCheckingRole(false);
-      }
-    };
-    
-    checkRole();
-  }, [user, isUserLoading, db, router]);
+  // Verificar rol de admin usando useDoc
+  const adminDocRef = useMemoFirebase(() => {
+    if (!db || !user) return null;
+    return doc(db, "roles_admin", user.uid);
+  }, [db, user]);
+
+  const { data: adminRoleDoc, isLoading: isRoleLoading } = useDoc(adminDocRef);
+
+  useEffect(() => {
+    if (!isRoleLoading && adminRoleDoc !== undefined) {
+      setIsAdmin(!!adminRoleDoc);
+    }
+  }, [adminRoleDoc, isRoleLoading]);
 
   // Query para órdenes
   const techOrdersQuery = useMemoFirebase(() => {
-    if (!db || !user || isAdmin || checkingRole) return null;
+    if (!db || !user || isAdmin || isRoleLoading) return null;
     return query(
       collection(db, "users", user.uid, "work_orders"),
       orderBy("folio", "desc")
     );
-  }, [db, user, isAdmin, checkingRole]);
+  }, [db, user, isAdmin, isRoleLoading]);
 
   const adminOrdersQuery = useMemoFirebase(() => {
-    if (!db || !isAdmin || checkingRole) return null;
+    if (!db || !isAdmin || isRoleLoading) return null;
     return query(collectionGroup(db, "work_orders"), orderBy("folio", "desc"));
-  }, [db, isAdmin, checkingRole]);
+  }, [db, isAdmin, isRoleLoading]);
 
   const { data: techOrders } = useCollection(techOrdersQuery);
   const { data: allOrders } = useCollection(adminOrdersQuery);
 
   const orders = isAdmin ? allOrders : techOrders;
-  const isLoading = isUserLoading || checkingRole;
+  const isLoading = isUserLoading || isRoleLoading;
 
   // Gráficas
   const chartData = useMemo(() => {

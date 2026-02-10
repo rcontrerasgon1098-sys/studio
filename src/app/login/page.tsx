@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState } from "react";
@@ -13,7 +12,9 @@ import { PlaceHolderImages } from "@/lib/placeholder-images";
 import { ArrowLeft, LogIn, ShieldCheck, Eye, EyeOff } from "lucide-react";
 import Link from "next/link";
 import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword } from "firebase/auth";
-import { getFirestore, doc, setDoc } from "firebase/firestore";
+import { doc } from "firebase/firestore";
+import { useFirestore } from "@/firebase";
+import { setDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -23,6 +24,7 @@ export default function LoginPage() {
   const [setupLoading, setSetupLoading] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
+  const db = useFirestore();
   const logoImage = PlaceHolderImages.find(img => img.id === "icsa-logo");
 
   const handleAuth = async (e: React.FormEvent) => {
@@ -35,7 +37,6 @@ export default function LoginPage() {
       toast({ title: "Bienvenido", description: "Acceso concedido al portal ICSA." });
       router.push("/dashboard");
     } catch (error: any) {
-      console.error("Auth error:", error);
       let message = "Error de conexión. Verifique sus datos.";
       if (error.code === 'auth/invalid-credential') message = "Credenciales inválidas. Asegúrese de haber configurado el acceso demo o contacte a un administrador.";
       if (error.code === 'auth/user-not-found') message = "Usuario no registrado. Use el botón de configuración demo abajo.";
@@ -52,26 +53,22 @@ export default function LoginPage() {
   const setupAdminAccount = async () => {
     setSetupLoading(true);
     const auth = getAuth();
-    const db = getFirestore();
     const adminEmail = "admin@icsa.com";
     const adminPassword = "admin123456";
 
     try {
       let user;
       try {
-        // Intentar iniciar sesión primero
         const userCredential = await signInWithEmailAndPassword(auth, adminEmail, adminPassword);
         user = userCredential.user;
       } catch (signInError: any) {
-        // Si no existe, intentar crear
         if (signInError.code === 'auth/user-not-found' || signInError.code === 'auth/invalid-credential') {
           try {
             const createCredential = await createUserWithEmailAndPassword(auth, adminEmail, adminPassword);
             user = createCredential.user;
           } catch (createError: any) {
             if (createError.code === 'auth/email-already-in-use') {
-              // Si ya existe pero el login falló arriba, es que la contraseña es distinta en el sistema
-              throw new Error("El usuario ya existe con otra contraseña. Por favor, use las credenciales correctas o contacte soporte.");
+              throw new Error("El usuario ya existe con otra contraseña. Por favor, use las credenciales correctas.");
             }
             throw createError;
           }
@@ -80,9 +77,9 @@ export default function LoginPage() {
         }
       }
 
-      if (user) {
-        // Asegurar que el documento de rol exista
-        await setDoc(doc(db, "roles_admin", user.uid), {
+      if (user && db) {
+        const adminDocRef = doc(db, "roles_admin", user.uid);
+        setDocumentNonBlocking(adminDocRef, {
           email: adminEmail,
           role: "administrator",
           setupDate: new Date().toISOString()
@@ -93,17 +90,14 @@ export default function LoginPage() {
           description: "Acceso admin@icsa.com preparado correctamente." 
         });
         
-        // Pequeña pausa para asegurar la persistencia antes de redirigir
-        setTimeout(() => router.push("/dashboard"), 500);
+        setTimeout(() => router.push("/dashboard"), 1000);
       }
     } catch (error: any) {
-      console.error("Setup error:", error);
       toast({ 
         variant: "destructive", 
         title: "Error de Configuración", 
         description: error.message || "No se pudo preparar la cuenta de administrador."
       });
-    } finally {
       setSetupLoading(false);
     }
   };
