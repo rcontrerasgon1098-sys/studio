@@ -17,7 +17,7 @@ export default function Home() {
         <div className="container mx-auto px-4 h-24 flex items-center justify-between">
           <div className="flex items-center gap-4">
             {logoImage && (
-              <div className="relative w-28 h-28">
+              <div className="relative w-32 h-32">
                 <Image
                   src={logoImage.imageUrl}
                   alt="ICSA Logo"
@@ -42,33 +42,28 @@ export default function Home() {
       </header>
 
       <main>
-        <section className="relative h-[700px] flex items-center overflow-hidden">
+        <section className="relative h-[600px] flex items-center overflow-hidden">
           {heroImage && (
             <div className="absolute inset-0 z-0">
               <Image
                 src={heroImage.imageUrl}
                 alt={heroImage.description}
                 fill
-                className="object-cover opacity-25"
+                className="object-cover opacity-20"
                 data-ai-hint={heroImage.imageHint}
                 priority
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-background via-background/60 to-transparent" />
+              <div className="absolute inset-0 bg-gradient-to-t from-background via-background/40 to-transparent" />
             </div>
           )}
-          <div className="container mx-auto px-4 relative z-10 text-center md:text-left">
-            <div className="max-w-3xl">
-              <h1 className="text-5xl md:text-7xl font-headline font-extrabold tracking-tight text-primary mb-6 leading-[1.1]">
+          <div className="container mx-auto px-4 relative z-10 text-center">
+            <div className="max-w-4xl mx-auto">
+              <h1 className="text-5xl md:text-8xl font-headline font-extrabold tracking-tight text-primary mb-8 leading-[1.1]">
                 Ordenes de Trabajo Digital
               </h1>
-              <p className="text-xl md:text-2xl text-muted-foreground mb-10 font-medium">
+              <p className="text-xl md:text-3xl text-muted-foreground mb-10 font-medium max-w-2xl mx-auto">
                 Digitaliza tus formularios, captura firmas y gestiona tu equipo con la plataforma líder para ICSA.
               </p>
-              <Link href="/login">
-                <Button size="lg" className="h-16 px-12 text-xl font-bold shadow-2xl hover:scale-105 transition-transform bg-primary">
-                  Acceso Técnico
-                </Button>
-              </Link>
             </div>
           </div>
         </section>
@@ -116,7 +111,7 @@ export default function Home() {
         <div className="container mx-auto px-4 text-center">
           <div className="flex flex-col items-center gap-6 mb-10">
             {logoImage && (
-              <div className="relative w-28 h-28 bg-white/10 rounded-3xl p-4 shadow-inner backdrop-blur-sm">
+              <div className="relative w-32 h-32 bg-white/10 rounded-3xl p-4 shadow-inner backdrop-blur-sm">
                 <Image
                   src={logoImage.imageUrl}
                   alt="Logo"
