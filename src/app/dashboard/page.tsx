@@ -3,7 +3,7 @@
 
 import { useState, useMemo, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { 
   Plus, FileText, Search, Settings, LogOut, LayoutDashboard, 
   Eye, Download, Menu, TrendingUp, Users, UserRound, Shield,
-  Pencil, Trash2
+  Pencil, Trash2, PieChart as PieChartIcon, BarChart as BarChartIcon
 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
@@ -33,6 +33,20 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
+import { 
+  BarChart, 
+  Bar, 
+  XAxis, 
+  YAxis, 
+  CartesianGrid, 
+  Tooltip as RechartsTooltip, 
+  ResponsiveContainer, 
+  PieChart, 
+  Pie, 
+  Cell,
+  Legend
+} from "recharts";
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 
 export default function Dashboard() {
   const { user, isUserLoading } = useUser();
@@ -69,6 +83,32 @@ export default function Dashboard() {
     return query(collection(db, "personnel"), orderBy("nombre_t", "asc"));
   }, [db]);
   const { data: personnel } = useCollection(personnelQuery);
+
+  // Procesamiento de datos para Gráficos
+  const orderStatsData = useMemo(() => {
+    if (!orders) return [];
+    const completed = orders.filter(o => o.status === "Completed").length;
+    const pending = orders.filter(o => o.status !== "Completed").length;
+    return [
+      { name: "Completadas", value: completed, color: "hsl(var(--accent))" },
+      { name: "Pendientes", value: pending, color: "hsl(var(--primary))" },
+    ];
+  }, [orders]);
+
+  const weeklyOrdersData = useMemo(() => {
+    if (!orders) return [];
+    const last7Days = Array.from({ length: 7 }, (_, i) => {
+      const d = new Date();
+      d.setDate(d.getDate() - (6 - i));
+      return d.toISOString().split('T')[0];
+    });
+
+    return last7Days.map(date => {
+      const count = orders.filter(o => o.startDate && o.startDate.startsWith(date)).length;
+      const dayName = new Date(date).toLocaleDateString('es-ES', { weekday: 'short' });
+      return { day: dayName, ordenes: count };
+    });
+  }, [orders]);
 
   // Filtrados
   const filteredOrders = useMemo(() => {
@@ -224,46 +264,102 @@ export default function Dashboard() {
         </header>
 
         {activeTab === "dashboard" && (
-          <div className="grid grid-cols-1 sm:grid-cols-4 gap-6 mb-8">
-            <Card className="shadow-md border-none bg-white">
-              <CardHeader className="pb-2 p-6 flex flex-row items-center justify-between">
-                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Total Órdenes</p>
-                <FileText className="h-4 w-4 text-primary opacity-30" />
-              </CardHeader>
-              <CardContent className="p-6 pt-0">
-                <p className="text-4xl font-black text-primary">{orders?.length || 0}</p>
-              </CardContent>
-            </Card>
-            <Card className="shadow-md border-none bg-white">
-              <CardHeader className="pb-2 p-6 flex flex-row items-center justify-between">
-                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Completadas</p>
-                <TrendingUp className="h-4 w-4 text-accent opacity-30" />
-              </CardHeader>
-              <CardContent className="p-6 pt-0">
-                <p className="text-4xl font-black text-accent">
-                  {orders?.filter(o => o.status === "Completed").length || 0}
-                </p>
-              </CardContent>
-            </Card>
-            <Card className="shadow-md border-none bg-white">
-              <CardHeader className="pb-2 p-6 flex flex-row items-center justify-between">
-                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Clientes</p>
-                <Users className="h-4 w-4 text-primary opacity-30" />
-              </CardHeader>
-              <CardContent className="p-6 pt-0">
-                <p className="text-4xl font-black text-primary/40">{clients?.length || 0}</p>
-              </CardContent>
-            </Card>
-            <Card className="shadow-md border-none bg-white">
-              <CardHeader className="pb-2 p-6 flex flex-row items-center justify-between">
-                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Personal</p>
-                <UserRound className="h-4 w-4 text-primary opacity-30" />
-              </CardHeader>
-              <CardContent className="p-6 pt-0">
-                <p className="text-4xl font-black text-primary/40">{personnel?.length || 0}</p>
-              </CardContent>
-            </Card>
-          </div>
+          <>
+            <div className="grid grid-cols-1 sm:grid-cols-4 gap-6 mb-8">
+              <Card className="shadow-md border-none bg-white">
+                <CardHeader className="pb-2 p-6 flex flex-row items-center justify-between">
+                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Total Órdenes</p>
+                  <FileText className="h-4 w-4 text-primary opacity-30" />
+                </CardHeader>
+                <CardContent className="p-6 pt-0">
+                  <p className="text-4xl font-black text-primary">{orders?.length || 0}</p>
+                </CardContent>
+              </Card>
+              <Card className="shadow-md border-none bg-white">
+                <CardHeader className="pb-2 p-6 flex flex-row items-center justify-between">
+                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Completadas</p>
+                  <TrendingUp className="h-4 w-4 text-accent opacity-30" />
+                </CardHeader>
+                <CardContent className="p-6 pt-0">
+                  <p className="text-4xl font-black text-accent">
+                    {orders?.filter(o => o.status === "Completed").length || 0}
+                  </p>
+                </CardContent>
+              </Card>
+              <Card className="shadow-md border-none bg-white">
+                <CardHeader className="pb-2 p-6 flex flex-row items-center justify-between">
+                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Clientes</p>
+                  <Users className="h-4 w-4 text-primary opacity-30" />
+                </CardHeader>
+                <CardContent className="p-6 pt-0">
+                  <p className="text-4xl font-black text-primary/40">{clients?.length || 0}</p>
+                </CardContent>
+              </Card>
+              <Card className="shadow-md border-none bg-white">
+                <CardHeader className="pb-2 p-6 flex flex-row items-center justify-between">
+                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Personal</p>
+                  <UserRound className="h-4 w-4 text-primary opacity-30" />
+                </CardHeader>
+                <CardContent className="p-6 pt-0">
+                  <p className="text-4xl font-black text-primary/40">{personnel?.length || 0}</p>
+                </CardContent>
+              </Card>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+              <Card className="shadow-xl border-none bg-white">
+                <CardHeader className="border-b pb-4 mb-4 flex flex-row items-center gap-2">
+                  <PieChartIcon className="h-5 w-5 text-primary" />
+                  <div>
+                    <CardTitle className="text-lg font-bold text-primary">Estado de Órdenes</CardTitle>
+                    <CardDescription>Distribución de cumplimiento</CardDescription>
+                  </div>
+                </CardHeader>
+                <CardContent className="h-[300px] flex items-center justify-center">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={orderStatsData}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={60}
+                        outerRadius={80}
+                        paddingAngle={5}
+                        dataKey="value"
+                      >
+                        {orderStatsData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.color} />
+                        ))}
+                      </Pie>
+                      <RechartsTooltip />
+                      <Legend verticalAlign="bottom" height={36}/>
+                    </PieChart>
+                  </ResponsiveContainer>
+                </CardContent>
+              </Card>
+
+              <Card className="shadow-xl border-none bg-white">
+                <CardHeader className="border-b pb-4 mb-4 flex flex-row items-center gap-2">
+                  <BarChartIcon className="h-5 w-5 text-primary" />
+                  <div>
+                    <CardTitle className="text-lg font-bold text-primary">Actividad Semanal</CardTitle>
+                    <CardDescription>Órdenes creadas en los últimos 7 días</CardDescription>
+                  </div>
+                </CardHeader>
+                <CardContent className="h-[300px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={weeklyOrdersData}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.1} />
+                      <XAxis dataKey="day" axisLine={false} tickLine={false} />
+                      <YAxis axisLine={false} tickLine={false} />
+                      <RechartsTooltip cursor={{fill: 'transparent'}} />
+                      <Bar dataKey="ordenes" fill="hsl(var(--accent))" radius={[4, 4, 0, 0]} barSize={40} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </CardContent>
+              </Card>
+            </div>
+          </>
         )}
 
         {/* Listado de Órdenes */}
