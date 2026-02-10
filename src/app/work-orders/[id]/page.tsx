@@ -1,3 +1,4 @@
+
 "use client";
 
 import { use, useState } from "react";
@@ -5,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Download, Printer, User, Calendar, MapPin, ClipboardCheck, Info } from "lucide-react";
+import { ArrowLeft, Download, Printer, User, Calendar, MapPin, ClipboardCheck, Info, Pencil } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import { generateWorkOrderPDF } from "@/lib/pdf-generator";
@@ -40,6 +41,13 @@ export default function WorkOrderView({ params }: { params: Promise<{ id: string
             <h1 className="font-black text-lg text-primary truncate">OT #{order.folio}</h1>
           </div>
           <div className="flex gap-2">
+            {order.status === "Pending" && (
+              <Link href={`/work-orders/${order.id}/edit`}>
+                <Button variant="outline" size="sm" className="h-10 gap-2 border-primary text-primary hover:bg-primary/5">
+                  <Pencil className="h-4 w-4" /> Editar / Firmar
+                </Button>
+              </Link>
+            )}
             <Button size="icon" onClick={() => generateWorkOrderPDF(order)} className="bg-primary hover:bg-primary/90 h-10 w-10">
               <Download className="h-5 w-5" />
             </Button>
@@ -182,6 +190,13 @@ export default function WorkOrderView({ params }: { params: Promise<{ id: string
         </div>
 
         <div className="flex flex-col gap-3 mt-8">
+           {order.status === "Pending" && (
+             <Link href={`/work-orders/${order.id}/edit`} className="w-full">
+               <Button className="bg-accent text-primary h-14 w-full text-lg font-black gap-3 shadow-xl active:scale-95 transition-all">
+                 <Pencil /> Reabrir para completar
+               </Button>
+             </Link>
+           )}
            <Button onClick={() => generateWorkOrderPDF(order)} className="bg-primary h-14 w-full text-lg font-black gap-3 shadow-xl active:scale-95 transition-all">
              <Download /> Descargar Reporte PDF
            </Button>

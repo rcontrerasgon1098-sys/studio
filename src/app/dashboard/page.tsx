@@ -70,7 +70,6 @@ export default function Dashboard() {
     }
   }, [user, isUserLoading, router]);
 
-  // Consultas Firestore
   const ordersQuery = useMemoFirebase(() => {
     if (!db) return null;
     return query(collection(db, "ordenes"), orderBy("folio", "desc"));
@@ -89,7 +88,6 @@ export default function Dashboard() {
   }, [db]);
   const { data: personnel } = useCollection(personnelQuery);
 
-  // Procesamiento de datos para Gráficos
   const orderStatsData = useMemo(() => {
     if (!orders) return [];
     const completed = orders.filter(o => o.status === "Completed").length;
@@ -102,12 +100,9 @@ export default function Dashboard() {
 
   const weeklyOrdersData = useMemo(() => {
     if (!orders || !mountedDate) return [];
-    
-    // Generamos los últimos 7 días basados en la fecha local del cliente
     const last7Days = Array.from({ length: 7 }, (_, i) => {
       const d = new Date(mountedDate);
       d.setDate(d.getDate() - (6 - i));
-      // Formateamos como YYYY-MM-DD en hora LOCAL para la comparación
       const year = d.getFullYear();
       const month = String(d.getMonth() + 1).padStart(2, '0');
       const day = String(d.getDate()).padStart(2, '0');
@@ -141,10 +136,9 @@ export default function Dashboard() {
     return Object.entries(counts)
       .map(([name, count]) => ({ name, ordenes: count }))
       .sort((a, b) => b.ordenes - a.ordenes)
-      .slice(0, 5); // Top 5
+      .slice(0, 5);
   }, [orders]);
 
-  // Filtrados
   const filteredOrders = useMemo(() => {
     if (!orders) return [];
     return orders.filter(o => 
@@ -429,7 +423,6 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* Listado de Órdenes */}
         {(activeTab === "dashboard" || activeTab === "orders") && (
           <Card className="shadow-xl border-none bg-white mb-8">
             <CardHeader className="flex flex-col md:flex-row items-start md:items-center justify-between border-b pb-6 mb-4 gap-4 px-8">
@@ -476,6 +469,13 @@ export default function Dashboard() {
                                 <Eye className="h-5 w-5" />
                               </Button>
                             </Link>
+                            {order.status === "Pending" && (
+                              <Link href={`/work-orders/${order.id}/edit`}>
+                                <Button variant="ghost" size="icon" className="h-9 w-9 text-primary" title="Editar / Firmar">
+                                  <Pencil className="h-5 w-5" />
+                                </Button>
+                              </Link>
+                            )}
                             <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => generateWorkOrderPDF(order)} title="Descargar PDF">
                               <Download className="h-5 w-5" />
                             </Button>
@@ -499,7 +499,6 @@ export default function Dashboard() {
           </Card>
         )}
 
-        {/* Listado de Clientes */}
         {activeTab === "clients" && (
           <Card className="shadow-xl border-none bg-white">
             <CardHeader className="flex flex-col md:flex-row items-start md:items-center justify-between border-b pb-6 mb-4 gap-4 px-8">
@@ -574,7 +573,6 @@ export default function Dashboard() {
           </Card>
         )}
 
-        {/* Listado de Personal */}
         {activeTab === "personnel" && (
           <Card className="shadow-xl border-none bg-white">
             <CardHeader className="flex flex-col md:flex-row items-start md:items-center justify-between border-b pb-6 mb-4 gap-4 px-8">
@@ -647,7 +645,6 @@ export default function Dashboard() {
         )}
       </main>
 
-      {/* Diálogo de Confirmación de Eliminación Global */}
       <AlertDialog open={!!deleteConfirm} onOpenChange={() => setDeleteConfirm(null)}>
         <AlertDialogContent className="max-w-[400px]">
           <AlertDialogHeader>
