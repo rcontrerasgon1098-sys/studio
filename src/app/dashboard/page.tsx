@@ -1,6 +1,7 @@
+
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -33,39 +34,53 @@ export default function Dashboard() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [checkingRole, setCheckingRole] = useState(true);
 
-  // Verificar rol de admin
-  useMemo(() => {
-    if (!user || !db) return;
+  // Verificar rol de admin y redirección
+  useEffect(() => {
+    if (isUserLoading) return;
+    
+    if (!user) {
+      router.push("/login");
+      return;
+    }
+
     const checkRole = async () => {
-      const adminDoc = await getDoc(doc(db, "roles_admin", user.uid));
-      setIsAdmin(adminDoc.exists());
-      setCheckingRole(false);
+      try {
+        const adminDoc = await getDoc(doc(db, "roles_admin", user.uid));
+        setIsAdmin(adminDoc.exists());
+      } catch (e) {
+        console.error("Error checking role:", e);
+      } finally {
+        setCheckingRole(false);
+      }
     };
+    
     checkRole();
-  }, [user, db]);
+  }, [user, isUserLoading, db, router]);
 
   // Query para órdenes del técnico
   const techOrdersQuery = useMemoFirebase(() => {
-    if (!db || !user || isAdmin) return null;
+    if (!db || !user || isAdmin || checkingRole) return null;
     return query(
       collection(db, "users", user.uid, "work_orders"),
       orderBy("folio", "desc")
     );
-  }, [db, user, isAdmin]);
+  }, [db, user, isAdmin, checkingRole]);
 
   // Query para TODAS las órdenes (Solo para Admins)
   const adminOrdersQuery = useMemoFirebase(() => {
-    if (!db || !isAdmin) return null;
+    if (!db || !isAdmin || checkingRole) return null;
     return query(collectionGroup(db, "work_orders"), orderBy("folio", "desc"));
-  }, [db, isAdmin]);
+  }, [db, isAdmin, checkingRole]);
 
   const { data: techOrders, isLoading: loadingTech } = useCollection(techOrdersQuery);
   const { data: allOrders, isLoading: loadingAll } = useCollection(adminOrdersQuery);
 
   const orders = isAdmin ? allOrders : techOrders;
-  const isLoading = isUserLoading || checkingRole || (isAdmin ? loadingAll : loadingTech);
+  
+  // El estado de carga global ahora es más robusto
+  const isLoading = isUserLoading || checkingRole;
 
-  // Datos para gráficas (Simulados basados en órdenes reales si existen)
+  // Datos para gráficas
   const chartData = useMemo(() => {
     if (!orders) return [];
     const counts: Record<string, number> = {};
@@ -129,7 +144,7 @@ export default function Dashboard() {
     </div>
   );
 
-  if (isLoading) return <div className="min-h-screen flex items-center justify-center text-primary font-black animate-pulse">CARGANDO ICSA...</div>;
+  if (isLoading) return <div className="min-h-screen flex items-center justify-center text-primary font-black animate-pulse bg-background">CARGANDO ICSA...</div>;
 
   return (
     <div className="min-h-screen bg-background flex flex-col md:flex-row">
@@ -322,7 +337,7 @@ export default function Dashboard() {
                   {(!orders || orders.length === 0) && (
                     <TableRow>
                       <TableCell colSpan={5} className="text-center py-20 text-muted-foreground italic">
-                        No se encontraron órdenes registradas.
+                        {isLoading ? "Consultando datos..." : "No se encontraron órdenes registradas."}
                       </TableCell>
                     </TableRow>
                   )}

@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from "react";
@@ -11,6 +12,7 @@ import Image from "next/image";
 import { PlaceHolderImages } from "@/lib/placeholder-images";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
+import { getAuth, signInWithEmailAndPassword } from "firebase/auth";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -24,15 +26,20 @@ export default function LoginPage() {
     e.preventDefault();
     setLoading(true);
 
-    setTimeout(() => {
-      if (email && password) {
-        toast({ title: "Bienvenido", description: "Acceso concedido al panel técnico." });
-        router.push("/dashboard");
-      } else {
-        toast({ variant: "destructive", title: "Error", description: "Credenciales inválidas." });
-      }
+    const auth = getAuth();
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
+      toast({ title: "Bienvenido", description: "Acceso concedido al panel técnico." });
+      router.push("/dashboard");
+    } catch (error: any) {
+      console.error("Login error:", error);
+      toast({ 
+        variant: "destructive", 
+        title: "Error", 
+        description: "Credenciales inválidas o error de conexión. Verifique su correo y contraseña." 
+      });
       setLoading(false);
-    }, 1000);
+    }
   };
 
   return (
