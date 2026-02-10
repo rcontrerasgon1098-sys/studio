@@ -16,8 +16,8 @@ import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, Save, CheckCircle2, Camera, X, Image as ImageIcon, Loader2, User, CreditCard } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
-import { useUser, useFirestore, useDoc, useMemoFirebase } from "@/firebase";
-import { doc } from "firebase/firestore";
+import { useUser, useFirestore, useDoc, useMemoFirebase, useCollection } from "@/firebase";
+import { doc, collection, query, where } from "firebase/firestore";
 import { updateDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 
 export default function EditWorkOrder({ params }: { params: Promise<{ id: string }> }) {
@@ -34,6 +34,13 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
   }, [db, id]);
 
   const { data: order, isLoading: isOrderLoading } = useDoc(orderRef);
+
+  // Consulta para obtener los datos del técnico logueado
+  const techProfileQuery = useMemoFirebase(() => {
+    if (!db || !user?.email) return null;
+    return query(collection(db, "personnel"), where("email_t", "==", user.email));
+  }, [db, user?.email]);
+  const { data: techProfiles } = useCollection(techProfileQuery);
 
   const [loading, setLoading] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
@@ -102,6 +109,18 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
       router.push("/login");
     }
   }, [user, isUserLoading, router]);
+
+  // Efecto para autocompletar datos del técnico si están vacíos al reabrir
+  useEffect(() => {
+    if (techProfiles && techProfiles.length > 0 && isInitialized) {
+      const tech = techProfiles[0];
+      setFormData(prev => ({
+        ...prev,
+        techName: prev.techName || tech.nombre_t || "",
+        techRut: prev.techRut || tech.rut_t || ""
+      }));
+    }
+  }, [techProfiles, isInitialized]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -192,7 +211,9 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
                   <CardTitle className="text-primary text-xl">Datos del Servicio</CardTitle>
                   <CardDescription className="text-xs">Actualice los campos pendientes de la OT.</CardDescription>
                 </div>
-                <Badge variant="outline" className="bg-white text-primary border-primary font-black">PENDIENTE</Badge>
+                <div className="flex flex-col items-end">
+                  <Badge variant="outline" className="text-primary border-primary">PENDIENTE</Badge>
+                </div>
               </div>
             </CardHeader>
             <CardContent className="pt-6 space-y-6">

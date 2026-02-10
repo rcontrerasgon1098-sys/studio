@@ -16,7 +16,7 @@ import { ArrowLeft, Save, Camera, CheckCircle2, Clock, Search, X, Image as Image
 import Link from "next/link";
 import Image from "next/image";
 import { useUser, useFirestore, useCollection, useMemoFirebase } from "@/firebase";
-import { collection, doc, query, orderBy } from "firebase/firestore";
+import { collection, doc, query, orderBy, where } from "firebase/firestore";
 import { setDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
@@ -38,6 +38,13 @@ export default function NewWorkOrder() {
   }, [db]);
 
   const { data: clients } = useCollection(clientsQuery);
+
+  // Consulta para obtener los datos del técnico logueado
+  const techProfileQuery = useMemoFirebase(() => {
+    if (!db || !user?.email) return null;
+    return query(collection(db, "personnel"), where("email_t", "==", user.email));
+  }, [db, user?.email]);
+  const { data: techProfiles } = useCollection(techProfileQuery);
 
   const [formData, setFormData] = useState({
     clientName: "",
@@ -70,6 +77,18 @@ export default function NewWorkOrder() {
       router.push("/login");
     }
   }, [user, isUserLoading, router]);
+
+  // Efecto para autocompletar datos del técnico
+  useEffect(() => {
+    if (techProfiles && techProfiles.length > 0) {
+      const tech = techProfiles[0];
+      setFormData(prev => ({
+        ...prev,
+        techName: tech.nombre_t || "",
+        techRut: tech.rut_t || ""
+      }));
+    }
+  }, [techProfiles]);
 
   const handleSelectClient = (client: any) => {
     setFormData({
