@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { format } from "date-fns";
+import { format, startOfDay, subDays, isSameDay } from "date-fns";
 import { es } from "date-fns/locale";
 import { 
   Plus, FileText, Search, LogOut, LayoutDashboard, 
@@ -109,29 +109,19 @@ export default function Dashboard() {
   const weeklyOrdersData = useMemo(() => {
     if (!orders || !mountedDate) return [];
     
-    const today = new Date();
-    const last7Days = Array.from({ length: 7 }, (_, i) => {
-      const d = new Date(today);
-      d.setDate(d.getDate() - (6 - i));
-      const year = d.getFullYear();
-      const month = String(d.getMonth() + 1).padStart(2, '0');
-      const day = String(d.getDate()).padStart(2, '0');
-      return `${year}-${month}-${day}`;
-    });
+    const today = startOfDay(mountedDate);
+    const last7Days = Array.from({ length: 7 }, (_, i) => subDays(today, 6 - i));
 
-    return last7Days.map(dateStr => {
+    return last7Days.map(date => {
       const count = orders.filter(o => {
         if (!o.startDate) return false;
-        const orderDate = new Date(o.startDate);
-        const y = orderDate.getFullYear();
-        const m = String(orderDate.getMonth() + 1).padStart(2, '0');
-        const d = String(orderDate.getDate()).padStart(2, '0');
-        return `${y}-${m}-${d}` === dateStr;
+        return isSameDay(new Date(o.startDate), date);
       }).length;
       
-      const [y, m, d] = dateStr.split('-').map(Number);
-      const dayName = new Date(y, m - 1, d).toLocaleDateString('es-ES', { weekday: 'short' });
-      return { day: dayName, ordenes: count };
+      return { 
+        day: format(date, 'eee', { locale: es }), 
+        ordenes: count 
+      };
     });
   }, [orders, mountedDate]);
 
@@ -159,8 +149,7 @@ export default function Dashboard() {
       
       let matchesDate = true;
       if (dateFilter && o.startDate) {
-        const orderDate = new Date(o.startDate);
-        matchesDate = orderDate.toDateString() === dateFilter.toDateString();
+        matchesDate = isSameDay(new Date(o.startDate), dateFilter);
       }
       
       return matchesSearch && matchesStatus && matchesDate;
@@ -264,7 +253,7 @@ export default function Dashboard() {
     </div>
   );
 
-  if (isUserLoading) return <div className="min-h-screen flex items-center justify-center text-primary font-black animate-pulse bg-background">CARGANDO PORTAL ICSA...</div>;
+  if (isUserLoading) return <div className="min-h-screen flex items-center justify-center text-primary font-black animate-pulse bg-background uppercase tracking-tighter">Cargando Portal ICSA...</div>;
 
   return (
     <div className="min-h-screen bg-background flex flex-col md:flex-row">
@@ -300,7 +289,7 @@ export default function Dashboard() {
                activeTab === "orders" ? "Historial de Órdenes" : 
                activeTab === "analytics" ? "Estadísticas y Reportes" : "Portal de Gestión"}
             </h1>
-            <p className="text-muted-foreground font-medium">Panel Operativo de ICSA</p>
+            <p className="text-muted-foreground font-medium uppercase text-[10px] tracking-widest">Panel Operativo de ICSA</p>
           </div>
           <div className="flex gap-2">
             {activeTab === "clients" && (
@@ -424,14 +413,14 @@ export default function Dashboard() {
                 <TrendingUp className="h-5 w-5 text-accent" />
                 <div>
                   <CardTitle className="text-lg font-bold text-primary">Actividad Semanal</CardTitle>
-                  <CardDescription>Carga de trabajo en los últimos 7 días</CardDescription>
+                  <CardDescription>Carga de trabajo diaria (ordenada cronológicamente)</CardDescription>
                 </div>
               </CardHeader>
               <CardContent className="h-[300px]">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={weeklyOrdersData}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.1} />
-                    <XAxis dataKey="day" axisLine={false} tickLine={false} />
+                    <XAxis dataKey="day" axisLine={false} tickLine={false} style={{ fontSize: '12px', fontWeight: 'bold' }} />
                     <YAxis axisLine={false} tickLine={false} />
                     <RechartsTooltip cursor={{fill: 'transparent'}} />
                     <Bar dataKey="ordenes" fill="hsl(var(--accent))" radius={[4, 4, 0, 0]} barSize={50} />
@@ -447,7 +436,7 @@ export default function Dashboard() {
             <CardHeader className="flex flex-col items-stretch border-b pb-6 mb-4 gap-4 px-8">
               <div className="flex items-center justify-between">
                 <CardTitle className="text-xl font-bold text-primary">Listado de Órdenes</CardTitle>
-                <Button variant="ghost" size="sm" onClick={clearFilters} className="text-muted-foreground hover:text-primary gap-2 h-8">
+                <Button variant="ghost" size="sm" onClick={clearFilters} className="text-muted-foreground hover:text-primary gap-2 h-8 uppercase font-bold text-[10px]">
                   <FilterX className="h-4 w-4" /> Limpiar Filtros
                 </Button>
               </div>
@@ -459,12 +448,12 @@ export default function Dashboard() {
                     placeholder="Buscar folio o cliente..." 
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10 h-10 bg-background border-none rounded-xl w-full text-sm"
+                    className="pl-10 h-12 bg-background border-none rounded-xl w-full text-sm font-medium"
                   />
                 </div>
                 
                 <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger className="h-10 bg-background border-none rounded-xl">
+                  <SelectTrigger className="h-12 bg-background border-none rounded-xl font-medium">
                     <SelectValue placeholder="Filtrar por estado" />
                   </SelectTrigger>
                   <SelectContent>
@@ -479,7 +468,7 @@ export default function Dashboard() {
                     <Button
                       variant="outline"
                       className={cn(
-                        "h-10 justify-start text-left font-normal bg-background border-none rounded-xl",
+                        "h-12 justify-start text-left font-medium bg-background border-none rounded-xl",
                         !dateFilter && "text-muted-foreground"
                       )}
                     >
@@ -503,11 +492,11 @@ export default function Dashboard() {
                 <Table>
                   <TableHeader>
                     <TableRow className="bg-muted/40">
-                      <TableHead className="font-bold py-4">Folio</TableHead>
-                      <TableHead className="font-bold py-4">Cliente</TableHead>
-                      <TableHead className="font-bold py-4">Fecha</TableHead>
-                      <TableHead className="font-bold py-4">Estado</TableHead>
-                      <TableHead className="text-right font-bold py-4">Acciones</TableHead>
+                      <TableHead className="font-bold py-4 uppercase text-[10px]">Folio</TableHead>
+                      <TableHead className="font-bold py-4 uppercase text-[10px]">Cliente</TableHead>
+                      <TableHead className="font-bold py-4 uppercase text-[10px]">Fecha</TableHead>
+                      <TableHead className="font-bold py-4 uppercase text-[10px]">Estado</TableHead>
+                      <TableHead className="text-right font-bold py-4 uppercase text-[10px]">Acciones</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -516,35 +505,35 @@ export default function Dashboard() {
                         <TableRow key={order.id} className="hover:bg-muted/20 transition-colors">
                           <TableCell className="font-black text-primary">#{order.folio}</TableCell>
                           <TableCell className="font-bold">{order.clientName}</TableCell>
-                          <TableCell className="text-xs text-muted-foreground">
-                            {order.startDate ? new Date(order.startDate).toLocaleDateString() : "N/A"}
+                          <TableCell className="text-xs text-muted-foreground font-medium">
+                            {order.startDate ? format(new Date(order.startDate), "dd/MM/yyyy") : "N/A"}
                           </TableCell>
                           <TableCell>
-                            <Badge className={cn("border-none text-[10px] px-2 py-0.5", order.status === 'Completed' ? 'bg-accent/15 text-primary' : 'bg-primary/10 text-primary')}>
+                            <Badge className={cn("border-none text-[10px] px-2 py-0.5 uppercase font-bold", order.status === 'Completed' ? 'bg-accent/15 text-primary' : 'bg-primary/10 text-primary')}>
                               {order.status === 'Completed' ? 'Completado' : 'Pendiente'}
                             </Badge>
                           </TableCell>
                           <TableCell className="text-right">
                             <div className="flex justify-end gap-2">
                               <Link href={`/work-orders/${order.id}`}>
-                                <Button variant="ghost" size="icon" className="h-9 w-9" title="Ver detalle">
+                                <Button variant="ghost" size="icon" className="h-10 w-10" title="Ver detalle">
                                   <Eye className="h-5 w-5" />
                                 </Button>
                               </Link>
                               {order.status === "Pending" && (
                                 <Link href={`/work-orders/${order.id}/edit`}>
-                                  <Button variant="ghost" size="icon" className="h-9 w-9 text-primary" title="Editar / Firmar">
+                                  <Button variant="ghost" size="icon" className="h-10 w-10 text-primary" title="Editar / Firmar">
                                     <Pencil className="h-5 w-5" />
                                   </Button>
                                 </Link>
                               )}
-                              <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => generateWorkOrderPDF(order)} title="Descargar PDF">
+                              <Button variant="ghost" size="icon" className="h-10 w-10" onClick={() => generateWorkOrderPDF(order)} title="Descargar PDF">
                                 <Download className="h-5 w-5" />
                               </Button>
                               <Button 
                                 variant="ghost" 
                                 size="icon" 
-                                className="h-9 w-9 text-destructive" 
+                                className="h-10 w-10 text-destructive" 
                                 title="Eliminar orden"
                                 onClick={() => setDeleteConfirm({ id: order.id, type: 'ordenes' })}
                               >
@@ -556,8 +545,8 @@ export default function Dashboard() {
                       ))
                     ) : (
                       <TableRow>
-                        <TableCell colSpan={5} className="h-24 text-center font-medium text-muted-foreground">
-                          No se encontraron órdenes con los filtros aplicados.
+                        <TableCell colSpan={5} className="h-32 text-center font-bold text-muted-foreground uppercase tracking-widest text-xs">
+                          No se encontraron registros activos
                         </TableCell>
                       </TableRow>
                     )}
@@ -578,7 +567,7 @@ export default function Dashboard() {
                   placeholder="Buscar nombre o RUT..." 
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 h-10 bg-background border-none rounded-xl w-full text-sm"
+                  className="pl-10 h-12 bg-background border-none rounded-xl w-full text-sm font-medium"
                 />
               </div>
             </CardHeader>
@@ -587,11 +576,11 @@ export default function Dashboard() {
                 <Table>
                   <TableHeader>
                     <TableRow className="bg-muted/40">
-                      <TableHead className="font-bold py-4">RUT</TableHead>
-                      <TableHead className="font-bold py-4">Nombre / Razón Social</TableHead>
-                      <TableHead className="font-bold py-4">Email / Teléfono</TableHead>
-                      <TableHead className="font-bold py-4">Estado</TableHead>
-                      <TableHead className="text-right font-bold py-4">Acciones</TableHead>
+                      <TableHead className="font-bold py-4 uppercase text-[10px]">RUT</TableHead>
+                      <TableHead className="font-bold py-4 uppercase text-[10px]">Nombre / Razón Social</TableHead>
+                      <TableHead className="font-bold py-4 uppercase text-[10px]">Email / Teléfono</TableHead>
+                      <TableHead className="font-bold py-4 uppercase text-[10px]">Estado</TableHead>
+                      <TableHead className="text-right font-bold py-4 uppercase text-[10px]">Acciones</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -601,31 +590,31 @@ export default function Dashboard() {
                         <TableCell>
                           <div className="flex flex-col">
                             <span className="font-bold">{client.nombreCliente}</span>
-                            <span className="text-[10px] text-muted-foreground">{client.razonSocial}</span>
+                            <span className="text-[10px] text-muted-foreground uppercase font-black">{client.razonSocial}</span>
                           </div>
                         </TableCell>
                         <TableCell>
-                          <div className="flex flex-col text-xs">
+                          <div className="flex flex-col text-xs font-medium">
                             <span>{client.emailClientes}</span>
                             <span className="text-muted-foreground">{client.telefonoCliente}</span>
                           </div>
                         </TableCell>
                         <TableCell>
-                          <Badge className={cn("border-none text-[10px] px-2 py-0.5", client.estadoCliente === 'Activo' ? 'bg-accent/15 text-primary' : 'bg-destructive/10 text-destructive')}>
+                          <Badge className={cn("border-none text-[10px] px-2 py-0.5 uppercase font-bold", client.estadoCliente === 'Activo' ? 'bg-accent/15 text-primary' : 'bg-destructive/10 text-destructive')}>
                             {client.estadoCliente}
                           </Badge>
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex justify-end gap-2">
                             <Link href={`/clients/${client.id}/edit`}>
-                              <Button variant="ghost" size="icon" className="h-9 w-9 text-primary" title="Editar cliente">
+                              <Button variant="ghost" size="icon" className="h-10 w-10 text-primary" title="Editar cliente">
                                 <Pencil className="h-5 w-5" />
                               </Button>
                             </Link>
                             <Button 
                               variant="ghost" 
                               size="icon" 
-                              className="h-9 w-9 text-destructive"
+                              className="h-10 w-10 text-destructive"
                               title="Eliminar cliente"
                               onClick={() => setDeleteConfirm({ id: client.id, type: 'clients' })}
                             >
@@ -652,7 +641,7 @@ export default function Dashboard() {
                   placeholder="Buscar nombre o RUT..." 
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 h-10 bg-background border-none rounded-xl w-full text-sm"
+                  className="pl-10 h-12 bg-background border-none rounded-xl w-full text-sm font-medium"
                 />
               </div>
             </CardHeader>
@@ -661,12 +650,12 @@ export default function Dashboard() {
                 <Table>
                   <TableHeader>
                     <TableRow className="bg-muted/40">
-                      <TableHead className="font-bold py-4">ID</TableHead>
-                      <TableHead className="font-bold py-4">Nombre Completo</TableHead>
-                      <TableHead className="font-bold py-4">Rol</TableHead>
-                      <TableHead className="font-bold py-4">RUT</TableHead>
-                      <TableHead className="font-bold py-4">Email / Celular</TableHead>
-                      <TableHead className="text-right font-bold py-4">Acciones</TableHead>
+                      <TableHead className="font-bold py-4 uppercase text-[10px]">ID</TableHead>
+                      <TableHead className="font-bold py-4 uppercase text-[10px]">Nombre Completo</TableHead>
+                      <TableHead className="font-bold py-4 uppercase text-[10px]">Rol</TableHead>
+                      <TableHead className="font-bold py-4 uppercase text-[10px]">RUT</TableHead>
+                      <TableHead className="font-bold py-4 uppercase text-[10px]">Email / Celular</TableHead>
+                      <TableHead className="text-right font-bold py-4 uppercase text-[10px]">Acciones</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -675,28 +664,28 @@ export default function Dashboard() {
                         <TableCell className="font-black text-primary text-xs">{p.id_t}</TableCell>
                         <TableCell className="font-bold">{p.nombre_t}</TableCell>
                         <TableCell>
-                          <Badge variant="outline" className={cn("gap-1 border-primary/20 text-primary", p.rol_t === 'Administrador' && 'bg-primary/5')}>
+                          <Badge variant="outline" className={cn("gap-1 border-primary/20 text-primary uppercase text-[9px] font-black", p.rol_t === 'Administrador' && 'bg-primary/5')}>
                             <Shield className="h-3 w-3" /> {p.rol_t}
                           </Badge>
                         </TableCell>
-                        <TableCell className="text-xs">{p.rut_t}</TableCell>
+                        <TableCell className="text-xs font-bold">{p.rut_t}</TableCell>
                         <TableCell>
-                          <div className="flex flex-col text-xs">
-                            <span className="font-medium">{p.email_t}</span>
+                          <div className="flex flex-col text-xs font-medium">
+                            <span className="font-bold">{p.email_t}</span>
                             <span className="text-muted-foreground">{p.cel_t}</span>
                           </div>
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex justify-end gap-2">
                             <Link href={`/technicians/${p.id}/edit`}>
-                              <Button variant="ghost" size="icon" className="h-9 w-9 text-primary" title="Editar personal">
+                              <Button variant="ghost" size="icon" className="h-10 w-10 text-primary" title="Editar personal">
                                 <Pencil className="h-5 w-5" />
                               </Button>
                             </Link>
                             <Button 
                               variant="ghost" 
                               size="icon" 
-                              className="h-9 w-9 text-destructive"
+                              className="h-10 w-10 text-destructive"
                               title="Eliminar personal"
                               onClick={() => setDeleteConfirm({ id: p.id, type: 'personnel' })}
                             >
@@ -715,17 +704,17 @@ export default function Dashboard() {
       </main>
 
       <AlertDialog open={!!deleteConfirm} onOpenChange={() => setDeleteConfirm(null)}>
-        <AlertDialogContent className="max-w-[400px]">
+        <AlertDialogContent className="max-w-[400px] rounded-2xl">
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-primary font-black">¿Confirmar eliminación?</AlertDialogTitle>
-            <AlertDialogDescription className="text-sm font-medium">
-              Esta acción es permanente e irreversible. El registro será borrado definitivamente del sistema de ICSA.
+            <AlertDialogTitle className="text-primary font-black text-xl uppercase tracking-tighter">¿Confirmar eliminación?</AlertDialogTitle>
+            <AlertDialogDescription className="text-sm font-medium leading-relaxed">
+              Esta acción es permanente e irreversible. El registro será borrado definitivamente de los servidores de ICSA.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter className="gap-2 sm:gap-0">
-            <AlertDialogCancel className="font-bold border-primary/20 text-primary hover:bg-primary/5">Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} className="bg-destructive hover:bg-destructive/90 font-black">
-              Sí, Eliminar Registro
+          <AlertDialogFooter className="gap-2 sm:gap-2 pt-4">
+            <AlertDialogCancel className="font-bold border-primary/20 text-primary h-12 rounded-xl">Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} className="bg-destructive hover:bg-destructive/90 font-black h-12 rounded-xl shadow-lg">
+              Eliminar Definitivamente
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
