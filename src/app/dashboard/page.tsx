@@ -6,10 +6,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { Input } from "@/components/ui/input";
 import { 
   Plus, FileText, Search, Settings, LogOut, LayoutDashboard, 
-  Eye, Download, Menu, Users, BarChart3, TrendingUp, UserPlus, EyeOff,
-  Calendar as CalendarIcon, Filter, X, FilterX
+  Eye, Download, Menu, Users, TrendingUp, BarChart3
 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
@@ -18,20 +18,7 @@ import { generateWorkOrderPDF } from "@/lib/pdf-generator";
 import { PlaceHolderImages } from "@/lib/placeholder-images";
 import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc } from "@/firebase";
 import { collection, collectionGroup, query, orderBy, doc } from "firebase/firestore";
-import { 
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  PieChart, Pie, Cell 
-} from "recharts";
 import { getAuth, signOut } from "firebase/auth";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { useToast } from "@/hooks/use-toast";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Calendar } from "@/components/ui/calendar";
-import { format } from "date-fns";
-import { es } from "date-fns/locale";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export default function Dashboard() {
   const { user, isUserLoading } = useUser();
@@ -41,12 +28,7 @@ export default function Dashboard() {
   
   const [isAdmin, setIsAdmin] = useState(false);
   const [activeTab, setActiveTab] = useState("dashboard");
-  const [showRegPassword, setShowRegPassword] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-  
-  const [dateRange, setDateRange] = useState<{ from: Date | undefined; to: Date | undefined }>({ from: undefined, to: undefined });
-  const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [clientFilter, setClientFilter] = useState<string>("all");
 
   useEffect(() => {
     if (!isUserLoading && !user) {
@@ -62,8 +44,10 @@ export default function Dashboard() {
   const { data: adminRoleDoc, isLoading: isRoleLoading } = useDoc(adminDocRef);
 
   useEffect(() => {
-    if (!isRoleLoading && adminRoleDoc !== undefined) {
-      setIsAdmin(!!adminRoleDoc);
+    if (!isRoleLoading && adminRoleDoc) {
+      setIsAdmin(true);
+    } else if (!isRoleLoading) {
+      setIsAdmin(false);
     }
   }, [adminRoleDoc, isRoleLoading]);
 
@@ -77,6 +61,7 @@ export default function Dashboard() {
 
   const adminOrdersQuery = useMemoFirebase(() => {
     if (!db || !isAdmin || isRoleLoading) return null;
+    // Solo permitimos esta consulta si ya sabemos que es admin para evitar errores de permisos
     return query(collectionGroup(db, "work_orders"), orderBy("folio", "desc"));
   }, [db, isAdmin, isRoleLoading]);
 
@@ -86,56 +71,13 @@ export default function Dashboard() {
   const orders = isAdmin ? allOrders : techOrders;
   const isLoading = isUserLoading || isRoleLoading;
 
-  const uniqueClients = useMemo(() => {
-    if (!orders) return [];
-    const clients = new Set(orders.map(o => o.clientName).filter(Boolean));
-    return Array.from(clients).sort();
-  }, [orders]);
-
   const filteredOrders = useMemo(() => {
     if (!orders) return [];
-    return orders.filter(o => {
-      const matchesSearch = o.folio.toString().includes(searchTerm) || 
-                          o.clientName?.toLowerCase().includes(searchTerm.toLowerCase());
-      
-      const matchesStatus = statusFilter === "all" || o.status === statusFilter;
-      
-      const matchesClient = clientFilter === "all" || o.clientName === clientFilter;
-
-      const orderDate = new Date(o.startDate);
-      const matchesDate = (!dateRange.from || orderDate >= dateRange.from) && 
-                          (!dateRange.to || orderDate <= dateRange.to);
-
-      return matchesSearch && matchesStatus && matchesClient && matchesDate;
-    });
-  }, [orders, searchTerm, statusFilter, clientFilter, dateRange]);
-
-  const resetFilters = () => {
-    setSearchTerm("");
-    setDateRange({ from: undefined, to: undefined });
-    setStatusFilter("all");
-    setClientFilter("all");
-  };
-
-  const chartData = useMemo(() => {
-    if (!orders) return [];
-    const counts: Record<string, number> = {};
-    orders.slice(0, 7).forEach(o => {
-      const day = new Date(o.startDate || Date.now()).toLocaleDateString('es-ES', { weekday: 'short' });
-      counts[day] = (counts[day] || 0) + 1;
-    });
-    return Object.entries(counts).map(([name, total]) => ({ name, total }));
-  }, [orders]);
-
-  const statusData = useMemo(() => {
-    if (!orders) return [];
-    const completed = orders.filter(o => o.status === "Completed").length;
-    const pending = orders.length - completed;
-    return [
-      { name: "Completado", value: completed, color: "#43D88B" },
-      { name: "Pendiente", value: pending, color: "#38A3A5" }
-    ];
-  }, [orders]);
+    return orders.filter(o => 
+      o.folio?.toString().includes(searchTerm) || 
+      o.clientName?.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }, [orders, searchTerm]);
 
   const handleLogout = async () => {
     const auth = getAuth();
@@ -274,7 +216,7 @@ export default function Dashboard() {
 
         <Card className="shadow-xl border-none bg-white">
           <CardHeader className="flex flex-col md:flex-row items-start md:items-center justify-between border-b pb-6 mb-4 gap-4 px-8">
-            <CardTitle className="text-xl font-bold text-primary">Órdenes Recientes</CardTitle>
+            <CardTitle className="text-xl font-bold text-primary">Listado de Órdenes</CardTitle>
             <div className="relative w-full md:w-80">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
               <Input 
@@ -292,6 +234,7 @@ export default function Dashboard() {
                   <TableRow className="bg-muted/40">
                     <TableHead className="font-bold py-4">Folio</TableHead>
                     <TableHead className="font-bold py-4">Cliente</TableHead>
+                    {isAdmin && <TableHead className="font-bold py-4">Técnico</TableHead>}
                     <TableHead className="font-bold py-4">Fecha</TableHead>
                     <TableHead className="font-bold py-4">Estado</TableHead>
                     <TableHead className="text-right font-bold py-4">Acciones</TableHead>
@@ -302,8 +245,9 @@ export default function Dashboard() {
                     <TableRow key={order.id} className="hover:bg-muted/20 transition-colors">
                       <TableCell className="font-black text-primary">#{order.folio}</TableCell>
                       <TableCell className="font-bold">{order.clientName}</TableCell>
+                      {isAdmin && <TableCell className="text-xs font-medium">{order.technicianEmail || "N/A"}</TableCell>}
                       <TableCell className="text-xs text-muted-foreground">
-                        {new Date(order.startDate).toLocaleDateString()}
+                        {order.startDate ? new Date(order.startDate).toLocaleDateString() : "N/A"}
                       </TableCell>
                       <TableCell>
                         <Badge className={`${order.status === 'Completed' ? 'bg-accent/15 text-primary' : 'bg-primary/10 text-primary'} border-none text-[10px] px-2 py-0.5`}>
@@ -324,6 +268,13 @@ export default function Dashboard() {
                       </TableCell>
                     </TableRow>
                   ))}
+                  {filteredOrders.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={isAdmin ? 6 : 5} className="text-center py-10 text-muted-foreground italic">
+                        No se encontraron órdenes.
+                      </TableCell>
+                    </TableRow>
+                  )}
                 </TableBody>
               </Table>
             </div>

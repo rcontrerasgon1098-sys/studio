@@ -9,7 +9,7 @@ import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
 import Image from "next/image";
 import { PlaceHolderImages } from "@/lib/placeholder-images";
-import { ArrowLeft, LogIn, Eye, EyeOff, ShieldCheck } from "lucide-react";
+import { ArrowLeft, LogIn, Eye, EyeOff } from "lucide-react";
 import Link from "next/link";
 import { getAuth, signInWithEmailAndPassword } from "firebase/auth";
 import { doc, getFirestore, setDoc } from "firebase/firestore";
@@ -34,13 +34,13 @@ export default function LoginPage() {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 
-      // Si es el correo de admin, aseguramos que tenga el rol en Firestore antes de entrar
+      // Si es el correo designado como admin, aseguramos sus permisos en cada entrada
       if (email === "admin@icsa.com") {
         await setDoc(doc(db, "roles_admin", user.uid), {
           email: email,
           role: "admin",
           updatedAt: new Date().toISOString()
-        });
+        }, { merge: true });
       }
 
       toast({ title: "Bienvenido", description: "Acceso concedido al portal ICSA." });
