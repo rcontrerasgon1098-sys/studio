@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,11 +12,15 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SignaturePad } from "@/components/SignaturePad";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Save, Camera, CheckCircle2, Clock, User as UserIcon } from "lucide-react";
+import { ArrowLeft, Save, Camera, CheckCircle2, Clock, User as UserIcon, Search, UserPlus } from "lucide-react";
 import Link from "next/link";
-import { useUser, useFirestore } from "@/firebase";
-import { collection, doc } from "firebase/firestore";
+import { useUser, useFirestore, useCollection, useMemoFirebase } from "@/firebase";
+import { collection, doc, query, orderBy } from "firebase/firestore";
 import { setDocumentNonBlocking } from "@/firebase/non-blocking-updates";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { cn } from "@/lib/utils";
+import { Check } from "lucide-react";
 
 export default function NewWorkOrder() {
   const router = useRouter();
@@ -26,11 +30,21 @@ export default function NewWorkOrder() {
   
   const [loading, setLoading] = useState(false);
   const [folio, setFolio] = useState(0);
+  const [openClientSearch, setOpenClientSearch] = useState(false);
+
+  // Fetch existing clients for autocomplete
+  const clientsQuery = useMemoFirebase(() => {
+    if (!db) return null;
+    return query(collection(db, "clients"), orderBy("name", "asc"));
+  }, [db]);
+
+  const { data: clients } = useCollection(clientsQuery);
 
   // Form State
   const [formData, setFormData] = useState({
     clientName: "",
     clientContact: "",
+    clientId: "generic_client",
     signalType: "Simple",
     isCert: false,
     isPlan: false,
@@ -46,16 +60,28 @@ export default function NewWorkOrder() {
   });
 
   useEffect(() => {
-    // Generar folio aleatorio para el prototipo
     setFolio(Math.floor(Math.random() * 90000) + 10000);
   }, []);
 
-  // Redirigir si no hay usuario (protección extra)
   useEffect(() => {
     if (!isUserLoading && !user) {
       router.push("/login");
     }
   }, [user, isUserLoading, router]);
+
+  const handleSelectClient = (client: any) => {
+    setFormData({
+      ...formData,
+      clientName: client.name,
+      clientContact: client.contact,
+      clientId: client.id
+    });
+    setOpenClientSearch(false);
+    toast({
+      title: "Cliente Seleccionado",
+      description: `Se han cargado los datos de ${client.name}`
+    });
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -79,16 +105,19 @@ export default function NewWorkOrder() {
       id: orderId,
       folio: folio,
       technicianId: user.uid,
-      technicianEmail: user.email, // Guardar automáticamente el correo del técnico
+      technicianEmail: user.email,
       startDate: new Date().toISOString(),
       endDate: new Date().toISOString(),
-      clientId: "generic_client"
     };
 
     const orderRef = doc(db, "users", user.uid, "work_orders", orderId);
     
     try {
       setDocumentNonBlocking(orderRef, workOrderData, { merge: true });
+      
+      // If client is new, we could potentially save it to the clients collection here
+      // but to keep it simple and denormalized as requested, we just save the order.
+      
       toast({ title: "Orden Guardada", description: "La orden ha sido sincronizada con éxito." });
       router.push("/dashboard");
     } catch (error) {
@@ -144,15 +173,72 @@ export default function NewWorkOrder() {
             </CardHeader>
             <CardContent className="pt-6 space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="clientName" className="font-bold">Nombre del Cliente</Label>
+                <div className="space-y-2 flex flex-col">
+                  <Label htmlFor="clientName" className="font-bold mb-1">Nombre del Cliente</Label>
+                  <Popover open={openClientSearch} onOpenChange={setOpenClientSearch}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        role="combobox"
+                        aria-expanded={openClientSearch}
+                        className="w-full justify-between h-12 text-base font-normal bg-white"
+                      >
+                        {formData.clientName || "Buscar o escribir cliente..."}
+                        <Search className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0">
+                      <Command>
+                        <CommandInput placeholder="Buscar cliente existente..." />
+                        <CommandList>
+                          <CommandEmpty>
+                            <div className="p-4 text-center">
+                              <p className="text-sm text-muted-foreground mb-2">No se encontró el cliente.</p>
+                              <Button 
+                                size="sm" 
+                                variant="outline" 
+                                className="w-full"
+                                onClick={() => {
+                                  setOpenClientSearch(false);
+                                  // El técnico puede escribir manualmente si no existe
+                                }}
+                              >
+                                <UserPlus className="mr-2 h-4 w-4" /> Crear nuevo
+                              </Button>
+                            </div>
+                          </CommandEmpty>
+                          <CommandGroup>
+                            {clients?.map((client) => (
+                              <CommandItem
+                                key={client.id}
+                                value={client.name}
+                                onSelect={() => handleSelectClient(client)}
+                              >
+                                <Check
+                                  className={cn(
+                                    "mr-2 h-4 w-4",
+                                    formData.clientName === client.name ? "opacity-100" : "opacity-0"
+                                  )}
+                                />
+                                <div className="flex flex-col">
+                                  <span>{client.name}</span>
+                                  <span className="text-[10px] text-muted-foreground">{client.contact}</span>
+                                </div>
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
+                  {/* Manual input fallback if needed */}
                   <Input 
                     id="clientName" 
-                    placeholder="Ej. Juan Pérez" 
+                    placeholder="Escribir nombre manualmente si es nuevo" 
                     value={formData.clientName}
-                    onChange={e => setFormData({...formData, clientName: e.target.value})}
+                    onChange={e => setFormData({...formData, clientName: e.target.value, clientId: "generic_client"})}
                     required
-                    className="h-12 text-base"
+                    className="mt-2 h-10 text-sm border-dashed"
                   />
                 </div>
                 <div className="space-y-2">
