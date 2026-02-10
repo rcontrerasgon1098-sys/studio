@@ -46,7 +46,6 @@ import {
   Cell,
   Legend
 } from "recharts";
-import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 
 export default function Dashboard() {
   const { user, isUserLoading } = useUser();
@@ -171,7 +170,7 @@ export default function Dashboard() {
           className={`w-full justify-start gap-3 h-12 font-semibold ${activeTab === "dashboard" ? "bg-white/10 text-white border-none" : "text-white/80 hover:bg-white/10"}`}
           onClick={() => { setActiveTab("dashboard"); setSearchTerm(""); }}
         >
-          <LayoutDashboard size={20} /> Dashboard
+          <LayoutDashboard size={20} /> Inicio
         </Button>
         <Button 
           variant={activeTab === "orders" ? "secondary" : "ghost"} 
@@ -179,6 +178,13 @@ export default function Dashboard() {
           onClick={() => { setActiveTab("orders"); setSearchTerm(""); }}
         >
           <FileText size={20} /> Órdenes
+        </Button>
+        <Button 
+          variant={activeTab === "analytics" ? "secondary" : "ghost"} 
+          className={`w-full justify-start gap-3 h-12 font-semibold ${activeTab === "analytics" ? "bg-white/10 text-white border-none" : "text-white/80 hover:bg-white/10"}`}
+          onClick={() => { setActiveTab("analytics"); setSearchTerm(""); }}
+        >
+          <PieChartIcon size={20} /> Reportes
         </Button>
         <Button 
           variant={activeTab === "clients" ? "secondary" : "ghost"} 
@@ -236,7 +242,8 @@ export default function Dashboard() {
             <h1 className="text-3xl font-black text-primary tracking-tight">
               {activeTab === "clients" ? "Gestión de Clientes" : 
                activeTab === "personnel" ? "Gestión de Personal" : 
-               activeTab === "orders" ? "Historial de Órdenes" : "Portal de Gestión"}
+               activeTab === "orders" ? "Historial de Órdenes" : 
+               activeTab === "analytics" ? "Estadísticas y Reportes" : "Portal de Gestión"}
             </h1>
             <p className="text-muted-foreground font-medium">Panel Operativo de ICSA</p>
           </div>
@@ -264,102 +271,102 @@ export default function Dashboard() {
         </header>
 
         {activeTab === "dashboard" && (
-          <>
-            <div className="grid grid-cols-1 sm:grid-cols-4 gap-6 mb-8">
-              <Card className="shadow-md border-none bg-white">
-                <CardHeader className="pb-2 p-6 flex flex-row items-center justify-between">
-                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Total Órdenes</p>
-                  <FileText className="h-4 w-4 text-primary opacity-30" />
-                </CardHeader>
-                <CardContent className="p-6 pt-0">
-                  <p className="text-4xl font-black text-primary">{orders?.length || 0}</p>
-                </CardContent>
-              </Card>
-              <Card className="shadow-md border-none bg-white">
-                <CardHeader className="pb-2 p-6 flex flex-row items-center justify-between">
-                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Completadas</p>
-                  <TrendingUp className="h-4 w-4 text-accent opacity-30" />
-                </CardHeader>
-                <CardContent className="p-6 pt-0">
-                  <p className="text-4xl font-black text-accent">
-                    {orders?.filter(o => o.status === "Completed").length || 0}
-                  </p>
-                </CardContent>
-              </Card>
-              <Card className="shadow-md border-none bg-white">
-                <CardHeader className="pb-2 p-6 flex flex-row items-center justify-between">
-                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Clientes</p>
-                  <Users className="h-4 w-4 text-primary opacity-30" />
-                </CardHeader>
-                <CardContent className="p-6 pt-0">
-                  <p className="text-4xl font-black text-primary/40">{clients?.length || 0}</p>
-                </CardContent>
-              </Card>
-              <Card className="shadow-md border-none bg-white">
-                <CardHeader className="pb-2 p-6 flex flex-row items-center justify-between">
-                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Personal</p>
-                  <UserRound className="h-4 w-4 text-primary opacity-30" />
-                </CardHeader>
-                <CardContent className="p-6 pt-0">
-                  <p className="text-4xl font-black text-primary/40">{personnel?.length || 0}</p>
-                </CardContent>
-              </Card>
-            </div>
+          <div className="grid grid-cols-1 sm:grid-cols-4 gap-6 mb-8">
+            <Card className="shadow-md border-none bg-white">
+              <CardHeader className="pb-2 p-6 flex flex-row items-center justify-between">
+                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Total Órdenes</p>
+                <FileText className="h-4 w-4 text-primary opacity-30" />
+              </CardHeader>
+              <CardContent className="p-6 pt-0">
+                <p className="text-4xl font-black text-primary">{orders?.length || 0}</p>
+              </CardContent>
+            </Card>
+            <Card className="shadow-md border-none bg-white">
+              <CardHeader className="pb-2 p-6 flex flex-row items-center justify-between">
+                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Completadas</p>
+                <TrendingUp className="h-4 w-4 text-accent opacity-30" />
+              </CardHeader>
+              <CardContent className="p-6 pt-0">
+                <p className="text-4xl font-black text-accent">
+                  {orders?.filter(o => o.status === "Completed").length || 0}
+                </p>
+              </CardContent>
+            </Card>
+            <Card className="shadow-md border-none bg-white">
+              <CardHeader className="pb-2 p-6 flex flex-row items-center justify-between">
+                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Clientes</p>
+                <Users className="h-4 w-4 text-primary opacity-30" />
+              </CardHeader>
+              <CardContent className="p-6 pt-0">
+                <p className="text-4xl font-black text-primary/40">{clients?.length || 0}</p>
+              </CardContent>
+            </Card>
+            <Card className="shadow-md border-none bg-white">
+              <CardHeader className="pb-2 p-6 flex flex-row items-center justify-between">
+                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Personal</p>
+                <UserRound className="h-4 w-4 text-primary opacity-30" />
+              </CardHeader>
+              <CardContent className="p-6 pt-0">
+                <p className="text-4xl font-black text-primary/40">{personnel?.length || 0}</p>
+              </CardContent>
+            </Card>
+          </div>
+        )}
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-              <Card className="shadow-xl border-none bg-white">
-                <CardHeader className="border-b pb-4 mb-4 flex flex-row items-center gap-2">
-                  <PieChartIcon className="h-5 w-5 text-primary" />
-                  <div>
-                    <CardTitle className="text-lg font-bold text-primary">Estado de Órdenes</CardTitle>
-                    <CardDescription>Distribución de cumplimiento</CardDescription>
-                  </div>
-                </CardHeader>
-                <CardContent className="h-[300px] flex items-center justify-center">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={orderStatsData}
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={60}
-                        outerRadius={80}
-                        paddingAngle={5}
-                        dataKey="value"
-                      >
-                        {orderStatsData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.color} />
-                        ))}
-                      </Pie>
-                      <RechartsTooltip />
-                      <Legend verticalAlign="bottom" height={36}/>
-                    </PieChart>
-                  </ResponsiveContainer>
-                </CardContent>
-              </Card>
+        {activeTab === "analytics" && (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+            <Card className="shadow-xl border-none bg-white">
+              <CardHeader className="border-b pb-4 mb-4 flex flex-row items-center gap-2">
+                <PieChartIcon className="h-5 w-5 text-primary" />
+                <div>
+                  <CardTitle className="text-lg font-bold text-primary">Estado de Órdenes</CardTitle>
+                  <CardDescription>Distribución de cumplimiento</CardDescription>
+                </div>
+              </CardHeader>
+              <CardContent className="h-[400px] flex items-center justify-center">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={orderStatsData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={80}
+                      outerRadius={120}
+                      paddingAngle={5}
+                      dataKey="value"
+                    >
+                      {orderStatsData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.color} />
+                      ))}
+                    </Pie>
+                    <RechartsTooltip />
+                    <Legend verticalAlign="bottom" height={36}/>
+                  </PieChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
 
-              <Card className="shadow-xl border-none bg-white">
-                <CardHeader className="border-b pb-4 mb-4 flex flex-row items-center gap-2">
-                  <BarChartIcon className="h-5 w-5 text-primary" />
-                  <div>
-                    <CardTitle className="text-lg font-bold text-primary">Actividad Semanal</CardTitle>
-                    <CardDescription>Órdenes creadas en los últimos 7 días</CardDescription>
-                  </div>
-                </CardHeader>
-                <CardContent className="h-[300px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={weeklyOrdersData}>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.1} />
-                      <XAxis dataKey="day" axisLine={false} tickLine={false} />
-                      <YAxis axisLine={false} tickLine={false} />
-                      <RechartsTooltip cursor={{fill: 'transparent'}} />
-                      <Bar dataKey="ordenes" fill="hsl(var(--accent))" radius={[4, 4, 0, 0]} barSize={40} />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </CardContent>
-              </Card>
-            </div>
-          </>
+            <Card className="shadow-xl border-none bg-white">
+              <CardHeader className="border-b pb-4 mb-4 flex flex-row items-center gap-2">
+                <BarChartIcon className="h-5 w-5 text-primary" />
+                <div>
+                  <CardTitle className="text-lg font-bold text-primary">Actividad Semanal</CardTitle>
+                  <CardDescription>Órdenes creadas en los últimos 7 días</CardDescription>
+                </div>
+              </CardHeader>
+              <CardContent className="h-[400px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={weeklyOrdersData}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.1} />
+                    <XAxis dataKey="day" axisLine={false} tickLine={false} />
+                    <YAxis axisLine={false} tickLine={false} />
+                    <RechartsTooltip cursor={{fill: 'transparent'}} />
+                    <Bar dataKey="ordenes" fill="hsl(var(--accent))" radius={[4, 4, 0, 0]} barSize={50} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+          </div>
         )}
 
         {/* Listado de Órdenes */}
