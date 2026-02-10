@@ -100,8 +100,11 @@ export default function Dashboard() {
 
   const weeklyOrdersData = useMemo(() => {
     if (!orders || !mountedDate) return [];
+    
+    // Usar fecha local para el cálculo
+    const today = new Date();
     const last7Days = Array.from({ length: 7 }, (_, i) => {
-      const d = new Date(mountedDate);
+      const d = new Date(today);
       d.setDate(d.getDate() - (6 - i));
       const year = d.getFullYear();
       const month = String(d.getMonth() + 1).padStart(2, '0');
@@ -269,8 +272,8 @@ export default function Dashboard() {
         <header className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
           <div>
             <h1 className="text-3xl font-black text-primary tracking-tight">
-              {activeTab === "clients" ? "Gestión de Clientes" : 
-               activeTab === "personnel" ? "Gestión de Personal" : 
+              {activeTab === "clients" ? `Gestión de Clientes (${clients?.length || 0})` : 
+               activeTab === "personnel" ? `Gestión de Personal (${personnel?.length || 0})` : 
                activeTab === "orders" ? "Historial de Órdenes" : 
                activeTab === "analytics" ? "Estadísticas y Reportes" : "Portal de Gestión"}
             </h1>
@@ -302,7 +305,7 @@ export default function Dashboard() {
         </header>
 
         {activeTab === "dashboard" && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-8">
             <Card className="shadow-md border-none bg-white">
               <CardHeader className="pb-2 p-6 flex flex-row items-center justify-between">
                 <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Total Órdenes</p>
@@ -332,24 +335,6 @@ export default function Dashboard() {
                 <p className="text-4xl font-black text-accent">
                   {orders?.filter(o => o.status === "Completed").length || 0}
                 </p>
-              </CardContent>
-            </Card>
-            <Card className="shadow-md border-none bg-white">
-              <CardHeader className="pb-2 p-6 flex flex-row items-center justify-between">
-                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Clientes</p>
-                <Users className="h-4 w-4 text-primary opacity-30" />
-              </CardHeader>
-              <CardContent className="p-6 pt-0">
-                <p className="text-4xl font-black text-primary/40">{clients?.length || 0}</p>
-              </CardContent>
-            </Card>
-            <Card className="shadow-md border-none bg-white">
-              <CardHeader className="pb-2 p-6 flex flex-row items-center justify-between">
-                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Personal</p>
-                <UserRound className="h-4 w-4 text-primary opacity-30" />
-              </CardHeader>
-              <CardContent className="p-6 pt-0">
-                <p className="text-4xl font-black text-primary/40">{personnel?.length || 0}</p>
               </CardContent>
             </Card>
           </div>
