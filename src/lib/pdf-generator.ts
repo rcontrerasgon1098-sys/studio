@@ -27,11 +27,11 @@ export const generateWorkOrderPDF = async (data: any) => {
   doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
   doc.rect(0, 0, 210, 40, "F");
   
-  // Add ICSA Logo
+  // Add ICSA Logo (Rectangular format)
   try {
     const logoBase64 = await toDataURL(LOGO_URL);
-    // Logo en el lado izquierdo
-    doc.addImage(logoBase64, "PNG", 10, 5, 30, 30);
+    // Logo en el lado izquierdo - Ajustado a rectangular (80x30)
+    doc.addImage(logoBase64, "PNG", 10, 5, 80, 30);
   } catch (e) {
     // Fallback if logo fails
     doc.setTextColor(255, 255, 255);
@@ -40,11 +40,12 @@ export const generateWorkOrderPDF = async (data: any) => {
   }
   
   doc.setTextColor(255, 255, 255);
-  doc.setFontSize(10);
-  doc.text("ingeniería comunicaciones S.A.", 45, 23);
+  doc.setFontSize(9);
+  // Texto desplazado a la derecha para no solapar con el logo rectangular
+  doc.text("ingeniería comunicaciones S.A.", 95, 23);
   
   doc.setFontSize(12);
-  doc.text(`Folio: #${data.folio}`, 160, 23);
+  doc.text(`Folio: #${data.folio}`, 165, 23);
 
   // Content Start
   doc.setTextColor(0, 0, 0);
