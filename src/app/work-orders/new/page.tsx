@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from "react";
@@ -11,16 +12,16 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SignaturePad } from "@/components/SignaturePad";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Save, Camera, CheckCircle2, Clock } from "lucide-react";
+import { ArrowLeft, Save, Camera, CheckCircle2, Clock, User as UserIcon } from "lucide-react";
 import Link from "next/link";
 import { useUser, useFirestore } from "@/firebase";
-import { collection, doc, setDoc, serverTimestamp } from "firebase/firestore";
+import { collection, doc } from "firebase/firestore";
 import { setDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 
 export default function NewWorkOrder() {
   const router = useRouter();
   const { toast } = useToast();
-  const { user } = useUser();
+  const { user, isUserLoading } = useUser();
   const db = useFirestore();
   
   const [loading, setLoading] = useState(false);
@@ -45,9 +46,16 @@ export default function NewWorkOrder() {
   });
 
   useEffect(() => {
-    // Generar folio aleatorio para el prototipo (en producción sería incremental en backend)
+    // Generar folio aleatorio para el prototipo
     setFolio(Math.floor(Math.random() * 90000) + 10000);
   }, []);
+
+  // Redirigir si no hay usuario (protección extra)
+  useEffect(() => {
+    if (!isUserLoading && !user) {
+      router.push("/login");
+    }
+  }, [user, isUserLoading, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -56,7 +64,11 @@ export default function NewWorkOrder() {
     setLoading(true);
 
     if (!formData.techSignatureUrl || !formData.clientSignatureUrl) {
-      toast({ variant: "destructive", title: "Firmas Requeridas", description: "Por favor captura ambas firmas antes de continuar." });
+      toast({ 
+        variant: "destructive", 
+        title: "Firmas Requeridas", 
+        description: "Por favor captura ambas firmas antes de continuar." 
+      });
       setLoading(false);
       return;
     }
@@ -67,9 +79,10 @@ export default function NewWorkOrder() {
       id: orderId,
       folio: folio,
       technicianId: user.uid,
+      technicianEmail: user.email, // Guardar automáticamente el correo del técnico
       startDate: new Date().toISOString(),
       endDate: new Date().toISOString(),
-      clientId: "generic_client" // Simplificado para el MVP
+      clientId: "generic_client"
     };
 
     const orderRef = doc(db, "users", user.uid, "work_orders", orderId);
@@ -83,6 +96,8 @@ export default function NewWorkOrder() {
       toast({ variant: "destructive", title: "Error", description: "No se pudo guardar la orden." });
     }
   };
+
+  if (isUserLoading) return <div className="min-h-screen flex items-center justify-center font-black animate-pulse">IDENTIFICANDO TÉCNICO...</div>;
 
   return (
     <div className="min-h-screen bg-background pb-20 md:pb-12">
@@ -114,9 +129,15 @@ export default function NewWorkOrder() {
                     <CardTitle className="text-primary text-xl">Información General</CardTitle>
                     <CardDescription className="text-xs">Fecha: {new Date().toLocaleDateString()}</CardDescription>
                   </div>
-                  <div className="flex items-center gap-2 text-xs font-bold text-primary bg-white px-3 py-1.5 rounded-full shadow-sm border border-primary/10">
-                    <Clock className="h-3.5 w-3.5" />
-                    <span>Inicio: {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                  <div className="flex flex-col items-end gap-1">
+                    <div className="flex items-center gap-2 text-[10px] font-bold text-primary bg-white px-3 py-1.5 rounded-full shadow-sm border border-primary/10">
+                      <Clock className="h-3.5 w-3.5" />
+                      <span>Inicio: {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                    </div>
+                    <div className="flex items-center gap-1 text-[10px] font-bold text-muted-foreground mt-1">
+                      <UserIcon className="h-3 w-3" />
+                      <span>Técnico: {user?.email}</span>
+                    </div>
                   </div>
                 </div>
               </div>
