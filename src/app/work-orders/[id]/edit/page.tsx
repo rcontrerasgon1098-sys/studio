@@ -1,7 +1,7 @@
 
 "use client";
 
-import { use, useState, useEffect } from "react";
+import { use, useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,8 +13,9 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SignaturePad } from "@/components/SignaturePad";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Save, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, Save, CheckCircle2, Camera, X, Image as ImageIcon } from "lucide-react";
 import Link from "next/link";
+import Image from "next/image";
 import { useUser, useFirestore, useDoc, useMemoFirebase } from "@/firebase";
 import { doc } from "firebase/firestore";
 import { updateDocumentNonBlocking } from "@/firebase/non-blocking-updates";
@@ -25,6 +26,7 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
   const { toast } = useToast();
   const { user, isUserLoading } = useUser();
   const db = useFirestore();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
   const orderRef = useMemoFirebase(() => {
     if (!db || !id) return null;
@@ -89,6 +91,26 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
       router.push("/login");
     }
   }, [user, isUserLoading, router]);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        toast({ variant: "destructive", title: "Archivo muy grande", description: "El tamaño máximo es de 5MB." });
+        return;
+      }
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setFormData({ ...formData, sketchImageUrl: reader.result as string });
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const removeImage = () => {
+    setFormData({ ...formData, sketchImageUrl: "" });
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -262,13 +284,41 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
             </CardContent>
           </Card>
 
+          <Card className="shadow-md border-none bg-white">
+            <CardHeader className="p-4 md:p-6 border-b">
+              <CardTitle className="text-lg">Multimedia</CardTitle>
+              <CardDescription>Actualice la foto o bosquejo técnico del servicio.</CardDescription>
+            </CardHeader>
+            <CardContent className="p-4 md:p-6">
+              <input type="file" ref={fileInputRef} onChange={handleFileChange} accept="image/*" className="hidden" />
+              {!formData.sketchImageUrl ? (
+                <div onClick={() => fileInputRef.current?.click()} className="border-2 border-dashed rounded-2xl p-6 md:p-10 flex flex-col items-center justify-center text-muted-foreground bg-background/50 hover:bg-background/80 transition-colors cursor-pointer">
+                  <Camera className="h-12 w-12 mb-3 text-primary opacity-60" />
+                  <p className="text-sm font-bold text-center">Subir foto o bosquejo</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <div className="relative aspect-video rounded-xl overflow-hidden bg-muted group border">
+                    <Image src={formData.sketchImageUrl} alt="Preview" fill className="object-contain" />
+                    <Button type="button" variant="destructive" size="icon" className="absolute top-2 right-2 h-8 w-8 rounded-full shadow-lg" onClick={removeImage}>
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <Button type="button" variant="outline" className="w-full h-12 font-bold" onClick={() => fileInputRef.current?.click()}>
+                    <ImageIcon className="h-4 w-4 mr-2" /> Cambiar Imagen
+                  </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
           <div className="grid grid-cols-1 gap-6 pb-6">
             <Card className="shadow-md border-none bg-white overflow-hidden">
               <CardContent className="p-4 md:p-6">
                 <div className="mb-4">
                   {formData.techSignatureUrl && (
                     <div className="mb-4 p-2 border rounded-lg bg-background">
-                      <p className="text-[10px] font-bold text-muted-foreground uppercase mb-1">Firma Actual Guardada:</p>
+                      <p className="text-[10px] font-bold text-muted-foreground uppercase mb-1">Firma Actual Técnico:</p>
                       <img src={formData.techSignatureUrl} alt="Tech Sig" className="h-20 object-contain" />
                     </div>
                   )}
@@ -284,7 +334,7 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
                 <div className="mb-4">
                   {formData.clientSignatureUrl && (
                     <div className="mb-4 p-2 border rounded-lg bg-background">
-                      <p className="text-[10px] font-bold text-muted-foreground uppercase mb-1">Firma Actual Guardada:</p>
+                      <p className="text-[10px] font-bold text-muted-foreground uppercase mb-1">Firma Actual Cliente:</p>
                       <img src={formData.clientSignatureUrl} alt="Client Sig" className="h-20 object-contain" />
                     </div>
                   )}

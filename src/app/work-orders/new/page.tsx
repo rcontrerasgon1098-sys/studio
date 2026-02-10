@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,8 +12,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SignaturePad } from "@/components/SignaturePad";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Save, Camera, CheckCircle2, Clock, User as UserIcon, Search } from "lucide-react";
+import { ArrowLeft, Save, Camera, CheckCircle2, Clock, User as UserIcon, Search, X, Image as ImageIcon } from "lucide-react";
 import Link from "next/link";
+import Image from "next/image";
 import { useUser, useFirestore, useCollection, useMemoFirebase } from "@/firebase";
 import { collection, doc, query, orderBy } from "firebase/firestore";
 import { setDocumentNonBlocking } from "@/firebase/non-blocking-updates";
@@ -25,6 +26,7 @@ export default function NewWorkOrder() {
   const { toast } = useToast();
   const { user, isUserLoading } = useUser();
   const db = useFirestore();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
   const [loading, setLoading] = useState(false);
   const [folio, setFolio] = useState(0);
@@ -52,7 +54,7 @@ export default function NewWorkOrder() {
     techSignatureUrl: "",
     clientSignatureUrl: "",
     sketchImageUrl: "",
-    status: "Pending" // Cambiado a Pending por defecto
+    status: "Pending"
   });
 
   useEffect(() => {
@@ -80,6 +82,31 @@ export default function NewWorkOrder() {
     });
   };
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        toast({
+          variant: "destructive",
+          title: "Archivo muy grande",
+          description: "El tamaño máximo es de 5MB."
+        });
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setFormData({ ...formData, sketchImageUrl: reader.result as string });
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const removeImage = () => {
+    setFormData({ ...formData, sketchImageUrl: "" });
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user || !db) return;
@@ -96,7 +123,6 @@ export default function NewWorkOrder() {
       return;
     }
 
-    // Determinamos el estado final basado en las firmas
     const hasBothSignatures = formData.techSignatureUrl && formData.clientSignatureUrl;
     const finalStatus = hasBothSignatures ? "Completed" : "Pending";
 
@@ -315,14 +341,54 @@ export default function NewWorkOrder() {
           <Card className="shadow-md border-none bg-white">
             <CardHeader className="p-4 md:p-6 border-b">
               <CardTitle className="text-lg">Multimedia</CardTitle>
-              <CardDescription>Carga una foto del bosquejo técnico realizado.</CardDescription>
+              <CardDescription>Carga una foto del bosquejo técnico o registro realizado.</CardDescription>
             </CardHeader>
             <CardContent className="p-4 md:p-6">
-              <div className="border-2 border-dashed rounded-2xl p-6 md:p-10 flex flex-col items-center justify-center text-muted-foreground bg-background/50 hover:bg-background/80 transition-colors cursor-pointer active:scale-[0.98]">
-                <Camera className="h-12 w-12 mb-3 text-primary opacity-60" />
-                <p className="text-sm font-bold text-center">Subir foto o bosquejo</p>
-                <p className="text-[10px] mt-1 uppercase tracking-widest font-medium">JPG, PNG hasta 5MB</p>
-              </div>
+              <input 
+                type="file" 
+                ref={fileInputRef} 
+                onChange={handleFileChange} 
+                accept="image/*" 
+                className="hidden" 
+              />
+              {!formData.sketchImageUrl ? (
+                <div 
+                  onClick={() => fileInputRef.current?.click()}
+                  className="border-2 border-dashed rounded-2xl p-6 md:p-10 flex flex-col items-center justify-center text-muted-foreground bg-background/50 hover:bg-background/80 transition-colors cursor-pointer active:scale-[0.98]"
+                >
+                  <Camera className="h-12 w-12 mb-3 text-primary opacity-60" />
+                  <p className="text-sm font-bold text-center">Subir foto o bosquejo</p>
+                  <p className="text-[10px] mt-1 uppercase tracking-widest font-medium">JPG, PNG hasta 5MB</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <div className="relative aspect-video rounded-xl overflow-hidden bg-muted group border">
+                    <Image 
+                      src={formData.sketchImageUrl} 
+                      alt="Preview" 
+                      fill 
+                      className="object-contain" 
+                    />
+                    <Button 
+                      type="button" 
+                      variant="destructive" 
+                      size="icon" 
+                      className="absolute top-2 right-2 h-8 w-8 rounded-full shadow-lg"
+                      onClick={removeImage}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    className="w-full h-12 font-bold"
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    <ImageIcon className="h-4 w-4 mr-2" /> Cambiar Imagen
+                  </Button>
+                </div>
+              )}
             </CardContent>
           </Card>
 
