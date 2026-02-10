@@ -18,13 +18,12 @@ service cloud.firestore {
       return isSignedIn() && request.auth.uid == userId;
     }
 
-    // REGLA GLOBAL PARA ADMINISTRADORES: Acceso total a cualquier ruta
-    // Esto previene errores de "Missing or insufficient permissions" en la raíz (/)
+    // Regla de acceso total para administradores
     match /{document=**} {
       allow read, write: if isAdmin();
     }
 
-    // Regla para perfiles de usuario
+    // Perfiles de usuario
     match /users/{userId} {
       allow get: if isSignedIn();
       allow list: if isAdmin();
@@ -33,37 +32,31 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
-    // Regla específica para consultas de grupo (collectionGroup) de órdenes de trabajo
+    // Órdenes de trabajo (Acceso por dueño o Admin)
+    match /users/{userId}/work_orders/{workOrderId} {
+      allow get, list: if isOwner(userId) || isAdmin();
+      allow create: if isOwner(userId);
+      allow update: if isOwner(userId) || isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // Regla para consultas globales de órdenes (Administración)
     match /{path=**}/work_orders/{workOrderId} {
       allow list: if isAdmin();
       allow get: if isSignedIn();
     }
 
-    // Órdenes de trabajo por técnico
-    match /users/{userId}/work_orders/{workOrderId} {
-      allow get, list: if isOwner(userId) || isAdmin();
-      
-      allow create: if isOwner(userId) 
-                    && request.resource.data.technicianId == userId;
-      
-      allow update: if (isOwner(userId) || isAdmin())
-                    && (request.resource.data.technicianId == resource.data.technicianId || isAdmin());
-      
-      allow delete: if isAdmin();
-    }
-
-    // Gestión de Clientes
+    // Clientes
     match /clients/{clientId} {
       allow get, list: if isSignedIn();
       allow create, update, delete: if isAdmin();
     }
 
-    // Registro de Roles Administrativos
+    // Roles Administrativos
     match /roles_admin/{userId} {
       allow get: if isSignedIn();
       allow list: if isAdmin();
-      allow create: if isOwner(userId) || isAdmin(); 
-      allow update, delete: if isAdmin(); 
+      allow create, update, delete: if isAdmin();
     }
   }
 }

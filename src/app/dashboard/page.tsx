@@ -44,19 +44,16 @@ export default function Dashboard() {
   const [showRegPassword, setShowRegPassword] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   
-  // Estados para Filtros
   const [dateRange, setDateRange] = useState<{ from: Date | undefined; to: Date | undefined }>({ from: undefined, to: undefined });
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [clientFilter, setClientFilter] = useState<string>("all");
 
-  // Redirigir si no hay usuario
   useEffect(() => {
     if (!isUserLoading && !user) {
       router.push("/login");
     }
   }, [user, isUserLoading, router]);
 
-  // Verificar rol de admin
   const adminDocRef = useMemoFirebase(() => {
     if (!db || !user) return null;
     return doc(db, "roles_admin", user.uid);
@@ -70,7 +67,6 @@ export default function Dashboard() {
     }
   }, [adminRoleDoc, isRoleLoading]);
 
-  // Query para órdenes
   const techOrdersQuery = useMemoFirebase(() => {
     if (!db || !user || isAdmin || isRoleLoading) return null;
     return query(
@@ -90,14 +86,12 @@ export default function Dashboard() {
   const orders = isAdmin ? allOrders : techOrders;
   const isLoading = isUserLoading || isRoleLoading;
 
-  // Lista de clientes únicos para el filtro
   const uniqueClients = useMemo(() => {
     if (!orders) return [];
     const clients = new Set(orders.map(o => o.clientName).filter(Boolean));
     return Array.from(clients).sort();
   }, [orders]);
 
-  // Filtrado avanzado de órdenes
   const filteredOrders = useMemo(() => {
     if (!orders) return [];
     return orders.filter(o => {
@@ -123,11 +117,10 @@ export default function Dashboard() {
     setClientFilter("all");
   };
 
-  // Gráficas
   const chartData = useMemo(() => {
     if (!orders) return [];
     const counts: Record<string, number> = {};
-    orders.forEach(o => {
+    orders.slice(0, 7).forEach(o => {
       const day = new Date(o.startDate || Date.now()).toLocaleDateString('es-ES', { weekday: 'short' });
       counts[day] = (counts[day] || 0) + 1;
     });
@@ -201,155 +194,6 @@ export default function Dashboard() {
 
   if (isLoading) return <div className="min-h-screen flex items-center justify-center text-primary font-black animate-pulse bg-background">CARGANDO ICSA...</div>;
 
-  const FilterSection = () => (
-    <div className="flex flex-wrap items-center gap-3 mb-6 bg-muted/20 p-4 rounded-xl border border-dashed border-primary/20">
-      <div className="flex items-center gap-2 text-primary font-bold text-xs uppercase tracking-wider mr-2">
-        <Filter size={16} /> Filtros
-      </div>
-      
-      <Popover>
-        <PopoverTrigger asChild>
-          <Button variant="outline" size="sm" className="h-10 bg-white border-primary/20 font-medium gap-2 text-xs">
-            <CalendarIcon size={14} />
-            {dateRange.from ? (
-              dateRange.to ? (
-                <>
-                  {format(dateRange.from, "dd LLL", { locale: es })} - {format(dateRange.to, "dd LLL", { locale: es })}
-                </>
-              ) : (
-                format(dateRange.from, "dd LLL", { locale: es })
-              )
-            ) : (
-              <span>Filtrar por fecha</span>
-            )}
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent className="w-auto p-0" align="start">
-          <Calendar
-            initialFocus
-            mode="range"
-            defaultMonth={dateRange.from}
-            selected={{ from: dateRange.from, to: dateRange.to }}
-            onSelect={(range) => setDateRange({ from: range?.from, to: range?.to })}
-            numberOfMonths={2}
-            locale={es}
-          />
-        </PopoverContent>
-      </Popover>
-
-      <Select value={clientFilter} onValueChange={setClientFilter}>
-        <SelectTrigger className="w-[180px] h-10 bg-white text-xs border-primary/20 font-medium">
-          <SelectValue placeholder="Cliente" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all">Todos los clientes</SelectItem>
-          {uniqueClients.map(client => (
-            <SelectItem key={client} value={client}>{client}</SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-
-      <Select value={statusFilter} onValueChange={setStatusFilter}>
-        <SelectTrigger className="w-[150px] h-10 bg-white text-xs border-primary/20 font-medium">
-          <SelectValue placeholder="Estado" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all">Todos los estados</SelectItem>
-          <SelectItem value="Completed">Completado</SelectItem>
-          <SelectItem value="Pending">Pendiente</SelectItem>
-        </SelectContent>
-      </Select>
-
-      <Button 
-        variant="ghost" 
-        size="sm" 
-        className="h-10 text-muted-foreground hover:text-primary gap-2"
-        onClick={resetFilters}
-      >
-        <FilterX size={16} /> Limpiar
-      </Button>
-    </div>
-  );
-
-  const OrdersTable = () => (
-    <Card className="shadow-xl border-none bg-white">
-      <CardHeader className="flex flex-col md:flex-row items-start md:items-center justify-between border-b pb-6 mb-4 gap-4 px-4 md:px-8">
-        <CardTitle className="text-xl font-bold text-primary">
-          {activeTab === "orders" ? (isAdmin ? "Historial Completo de Órdenes" : "Mis Órdenes de Trabajo") : "Órdenes Recientes"}
-        </CardTitle>
-        <div className="relative w-full md:w-80">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
-          <Input 
-            placeholder="Buscar por cliente o folio..." 
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10 h-12 bg-background border-none rounded-xl w-full text-sm outline-none focus:ring-4 focus:ring-primary/10 transition-all"
-          />
-        </div>
-      </CardHeader>
-      <CardContent className="px-2 md:px-8 pb-8">
-        <FilterSection />
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader className="bg-muted/40">
-              <TableRow>
-                <TableHead className="font-bold py-4 text-xs">Folio</TableHead>
-                <TableHead className="font-bold py-4 text-xs">Cliente</TableHead>
-                <TableHead className="font-bold py-4 hidden sm:table-cell text-xs">Fecha</TableHead>
-                <TableHead className="font-bold py-4 hidden md:table-cell text-xs">Hora</TableHead>
-                <TableHead className="font-bold py-4 text-xs">Estado</TableHead>
-                <TableHead className="text-right font-bold py-4 text-xs">Acciones</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredOrders.map((order) => (
-                <TableRow key={order.id} className="hover:bg-muted/20 transition-colors">
-                  <TableCell className="font-black text-primary">#{order.folio}</TableCell>
-                  <TableCell className="font-bold text-xs md:text-sm max-w-[150px] truncate">{order.clientName}</TableCell>
-                  <TableCell className="text-xs text-muted-foreground hidden sm:table-cell">
-                    {new Date(order.startDate).toLocaleDateString()}
-                  </TableCell>
-                  <TableCell className="text-xs text-muted-foreground hidden md:table-cell">
-                    {new Date(order.startDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                  </TableCell>
-                  <TableCell>
-                    <Badge className={`${order.status === 'Completed' ? 'bg-accent/15 text-primary' : 'bg-primary/10 text-primary'} border-none text-[10px] md:text-xs px-2 py-0.5`}>
-                      {order.status === 'Completed' ? 'Completado' : 'Pendiente'}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex justify-end gap-1 md:gap-2">
-                      <Link href={`/work-orders/${order.id}${isAdmin ? `?techId=${order.technicianId}` : ''}`}>
-                        <Button variant="ghost" size="icon" className="h-9 w-9 md:h-11 md:w-11 rounded-lg">
-                          <Eye className="h-5 w-5" />
-                        </Button>
-                      </Link>
-                      <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        className="h-9 w-9 md:h-11 md:w-11 rounded-lg text-primary"
-                        onClick={() => generateWorkOrderPDF(order)}
-                      >
-                        <Download className="h-5 w-5" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-              {filteredOrders.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={6} className="text-center py-20 text-muted-foreground italic font-medium">
-                    No se encontraron órdenes con los filtros aplicados.
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </div>
-      </CardContent>
-    </Card>
-  );
-
   return (
     <div className="min-h-screen bg-background flex flex-col md:flex-row">
       <aside className="w-72 bg-primary text-white hidden md:flex flex-col shadow-2xl">
@@ -373,188 +217,118 @@ export default function Dashboard() {
             <span className="text-[7px] text-white/70 uppercase tracking-widest">ingeniería comunicaciones S.A.</span>
           </div>
         </div>
-        {!isAdmin && (
-          <Link href="/work-orders/new">
-            <Button size="icon" className="bg-accent text-primary rounded-full shadow-lg">
-              <Plus size={20} />
-            </Button>
-          </Link>
-        )}
       </header>
 
       <main className="flex-1 p-4 md:p-10 overflow-y-auto">
-        {activeTab === "dashboard" ? (
-          <>
-            <header className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-12">
-              <div>
-                <h1 className="text-3xl md:text-4xl font-black text-primary tracking-tight">
-                  {isAdmin ? "Panel Administrativo" : "Panel Técnico"}
-                </h1>
-                <p className="text-muted-foreground text-lg font-medium">
-                  {isAdmin ? "Gestión Global Operativa" : `Bienvenido, Técnico`}
-                </p>
-              </div>
-              {!isAdmin && (
-                <Link href="/work-orders/new">
-                  <Button className="bg-accent text-primary font-black hover:bg-accent/90 gap-3 h-14 px-8 text-lg shadow-xl transition-all hover:scale-105">
-                    <Plus size={24} /> Nueva Orden
-                  </Button>
-                </Link>
-              )}
-              {isAdmin && (
-                <Dialog>
-                  <DialogTrigger asChild>
-                    <Button className="bg-accent text-primary font-black hover:bg-accent/90 gap-3 h-14 px-8 text-lg shadow-xl">
-                      <UserPlus size={24} /> Registrar Técnico
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent>
-                    <DialogHeader>
-                      <DialogTitle>Registrar Nuevo Personal</DialogTitle>
-                      <DialogDescription>
-                        Crea las credenciales para un nuevo técnico de ICSA.
-                      </DialogDescription>
-                    </DialogHeader>
-                    <div className="space-y-4 pt-4">
-                      <div className="space-y-2">
-                        <Label>Correo Electrónico</Label>
-                        <Input placeholder="tecnico@icsa.com" />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Contraseña Temporal</Label>
-                        <div className="relative">
-                          <Input 
-                            type={showRegPassword ? "text" : "password"} 
-                            placeholder="••••••••" 
-                            className="pr-10"
-                          />
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            className="absolute right-0 top-0 h-full px-3 text-muted-foreground hover:bg-transparent"
-                            onClick={() => setShowRegPassword(!showRegPassword)}
-                          >
-                            {showRegPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+        <header className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
+          <div>
+            <h1 className="text-3xl font-black text-primary tracking-tight">
+              {isAdmin ? "Panel Administrativo" : "Panel Técnico"}
+            </h1>
+            <p className="text-muted-foreground font-medium">
+              {isAdmin ? "Gestión Global Operativa" : `Bienvenido, ${user?.email}`}
+            </p>
+          </div>
+          {!isAdmin && (
+            <Link href="/work-orders/new">
+              <Button className="bg-accent text-primary font-black hover:bg-accent/90 gap-3 h-14 px-8 text-lg shadow-xl">
+                <Plus size={24} /> Nueva Orden
+              </Button>
+            </Link>
+          )}
+        </header>
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-8">
+          <Card className="shadow-md border-none bg-white">
+            <CardHeader className="pb-2 p-6 flex flex-row items-center justify-between">
+              <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Total Órdenes</p>
+              <FileText className="h-4 w-4 text-primary opacity-30" />
+            </CardHeader>
+            <CardContent className="p-6 pt-0">
+              <p className="text-4xl font-black text-primary">{orders?.length || 0}</p>
+            </CardContent>
+          </Card>
+          <Card className="shadow-md border-none bg-white">
+            <CardHeader className="pb-2 p-6 flex flex-row items-center justify-between">
+              <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Completadas</p>
+              <TrendingUp className="h-4 w-4 text-accent opacity-30" />
+            </CardHeader>
+            <CardContent className="p-6 pt-0">
+              <p className="text-4xl font-black text-accent">
+                {orders?.filter(o => o.status === "Completed").length || 0}
+              </p>
+            </CardContent>
+          </Card>
+          <Card className="shadow-md border-none bg-white">
+            <CardHeader className="pb-2 p-6 flex flex-row items-center justify-between">
+              <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Pendientes</p>
+              <BarChart3 className="h-4 w-4 text-primary opacity-30" />
+            </CardHeader>
+            <CardContent className="p-6 pt-0">
+              <p className="text-4xl font-black text-primary/40">
+                {(orders?.length || 0) - (orders?.filter(o => o.status === "Completed").length || 0)}
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+
+        <Card className="shadow-xl border-none bg-white">
+          <CardHeader className="flex flex-col md:flex-row items-start md:items-center justify-between border-b pb-6 mb-4 gap-4 px-8">
+            <CardTitle className="text-xl font-bold text-primary">Órdenes Recientes</CardTitle>
+            <div className="relative w-full md:w-80">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
+              <Input 
+                placeholder="Buscar folio o cliente..." 
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10 h-10 bg-background border-none rounded-xl w-full text-sm"
+              />
+            </div>
+          </CardHeader>
+          <CardContent className="px-8 pb-8">
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-muted/40">
+                    <TableHead className="font-bold py-4">Folio</TableHead>
+                    <TableHead className="font-bold py-4">Cliente</TableHead>
+                    <TableHead className="font-bold py-4">Fecha</TableHead>
+                    <TableHead className="font-bold py-4">Estado</TableHead>
+                    <TableHead className="text-right font-bold py-4">Acciones</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredOrders.map((order) => (
+                    <TableRow key={order.id} className="hover:bg-muted/20 transition-colors">
+                      <TableCell className="font-black text-primary">#{order.folio}</TableCell>
+                      <TableCell className="font-bold">{order.clientName}</TableCell>
+                      <TableCell className="text-xs text-muted-foreground">
+                        {new Date(order.startDate).toLocaleDateString()}
+                      </TableCell>
+                      <TableCell>
+                        <Badge className={`${order.status === 'Completed' ? 'bg-accent/15 text-primary' : 'bg-primary/10 text-primary'} border-none text-[10px] px-2 py-0.5`}>
+                          {order.status === 'Completed' ? 'Completado' : 'Pendiente'}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-2">
+                          <Link href={`/work-orders/${order.id}${isAdmin ? `?techId=${order.technicianId}` : ''}`}>
+                            <Button variant="ghost" size="icon" className="h-9 w-9">
+                              <Eye className="h-5 w-5" />
+                            </Button>
+                          </Link>
+                          <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => generateWorkOrderPDF(order)}>
+                            <Download className="h-5 w-5" />
                           </Button>
                         </div>
-                      </div>
-                      <Button className="w-full bg-primary font-bold">Crear Usuario Técnico</Button>
-                    </div>
-                  </DialogContent>
-                </Dialog>
-              )}
-            </header>
-
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 md:gap-8 mb-8">
-              <Card className="shadow-md border-none bg-white">
-                <CardHeader className="pb-1 p-4 flex flex-row items-center justify-between">
-                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Total Órdenes</p>
-                  <FileText className="h-4 w-4 text-primary opacity-30" />
-                </CardHeader>
-                <CardContent className="p-4 pt-0">
-                  <p className="text-3xl md:text-5xl font-black text-primary">{orders?.length || 0}</p>
-                </CardContent>
-              </Card>
-              <Card className="shadow-md border-none bg-white">
-                <CardHeader className="pb-1 p-4 flex flex-row items-center justify-between">
-                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Completadas</p>
-                  <TrendingUp className="h-4 w-4 text-accent opacity-30" />
-                </CardHeader>
-                <CardContent className="p-4 pt-0">
-                  <p className="text-3xl md:text-5xl font-black text-accent">
-                    {orders?.filter(o => o.status === "Completed").length || 0}
-                  </p>
-                </CardContent>
-              </Card>
-              <Card className="shadow-md border-none bg-white">
-                <CardHeader className="pb-1 p-4 flex flex-row items-center justify-between">
-                  <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Pendientes</p>
-                  <BarChart3 className="h-4 w-4 text-primary opacity-30" />
-                </CardHeader>
-                <CardContent className="p-4 pt-0">
-                  <p className="text-3xl md:text-5xl font-black text-primary/40">
-                    {(orders?.length || 0) - (orders?.filter(o => o.status === "Completed").length || 0)}
-                  </p>
-                </CardContent>
-              </Card>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
             </div>
-
-            {isAdmin && (
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
-                <Card className="shadow-xl border-none bg-white">
-                  <CardHeader><CardTitle className="text-lg">Volumen Semanal</CardTitle></CardHeader>
-                  <CardContent className="h-[300px]">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={chartData}>
-                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#eee" />
-                        <XAxis dataKey="name" axisLine={false} tickLine={false} />
-                        <YAxis axisLine={false} tickLine={false} />
-                        <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }} />
-                        <Bar dataKey="total" fill="hsl(var(--primary))" radius={[6, 6, 0, 0]} />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </CardContent>
-                </Card>
-                <Card className="shadow-xl border-none bg-white">
-                  <CardHeader><CardTitle className="text-lg">Estado de Servicios</CardTitle></CardHeader>
-                  <CardContent className="h-[300px] flex items-center justify-center">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <PieChart>
-                        <Pie
-                          data={statusData}
-                          innerRadius={60}
-                          outerRadius={80}
-                          paddingAngle={5}
-                          dataKey="value"
-                        >
-                          {statusData.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={entry.color} />
-                          ))}
-                        </Pie>
-                        <Tooltip />
-                      </PieChart>
-                    </ResponsiveContainer>
-                    <div className="flex flex-col gap-2 ml-4">
-                      {statusData.map((d, i) => (
-                        <div key={i} className="flex items-center gap-2">
-                          <div className="w-3 h-3 rounded-full" style={{ backgroundColor: d.color }} />
-                          <span className="text-xs font-bold text-muted-foreground">{d.name}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-            )}
-
-            <OrdersTable />
-          </>
-        ) : activeTab === "orders" ? (
-          <div className="space-y-8">
-            <header>
-              <h1 className="text-3xl font-black text-primary">Listado de Órdenes</h1>
-              <p className="text-muted-foreground font-medium">Consulta y descarga todos los registros operativos</p>
-            </header>
-            <OrdersTable />
-          </div>
-        ) : (
-          <div className="space-y-8">
-            <header>
-              <h1 className="text-3xl font-black text-primary">Gestión de Técnicos</h1>
-              <p className="text-muted-foreground font-medium">Administra el personal operativo de ICSA</p>
-            </header>
-            
-            <Card className="shadow-xl border-none bg-white p-8">
-              <div className="flex flex-col items-center justify-center py-20 text-center space-y-4">
-                <Users size={64} className="text-primary opacity-20" />
-                <h3 className="text-xl font-bold">Lista de Personal</h3>
-                <p className="text-muted-foreground max-w-sm">Aquí podrás visualizar y gestionar a todos los técnicos registrados en la plataforma.</p>
-                <Button className="bg-primary font-black px-8">Cargar Lista Completa</Button>
-              </div>
-            </Card>
-          </div>
-        )}
+          </CardContent>
+        </Card>
       </main>
     </div>
   );

@@ -9,9 +9,10 @@ import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
 import Image from "next/image";
 import { PlaceHolderImages } from "@/lib/placeholder-images";
-import { ArrowLeft, LogIn, Eye, EyeOff } from "lucide-react";
+import { ArrowLeft, LogIn, Eye, EyeOff, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 import { getAuth, signInWithEmailAndPassword } from "firebase/auth";
+import { doc, getFirestore, setDoc } from "firebase/firestore";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -27,11 +28,25 @@ export default function LoginPage() {
     setLoading(true);
 
     const auth = getAuth();
+    const db = getFirestore();
+
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
+
+      // Si es el correo de admin, aseguramos que tenga el rol en Firestore antes de entrar
+      if (email === "admin@icsa.com") {
+        await setDoc(doc(db, "roles_admin", user.uid), {
+          email: email,
+          role: "admin",
+          updatedAt: new Date().toISOString()
+        });
+      }
+
       toast({ title: "Bienvenido", description: "Acceso concedido al portal ICSA." });
       router.push("/dashboard");
     } catch (error: any) {
+      console.error(error);
       let message = "Error de conexión. Verifique sus datos.";
       if (error.code === 'auth/invalid-credential') message = "Credenciales inválidas. Verifique su correo y contraseña.";
       if (error.code === 'auth/user-not-found') message = "Usuario no registrado.";
@@ -63,7 +78,7 @@ export default function LoginPage() {
         
         <CardHeader className="text-center space-y-4 pt-16 pb-2">
           {logoImage && (
-            <div className="mx-auto relative w-56 h-56 transition-transform hover:scale-105 duration-500 drop-shadow-2xl">
+            <div className="mx-auto relative w-48 h-48 transition-transform hover:scale-105 duration-500 drop-shadow-2xl">
               <Image
                 src={logoImage.imageUrl}
                 alt="ICSA Logo"
@@ -74,11 +89,11 @@ export default function LoginPage() {
             </div>
           )}
           <div className="space-y-1">
-            <CardTitle className="text-4xl font-black text-primary flex flex-col items-center leading-none tracking-tighter">
+            <CardTitle className="text-3xl font-black text-primary flex flex-col items-center leading-none tracking-tighter">
               ICSA
               <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-[0.3em] mt-2">ingeniería comunicaciones S.A.</span>
             </CardTitle>
-            <CardDescription className="text-lg pt-2 font-medium">
+            <CardDescription className="text-base pt-2 font-medium">
               Portal de Gestión Técnica
             </CardDescription>
           </div>
