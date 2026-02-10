@@ -9,21 +9,17 @@ import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
 import Image from "next/image";
 import { PlaceHolderImages } from "@/lib/placeholder-images";
-import { ArrowLeft, LogIn, ShieldCheck, Eye, EyeOff } from "lucide-react";
+import { ArrowLeft, LogIn, Eye, EyeOff } from "lucide-react";
 import Link from "next/link";
-import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword } from "firebase/auth";
-import { doc, setDoc } from "firebase/firestore";
-import { useFirestore } from "@/firebase";
+import { getAuth, signInWithEmailAndPassword } from "firebase/auth";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [setupLoading, setSetupLoading] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
-  const db = useFirestore();
   const logoImage = PlaceHolderImages.find(img => img.id === "icsa-logo");
 
   const handleAuth = async (e: React.FormEvent) => {
@@ -37,8 +33,8 @@ export default function LoginPage() {
       router.push("/dashboard");
     } catch (error: any) {
       let message = "Error de conexión. Verifique sus datos.";
-      if (error.code === 'auth/invalid-credential') message = "Credenciales inválidas. Asegúrese de haber configurado el acceso demo o contacte a un administrador.";
-      if (error.code === 'auth/user-not-found') message = "Usuario no registrado. Use el botón de configuración demo abajo.";
+      if (error.code === 'auth/invalid-credential') message = "Credenciales inválidas. Verifique su correo y contraseña.";
+      if (error.code === 'auth/user-not-found') message = "Usuario no registrado.";
       
       toast({ 
         variant: "destructive", 
@@ -46,60 +42,6 @@ export default function LoginPage() {
         description: message 
       });
       setLoading(false);
-    }
-  };
-
-  const setupAdminAccount = async () => {
-    setSetupLoading(true);
-    const auth = getAuth();
-    const adminEmail = "admin@icsa.com";
-    const adminPassword = "admin123456";
-
-    try {
-      let user;
-      try {
-        const userCredential = await signInWithEmailAndPassword(auth, adminEmail, adminPassword);
-        user = userCredential.user;
-      } catch (signInError: any) {
-        if (signInError.code === 'auth/user-not-found' || signInError.code === 'auth/invalid-credential') {
-          try {
-            const createCredential = await createUserWithEmailAndPassword(auth, adminEmail, adminPassword);
-            user = createCredential.user;
-          } catch (createError: any) {
-            if (createError.code === 'auth/email-already-in-use') {
-              throw new Error("El usuario ya existe con otra contraseña.");
-            }
-            throw createError;
-          }
-        } else {
-          throw signInError;
-        }
-      }
-
-      if (user && db) {
-        // IMPORTANTE: Esperar a que el documento se escriba antes de redirigir
-        const adminDocRef = doc(db, "roles_admin", user.uid);
-        await setDoc(adminDocRef, {
-          email: adminEmail,
-          role: "administrator",
-          setupDate: new Date().toISOString(),
-          isActive: true
-        }, { merge: true });
-
-        toast({ 
-          title: "Configuración Exitosa", 
-          description: "Rol de administrador asignado. Entrando..." 
-        });
-        
-        router.push("/dashboard");
-      }
-    } catch (error: any) {
-      toast({ 
-        variant: "destructive", 
-        title: "Error de Configuración", 
-        description: error.message || "No se pudo preparar la cuenta."
-      });
-      setSetupLoading(false);
     }
   };
 
@@ -181,26 +123,6 @@ export default function LoginPage() {
             <Button type="submit" className="w-full bg-primary h-14 text-lg font-black shadow-lg transition-all active:scale-95 rounded-xl" disabled={loading}>
               <LogIn className="mr-2" size={20} />
               {loading ? "Verificando..." : "Entrar al Portal"}
-            </Button>
-            
-            <div className="relative py-4">
-              <div className="absolute inset-0 flex items-center">
-                <span className="w-full border-t border-muted" />
-              </div>
-              <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-white px-2 text-muted-foreground font-bold">Desarrollo</span>
-              </div>
-            </div>
-
-            <Button 
-              type="button" 
-              variant="outline" 
-              className="w-full border-dashed border-primary/40 text-primary font-bold h-12 rounded-xl gap-2"
-              onClick={setupAdminAccount}
-              disabled={setupLoading}
-            >
-              <ShieldCheck size={18} />
-              {setupLoading ? "Configurando..." : "Configurar Acceso Demo Admin"}
             </Button>
           </form>
         </CardContent>
