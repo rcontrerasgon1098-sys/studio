@@ -10,7 +10,7 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Input } from "@/components/ui/input";
 import { 
   Plus, FileText, Search, Settings, LogOut, LayoutDashboard, 
-  Eye, Download, Menu, TrendingUp, BarChart3, Users
+  Eye, Download, Menu, TrendingUp, BarChart3, Users, UserRound
 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
@@ -36,22 +36,26 @@ export default function Dashboard() {
     }
   }, [user, isUserLoading, router]);
 
-  // Consulta todas las órdenes
+  // Consultas Firestore
   const ordersQuery = useMemoFirebase(() => {
     if (!db) return null;
     return query(collection(db, "ordenes"), orderBy("folio", "desc"));
   }, [db]);
+  const { data: orders } = useCollection(ordersQuery);
 
-  const { data: orders, isLoading: isOrdersLoading } = useCollection(ordersQuery);
-
-  // Consulta todos los clientes
   const clientsQuery = useMemoFirebase(() => {
     if (!db) return null;
     return query(collection(db, "clients"), orderBy("nombreCliente", "asc"));
   }, [db]);
+  const { data: clients } = useCollection(clientsQuery);
 
-  const { data: clients, isLoading: isClientsLoading } = useCollection(clientsQuery);
+  const personnelQuery = useMemoFirebase(() => {
+    if (!db) return null;
+    return query(collection(db, "personnel"), orderBy("nombre_t", "asc"));
+  }, [db]);
+  const { data: personnel } = useCollection(personnelQuery);
 
+  // Filtrados
   const filteredOrders = useMemo(() => {
     if (!orders) return [];
     return orders.filter(o => 
@@ -67,6 +71,14 @@ export default function Dashboard() {
       c.rutCliente?.toLowerCase().includes(searchTerm.toLowerCase())
     );
   }, [clients, searchTerm]);
+
+  const filteredPersonnel = useMemo(() => {
+    if (!personnel) return [];
+    return personnel.filter(p => 
+      p.nombre_t?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+      p.rut_t?.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }, [personnel, searchTerm]);
 
   const handleLogout = async () => {
     const auth = getAuth();
@@ -91,23 +103,30 @@ export default function Dashboard() {
         <Button 
           variant={activeTab === "dashboard" ? "secondary" : "ghost"} 
           className={`w-full justify-start gap-3 h-12 font-semibold ${activeTab === "dashboard" ? "bg-white/10 text-white border-none" : "text-white/80 hover:bg-white/10"}`}
-          onClick={() => setActiveTab("dashboard")}
+          onClick={() => { setActiveTab("dashboard"); setSearchTerm(""); }}
         >
           <LayoutDashboard size={20} /> Dashboard
         </Button>
         <Button 
           variant={activeTab === "orders" ? "secondary" : "ghost"} 
           className={`w-full justify-start gap-3 h-12 font-semibold ${activeTab === "orders" ? "bg-white/10 text-white border-none" : "text-white/80 hover:bg-white/10"}`}
-          onClick={() => setActiveTab("orders")}
+          onClick={() => { setActiveTab("orders"); setSearchTerm(""); }}
         >
           <FileText size={20} /> Órdenes
         </Button>
         <Button 
           variant={activeTab === "clients" ? "secondary" : "ghost"} 
           className={`w-full justify-start gap-3 h-12 font-semibold ${activeTab === "clients" ? "bg-white/10 text-white border-none" : "text-white/80 hover:bg-white/10"}`}
-          onClick={() => setActiveTab("clients")}
+          onClick={() => { setActiveTab("clients"); setSearchTerm(""); }}
         >
           <Users size={20} /> Clientes
+        </Button>
+        <Button 
+          variant={activeTab === "personnel" ? "secondary" : "ghost"} 
+          className={`w-full justify-start gap-3 h-12 font-semibold ${activeTab === "personnel" ? "bg-white/10 text-white border-none" : "text-white/80 hover:bg-white/10"}`}
+          onClick={() => { setActiveTab("personnel"); setSearchTerm(""); }}
+        >
+          <UserRound size={20} /> Personal
         </Button>
         <Button variant="ghost" className="w-full justify-start gap-3 hover:bg-white/10 h-12 text-white/80 font-medium">
           <Settings size={20} /> Ajustes
@@ -152,7 +171,9 @@ export default function Dashboard() {
         <header className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
           <div>
             <h1 className="text-3xl font-black text-primary tracking-tight">
-              {activeTab === "clients" ? "Gestión de Clientes" : "Portal de Gestión"}
+              {activeTab === "clients" ? "Gestión de Clientes" : 
+               activeTab === "personnel" ? "Gestión de Personal" : 
+               activeTab === "orders" ? "Historial de Órdenes" : "Portal de Gestión"}
             </h1>
             <p className="text-muted-foreground font-medium">Panel Operativo de ICSA</p>
           </div>
@@ -161,6 +182,12 @@ export default function Dashboard() {
               <Link href="/clients/new">
                 <Button className="bg-accent text-primary font-black hover:bg-accent/90 gap-3 h-14 px-8 text-lg shadow-xl">
                   <Plus size={24} /> Nuevo Cliente
+                </Button>
+              </Link>
+            ) : activeTab === "personnel" ? (
+              <Link href="/technicians/new">
+                <Button className="bg-accent text-primary font-black hover:bg-accent/90 gap-3 h-14 px-8 text-lg shadow-xl">
+                  <Plus size={24} /> Nuevo Personal
                 </Button>
               </Link>
             ) : (
@@ -174,7 +201,7 @@ export default function Dashboard() {
         </header>
 
         {activeTab === "dashboard" && (
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-8">
+          <div className="grid grid-cols-1 sm:grid-cols-4 gap-6 mb-8">
             <Card className="shadow-md border-none bg-white">
               <CardHeader className="pb-2 p-6 flex flex-row items-center justify-between">
                 <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Total Órdenes</p>
@@ -197,33 +224,39 @@ export default function Dashboard() {
             </Card>
             <Card className="shadow-md border-none bg-white">
               <CardHeader className="pb-2 p-6 flex flex-row items-center justify-between">
-                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Clientes Activos</p>
+                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Clientes</p>
                 <Users className="h-4 w-4 text-primary opacity-30" />
               </CardHeader>
               <CardContent className="p-6 pt-0">
-                <p className="text-4xl font-black text-primary/40">
-                  {clients?.filter(c => c.estadoCliente === "Activo").length || 0}
-                </p>
+                <p className="text-4xl font-black text-primary/40">{clients?.length || 0}</p>
+              </CardContent>
+            </Card>
+            <Card className="shadow-md border-none bg-white">
+              <CardHeader className="pb-2 p-6 flex flex-row items-center justify-between">
+                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Personal</p>
+                <UserRound className="h-4 w-4 text-primary opacity-30" />
+              </CardHeader>
+              <CardContent className="p-6 pt-0">
+                <p className="text-4xl font-black text-primary/40">{personnel?.length || 0}</p>
               </CardContent>
             </Card>
           </div>
         )}
 
+        {/* Listado de Órdenes (Visible en Dashboard y pestaña Órdenes) */}
         {(activeTab === "dashboard" || activeTab === "orders") && (
           <Card className="shadow-xl border-none bg-white mb-8">
             <CardHeader className="flex flex-col md:flex-row items-start md:items-center justify-between border-b pb-6 mb-4 gap-4 px-8">
               <CardTitle className="text-xl font-bold text-primary">Listado de Órdenes</CardTitle>
-              {activeTab === "orders" && (
-                <div className="relative w-full md:w-80">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
-                  <Input 
-                    placeholder="Buscar folio o cliente..." 
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10 h-10 bg-background border-none rounded-xl w-full text-sm"
-                  />
-                </div>
-              )}
+              <div className="relative w-full md:w-80">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                <Input 
+                  placeholder="Buscar folio o cliente..." 
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10 h-10 bg-background border-none rounded-xl w-full text-sm"
+                />
+              </div>
             </CardHeader>
             <CardContent className="px-8 pb-8">
               <div className="overflow-x-auto">
@@ -264,6 +297,11 @@ export default function Dashboard() {
                         </TableCell>
                       </TableRow>
                     ))}
+                    {filteredOrders.length === 0 && (
+                      <TableRow>
+                        <TableCell colSpan={5} className="text-center py-10 text-muted-foreground italic">No se encontraron órdenes.</TableCell>
+                      </TableRow>
+                    )}
                   </TableBody>
                 </Table>
               </div>
@@ -271,6 +309,7 @@ export default function Dashboard() {
           </Card>
         )}
 
+        {/* Listado de Clientes */}
         {activeTab === "clients" && (
           <Card className="shadow-xl border-none bg-white">
             <CardHeader className="flex flex-col md:flex-row items-start md:items-center justify-between border-b pb-6 mb-4 gap-4 px-8">
@@ -325,11 +364,62 @@ export default function Dashboard() {
                         </TableCell>
                       </TableRow>
                     ))}
-                    {filteredClients.length === 0 && !isClientsLoading && (
-                      <TableRow>
-                        <TableCell colSpan={5} className="text-center py-10 text-muted-foreground italic">
-                          No se encontraron clientes.
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Listado de Personal */}
+        {activeTab === "personnel" && (
+          <Card className="shadow-xl border-none bg-white">
+            <CardHeader className="flex flex-col md:flex-row items-start md:items-center justify-between border-b pb-6 mb-4 gap-4 px-8">
+              <CardTitle className="text-xl font-bold text-primary">Listado de Personal</CardTitle>
+              <div className="relative w-full md:w-80">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                <Input 
+                  placeholder="Buscar nombre o RUT..." 
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10 h-10 bg-background border-none rounded-xl w-full text-sm"
+                />
+              </div>
+            </CardHeader>
+            <CardContent className="px-8 pb-8">
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-muted/40">
+                      <TableHead className="font-bold py-4">ID Personal</TableHead>
+                      <TableHead className="font-bold py-4">Nombre Completo</TableHead>
+                      <TableHead className="font-bold py-4">RUT</TableHead>
+                      <TableHead className="font-bold py-4">Email / Celular</TableHead>
+                      <TableHead className="text-right font-bold py-4">Acciones</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredPersonnel.map((p) => (
+                      <TableRow key={p.id} className="hover:bg-muted/20 transition-colors">
+                        <TableCell className="font-black text-primary text-xs">{p.id_t}</TableCell>
+                        <TableCell className="font-bold">{p.nombre_t}</TableCell>
+                        <TableCell className="text-xs">{p.rut_t}</TableCell>
+                        <TableCell>
+                          <div className="flex flex-col text-xs">
+                            <span className="font-medium">{p.email_t}</span>
+                            <span className="text-muted-foreground">{p.cel_t}</span>
+                          </div>
                         </TableCell>
+                        <TableCell className="text-right">
+                          <Button variant="ghost" size="icon" className="h-9 w-9">
+                            <Eye className="h-5 w-5" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                    {filteredPersonnel.length === 0 && (
+                      <TableRow>
+                        <TableCell colSpan={5} className="text-center py-10 text-muted-foreground italic">No se encontró personal registrado.</TableCell>
                       </TableRow>
                     )}
                   </TableBody>

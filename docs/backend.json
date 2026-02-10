@@ -97,6 +97,20 @@
         "estadoCliente": { "type": "string", "enum": ["Activo", "Inactivo"] }
       },
       "required": ["nombreCliente", "rutCliente", "estadoCliente"]
+    },
+    "Personnel": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Personnel",
+      "type": "object",
+      "description": "Represents company personnel (technicians).",
+      "properties": {
+        "id_t": { "type": "string", "description": "Auto-assigned ID" },
+        "nombre_t": { "type": "string" },
+        "rut_t": { "type": "string" },
+        "email_t": { "type": "string", "format": "email" },
+        "cel_t": { "type": "string" }
+      },
+      "required": ["nombre_t", "rut_t", "email_t"]
     }
   },
   "auth": {
@@ -128,6 +142,14 @@
           "entityName": "Client",
           "schema": { "$ref": "#/backend/entities/Client" },
           "description": "Stores client information."
+        }
+      },
+      {
+        "path": "/personnel/{personnelId}",
+        "definition": {
+          "entityName": "Personnel",
+          "schema": { "$ref": "#/backend/entities/Personnel" },
+          "description": "Stores company technicians."
         }
       }
     ]
