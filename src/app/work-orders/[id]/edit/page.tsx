@@ -160,8 +160,12 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
     
     setLoading(true);
 
-    const hasBothSignatures = !!formData.techSignatureUrl && !!formData.clientSignatureUrl;
-    const finalStatus = hasBothSignatures ? "Completed" : "Pending";
+    // El RUT del receptor ahora es obligatorio para que el estado sea Completed
+    const isValidationComplete = !!formData.techSignatureUrl && 
+                                !!formData.clientSignatureUrl && 
+                                !!formData.clientReceiverRut;
+
+    const finalStatus = isValidationComplete ? "Completed" : "Pending";
 
     const updateData = {
       ...formData,
@@ -178,7 +182,7 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
         title: finalStatus === "Completed" ? "Orden Finalizada" : "Cambios Guardados", 
         description: finalStatus === "Completed" 
           ? "La orden se ha cerrado con éxito." 
-          : "La orden sigue pendiente de firmas."
+          : "La orden sigue pendiente de firmas o RUT del receptor."
       });
       router.push("/dashboard");
     } catch (error) {
@@ -429,10 +433,10 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
                   <div className="space-y-2">
                     <Label className="text-xs font-bold flex items-center gap-1"><CreditCard className="h-3 w-3" /> RUT Receptor</Label>
                     <Input 
-                      placeholder="RUT" 
+                      placeholder="RUT (Obligatorio para finalizar)" 
                       value={formData.clientReceiverRut} 
                       onChange={e => setFormData({...formData, clientReceiverRut: e.target.value})}
-                      className="h-10"
+                      className={`h-10 ${!formData.clientReceiverRut ? "border-destructive/30" : ""}`}
                     />
                   </div>
                 </div>
@@ -448,7 +452,7 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
               className="bg-primary hover:bg-primary/90 w-full h-16 text-xl font-black gap-3 shadow-xl active:scale-95 transition-all" 
               disabled={loading}
             >
-              <CheckCircle2 size={28} /> {formData.techSignatureUrl && formData.clientSignatureUrl ? "Cerrar y Finalizar OT" : "Guardar Avances"}
+              <CheckCircle2 size={28} /> {!!formData.techSignatureUrl && !!formData.clientSignatureUrl && !!formData.clientReceiverRut ? "Cerrar y Finalizar OT" : "Guardar Avances"}
             </Button>
           </div>
         </form>

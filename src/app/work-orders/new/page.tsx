@@ -155,8 +155,12 @@ export default function NewWorkOrder() {
       return;
     }
 
-    const hasBothSignatures = !!formData.techSignatureUrl && !!formData.clientSignatureUrl;
-    const finalStatus = hasBothSignatures ? "Completed" : "Pending";
+    // El RUT del receptor ahora es obligatorio para que el estado sea Completed
+    const isValidationComplete = !!formData.techSignatureUrl && 
+                                !!formData.clientSignatureUrl && 
+                                !!formData.clientReceiverRut;
+                                
+    const finalStatus = isValidationComplete ? "Completed" : "Pending";
 
     const orderId = doc(collection(db, "ordenes")).id;
     const workOrderData = {
@@ -178,7 +182,7 @@ export default function NewWorkOrder() {
         title: finalStatus === "Completed" ? "Orden Finalizada" : "Orden Guardada", 
         description: finalStatus === "Completed" 
           ? "La orden se ha completado correctamente." 
-          : "La orden se guardó como pendiente por falta de firmas."
+          : "La orden se guardó como pendiente por falta de firmas o RUT del receptor."
       });
       router.push("/dashboard");
     } catch (error) {
@@ -451,10 +455,10 @@ export default function NewWorkOrder() {
                   <div className="space-y-2">
                     <Label className="text-xs font-bold flex items-center gap-1"><CreditCard className="h-3 w-3" /> RUT Receptor</Label>
                     <Input 
-                      placeholder="RUT" 
+                      placeholder="RUT (Obligatorio para finalizar)" 
                       value={formData.clientReceiverRut} 
                       onChange={e => setFormData({...formData, clientReceiverRut: e.target.value})}
-                      className="h-10"
+                      className={`h-10 ${!formData.clientReceiverRut ? "border-destructive/30" : ""}`}
                     />
                   </div>
                 </div>
@@ -465,7 +469,7 @@ export default function NewWorkOrder() {
 
           <div className="fixed bottom-0 left-0 right-0 p-4 bg-white/90 backdrop-blur-md border-t md:relative md:bg-transparent md:border-none md:p-0">
             <Button type="submit" size="lg" className="bg-primary hover:bg-primary/90 w-full h-16 text-xl font-black gap-3 shadow-xl active:scale-95 transition-all">
-              <CheckCircle2 size={28} /> Finalizar Orden
+              <CheckCircle2 size={28} /> {!!formData.techSignatureUrl && !!formData.clientSignatureUrl && !!formData.clientReceiverRut ? "Finalizar Orden" : "Guardar como Pendiente"}
             </Button>
           </div>
         </form>
