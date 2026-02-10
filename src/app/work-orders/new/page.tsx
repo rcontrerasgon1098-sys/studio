@@ -12,7 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SignaturePad } from "@/components/SignaturePad";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Save, Camera, CheckCircle2, Clock, Search, X, Image as ImageIcon, User, CreditCard } from "lucide-react";
+import { ArrowLeft, Save, Camera, CheckCircle2, Clock, Search, X, Image as ImageIcon, User, CreditCard, Sparkles } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import { useUser, useFirestore, useCollection, useMemoFirebase } from "@/firebase";
@@ -78,17 +78,26 @@ export default function NewWorkOrder() {
     }
   }, [user, isUserLoading, router]);
 
-  // Efecto para autocompletar datos del técnico
+  // Efecto para autocompletar datos del técnico incluyendo su firma guardada
   useEffect(() => {
     if (techProfiles && techProfiles.length > 0) {
       const tech = techProfiles[0];
       setFormData(prev => ({
         ...prev,
         techName: tech.nombre_t || "",
-        techRut: tech.rut_t || ""
+        techRut: tech.rut_t || "",
+        techSignatureUrl: prev.techSignatureUrl || tech.signatureUrl || ""
       }));
+      
+      if (tech.signatureUrl) {
+        toast({
+          title: "Firma cargada",
+          description: "Se ha aplicado su firma digital guardada.",
+          icon: <Sparkles className="h-4 w-4 text-accent" />
+        });
+      }
     }
-  }, [techProfiles]);
+  }, [techProfiles, toast]);
 
   const handleSelectClient = (client: any) => {
     setFormData({
@@ -403,7 +412,24 @@ export default function NewWorkOrder() {
                     />
                   </div>
                 </div>
-                <SignaturePad label="Firma Técnico" onSave={(dataUrl) => setFormData({...formData, techSignatureUrl: dataUrl})} />
+                {formData.techSignatureUrl ? (
+                  <div className="space-y-2">
+                    <div className="relative h-32 w-full bg-background/50 rounded-xl border border-dashed flex items-center justify-center overflow-hidden">
+                      <Image src={formData.techSignatureUrl} alt="Firma Técnico" fill className="object-contain" />
+                    </div>
+                    <Button 
+                      type="button" 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={() => setFormData({...formData, techSignatureUrl: ""})}
+                      className="w-full text-[10px] h-6 text-muted-foreground"
+                    >
+                      Volver a firmar manualmente
+                    </Button>
+                  </div>
+                ) : (
+                  <SignaturePad label="Firma Técnico" onSave={(dataUrl) => setFormData({...formData, techSignatureUrl: dataUrl})} />
+                )}
               </CardContent>
             </Card>
 

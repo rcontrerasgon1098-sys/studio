@@ -13,7 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SignaturePad } from "@/components/SignaturePad";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Save, CheckCircle2, Camera, X, Image as ImageIcon, Loader2, User, CreditCard } from "lucide-react";
+import { ArrowLeft, Save, CheckCircle2, Camera, X, Image as ImageIcon, Loader2, User, CreditCard, Sparkles } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import { useUser, useFirestore, useDoc, useMemoFirebase, useCollection } from "@/firebase";
@@ -110,17 +110,29 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
     }
   }, [user, isUserLoading, router]);
 
-  // Efecto para autocompletar datos del técnico si están vacíos al reabrir
+  // Efecto para autocompletar datos del técnico e incluir firma guardada si falta en la OT
   useEffect(() => {
     if (techProfiles && techProfiles.length > 0 && isInitialized) {
       const tech = techProfiles[0];
-      setFormData(prev => ({
-        ...prev,
-        techName: prev.techName || tech.nombre_t || "",
-        techRut: prev.techRut || tech.rut_t || ""
-      }));
+      setFormData(prev => {
+        const updated = {
+          ...prev,
+          techName: prev.techName || tech.nombre_t || "",
+          techRut: prev.techRut || tech.rut_t || "",
+          techSignatureUrl: prev.techSignatureUrl || tech.signatureUrl || ""
+        };
+        
+        if (tech.signatureUrl && !prev.techSignatureUrl) {
+           toast({
+            title: "Firma recuperada",
+            description: "Se ha aplicado su firma guardada en el perfil.",
+            icon: <Sparkles className="h-4 w-4 text-accent" />
+          });
+        }
+        return updated;
+      });
     }
-  }, [techProfiles, isInitialized]);
+  }, [techProfiles, isInitialized, toast]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -378,7 +390,24 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
                     />
                   </div>
                 </div>
-                <SignaturePad label="Actualizar Firma Técnico" onSave={(dataUrl) => setFormData({...formData, techSignatureUrl: dataUrl})} />
+                {formData.techSignatureUrl ? (
+                  <div className="space-y-2">
+                    <div className="relative h-32 w-full bg-background/50 rounded-xl border border-dashed flex items-center justify-center overflow-hidden">
+                      <Image src={formData.techSignatureUrl} alt="Firma Técnico" fill className="object-contain" />
+                    </div>
+                    <Button 
+                      type="button" 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={() => setFormData({...formData, techSignatureUrl: ""})}
+                      className="w-full text-[10px] h-6 text-muted-foreground"
+                    >
+                      Volver a firmar manualmente
+                    </Button>
+                  </div>
+                ) : (
+                  <SignaturePad label="Actualizar Firma Técnico" onSave={(dataUrl) => setFormData({...formData, techSignatureUrl: dataUrl})} />
+                )}
               </CardContent>
             </Card>
 

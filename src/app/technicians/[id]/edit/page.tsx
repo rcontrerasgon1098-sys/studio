@@ -9,11 +9,13 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Save, User, Hash, Mail, Phone, ShieldCheck, UserCog } from "lucide-react";
+import { ArrowLeft, Save, User, Hash, Mail, Phone, ShieldCheck, UserCog, Eraser } from "lucide-react";
 import Link from "next/link";
+import Image from "next/image";
 import { useUser, useFirestore, useDoc, useMemoFirebase } from "@/firebase";
 import { doc } from "firebase/firestore";
 import { updateDocumentNonBlocking } from "@/firebase/non-blocking-updates";
+import { SignaturePad } from "@/components/SignaturePad";
 
 export default function EditTechnician({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
@@ -34,7 +36,8 @@ export default function EditTechnician({ params }: { params: Promise<{ id: strin
     rut_t: "",
     email_t: "",
     cel_t: "",
-    rol_t: "Técnico"
+    rol_t: "Técnico",
+    signatureUrl: ""
   });
 
   useEffect(() => {
@@ -44,7 +47,8 @@ export default function EditTechnician({ params }: { params: Promise<{ id: strin
         rut_t: personnel.rut_t || "",
         email_t: personnel.email_t || "",
         cel_t: personnel.cel_t || "",
-        rol_t: personnel.rol_t || "Técnico"
+        rol_t: personnel.rol_t || "Técnico",
+        signatureUrl: personnel.signatureUrl || ""
       });
     }
   }, [personnel]);
@@ -193,6 +197,32 @@ export default function EditTechnician({ params }: { params: Promise<{ id: strin
                     />
                   </div>
                 </div>
+              </div>
+
+              <div className="space-y-4 pt-4 border-t">
+                <Label className="font-bold">Firma Digital Permanente</Label>
+                {formData.signatureUrl ? (
+                  <div className="space-y-2">
+                    <div className="relative h-32 w-full bg-background/50 rounded-xl border border-dashed flex items-center justify-center overflow-hidden">
+                      <Image src={formData.signatureUrl} alt="Firma Guardada" fill className="object-contain" />
+                    </div>
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => setFormData({...formData, signatureUrl: ""})}
+                      className="w-full text-xs font-bold gap-2"
+                    >
+                      <Eraser className="h-3 w-3" /> Borrar para Cambiar
+                    </Button>
+                  </div>
+                ) : (
+                  <SignaturePad 
+                    label="Dibuje su firma para guardar" 
+                    onSave={(dataUrl) => setFormData({...formData, signatureUrl: dataUrl})} 
+                  />
+                )}
+                <p className="text-[10px] text-muted-foreground italic">Esta firma se cargará automáticamente en cada orden de trabajo que realice.</p>
               </div>
 
               <div className="p-4 bg-muted/40 rounded-xl border border-dashed flex items-start gap-3">
