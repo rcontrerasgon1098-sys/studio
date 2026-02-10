@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { format, startOfDay, subDays, isSameDay } from "date-fns";
+import { format, startOfDay, isSameDay, startOfWeek, addDays } from "date-fns";
 import { es } from "date-fns/locale";
 import { 
   Plus, FileText, Search, LogOut, LayoutDashboard, 
@@ -109,17 +109,19 @@ export default function Dashboard() {
   const weeklyOrdersData = useMemo(() => {
     if (!orders || !mountedDate) return [];
     
-    const today = startOfDay(mountedDate);
-    const last7Days = Array.from({ length: 7 }, (_, i) => subDays(today, 6 - i));
+    // Configurar el inicio de la semana el lunes (weekStartsOn: 1)
+    const monday = startOfWeek(mountedDate, { weekStartsOn: 1 });
+    const weekDays = Array.from({ length: 7 }, (_, i) => addDays(monday, i));
 
-    return last7Days.map(date => {
+    return weekDays.map(date => {
       const count = orders.filter(o => {
         if (!o.startDate) return false;
         return isSameDay(new Date(o.startDate), date);
       }).length;
       
+      const dayName = format(date, 'eeee', { locale: es });
       return { 
-        day: format(date, 'eee', { locale: es }), 
+        day: dayName.charAt(0).toUpperCase() + dayName.slice(1), 
         ordenes: count 
       };
     });
@@ -280,7 +282,7 @@ export default function Dashboard() {
         </div>
       </header>
 
-      <main className="flex-1 p-4 md:p-10 overflow-y-auto">
+      <main className="flex-1 p-4 md:p-10 overflow-y-auto pb-24 md:pb-10">
         <header className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
           <div>
             <h1 className="text-3xl font-black text-primary tracking-tight">
@@ -294,21 +296,21 @@ export default function Dashboard() {
           <div className="flex gap-2">
             {activeTab === "clients" && (
               <Link href="/clients/new">
-                <Button className="bg-accent text-primary font-black hover:bg-accent/90 gap-3 h-14 px-8 text-lg shadow-xl">
+                <Button className="bg-accent text-primary font-black hover:bg-accent/90 gap-3 h-14 px-8 text-lg shadow-xl rounded-xl">
                   <Plus size={24} /> Nuevo Cliente
                 </Button>
               </Link>
             )}
             {activeTab === "personnel" && (
               <Link href="/technicians/new">
-                <Button className="bg-accent text-primary font-black hover:bg-accent/90 gap-3 h-14 px-8 text-lg shadow-xl">
+                <Button className="bg-accent text-primary font-black hover:bg-accent/90 gap-3 h-14 px-8 text-lg shadow-xl rounded-xl">
                   <Plus size={24} /> Nuevo Personal
                 </Button>
               </Link>
             )}
             {(activeTab === "dashboard" || activeTab === "orders") && (
               <Link href="/work-orders/new">
-                <Button className="bg-accent text-primary font-black hover:bg-accent/90 gap-3 h-14 px-8 text-lg shadow-xl">
+                <Button className="bg-accent text-primary font-black hover:bg-accent/90 gap-3 h-14 px-8 text-lg shadow-xl rounded-xl">
                   <Plus size={24} /> Nueva Orden
                 </Button>
               </Link>
@@ -318,32 +320,32 @@ export default function Dashboard() {
 
         {activeTab === "dashboard" && (
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-8">
-            <Card className="shadow-md border-none bg-white">
-              <CardHeader className="pb-2 p-6 flex flex-row items-center justify-between">
+            <Card className="shadow-md border-none bg-white rounded-2xl overflow-hidden">
+              <CardHeader className="pb-2 p-6 flex flex-row items-center justify-between bg-primary/5">
                 <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Total Órdenes</p>
                 <FileText className="h-4 w-4 text-primary opacity-30" />
               </CardHeader>
-              <CardContent className="p-6 pt-0">
+              <CardContent className="p-6 pt-4">
                 <p className="text-4xl font-black text-primary">{orders?.length || 0}</p>
               </CardContent>
             </Card>
-            <Card className="shadow-md border-none bg-white">
-              <CardHeader className="pb-2 p-6 flex flex-row items-center justify-between">
+            <Card className="shadow-md border-none bg-white rounded-2xl overflow-hidden">
+              <CardHeader className="pb-2 p-6 flex flex-row items-center justify-between bg-destructive/5">
                 <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Pendientes</p>
                 <Clock className="h-4 w-4 text-destructive opacity-30" />
               </CardHeader>
-              <CardContent className="p-6 pt-0">
+              <CardContent className="p-6 pt-4">
                 <p className="text-4xl font-black text-destructive">
                   {orders?.filter(o => o.status === "Pending" || o.status !== "Completed").length || 0}
                 </p>
               </CardContent>
             </Card>
-            <Card className="shadow-md border-none bg-white">
-              <CardHeader className="pb-2 p-6 flex flex-row items-center justify-between">
+            <Card className="shadow-md border-none bg-white rounded-2xl overflow-hidden">
+              <CardHeader className="pb-2 p-6 flex flex-row items-center justify-between bg-accent/5">
                 <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Completadas</p>
                 <TrendingUp className="h-4 w-4 text-accent opacity-30" />
               </CardHeader>
-              <CardContent className="p-6 pt-0">
+              <CardContent className="p-6 pt-4">
                 <p className="text-4xl font-black text-accent">
                   {orders?.filter(o => o.status === "Completed").length || 0}
                 </p>
@@ -355,7 +357,7 @@ export default function Dashboard() {
         {activeTab === "analytics" && (
           <div className="space-y-8 mb-8">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-              <Card className="shadow-xl border-none bg-white">
+              <Card className="shadow-xl border-none bg-white rounded-2xl">
                 <CardHeader className="border-b pb-4 mb-4 flex flex-row items-center gap-2">
                   <PieChartIcon className="h-5 w-5 text-primary" />
                   <div>
@@ -386,7 +388,7 @@ export default function Dashboard() {
                 </CardContent>
               </Card>
 
-              <Card className="shadow-xl border-none bg-white">
+              <Card className="shadow-xl border-none bg-white rounded-2xl">
                 <CardHeader className="border-b pb-4 mb-4 flex flex-row items-center gap-2">
                   <BarChartIcon className="h-5 w-5 text-primary" />
                   <div>
@@ -408,19 +410,19 @@ export default function Dashboard() {
               </Card>
             </div>
 
-            <Card className="shadow-xl border-none bg-white">
+            <Card className="shadow-xl border-none bg-white rounded-2xl">
               <CardHeader className="border-b pb-4 mb-4 flex flex-row items-center gap-2">
                 <TrendingUp className="h-5 w-5 text-accent" />
                 <div>
                   <CardTitle className="text-lg font-bold text-primary">Actividad Semanal</CardTitle>
-                  <CardDescription>Carga de trabajo diaria (ordenada cronológicamente)</CardDescription>
+                  <CardDescription>Carga de trabajo por día (Lunes a Domingo)</CardDescription>
                 </div>
               </CardHeader>
               <CardContent className="h-[300px]">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={weeklyOrdersData}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.1} />
-                    <XAxis dataKey="day" axisLine={false} tickLine={false} style={{ fontSize: '12px', fontWeight: 'bold' }} />
+                    <XAxis dataKey="day" axisLine={false} tickLine={false} style={{ fontSize: '11px', fontWeight: 'bold' }} />
                     <YAxis axisLine={false} tickLine={false} />
                     <RechartsTooltip cursor={{fill: 'transparent'}} />
                     <Bar dataKey="ordenes" fill="hsl(var(--accent))" radius={[4, 4, 0, 0]} barSize={50} />
@@ -432,8 +434,8 @@ export default function Dashboard() {
         )}
 
         {(activeTab === "dashboard" || activeTab === "orders") && (
-          <Card className="shadow-xl border-none bg-white mb-8">
-            <CardHeader className="flex flex-col items-stretch border-b pb-6 mb-4 gap-4 px-8">
+          <Card className="shadow-xl border-none bg-white mb-8 rounded-2xl">
+            <CardHeader className="flex flex-col items-stretch border-b pb-6 mb-4 gap-4 px-4 md:px-8">
               <div className="flex items-center justify-between">
                 <CardTitle className="text-xl font-bold text-primary">Listado de Órdenes</CardTitle>
                 <Button variant="ghost" size="sm" onClick={clearFilters} className="text-muted-foreground hover:text-primary gap-2 h-8 uppercase font-bold text-[10px]">
@@ -445,7 +447,7 @@ export default function Dashboard() {
                 <div className="relative col-span-1 md:col-span-1">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
                   <Input 
-                    placeholder="Buscar folio o cliente..." 
+                    placeholder="Folio o cliente..." 
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     className="pl-10 h-12 bg-background border-none rounded-xl w-full text-sm font-medium"
@@ -454,7 +456,7 @@ export default function Dashboard() {
                 
                 <Select value={statusFilter} onValueChange={setStatusFilter}>
                   <SelectTrigger className="h-12 bg-background border-none rounded-xl font-medium">
-                    <SelectValue placeholder="Filtrar por estado" />
+                    <SelectValue placeholder="Estado" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">Todos los estados</SelectItem>
@@ -487,11 +489,11 @@ export default function Dashboard() {
                 </Popover>
               </div>
             </CardHeader>
-            <CardContent className="px-8 pb-8">
+            <CardContent className="px-4 md:px-8 pb-8">
               <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
-                    <TableRow className="bg-muted/40">
+                    <TableRow className="bg-muted/40 border-none">
                       <TableHead className="font-bold py-4 uppercase text-[10px]">Folio</TableHead>
                       <TableHead className="font-bold py-4 uppercase text-[10px]">Cliente</TableHead>
                       <TableHead className="font-bold py-4 uppercase text-[10px]">Fecha</TableHead>
@@ -502,7 +504,7 @@ export default function Dashboard() {
                   <TableBody>
                     {filteredOrders.length > 0 ? (
                       filteredOrders.map((order) => (
-                        <TableRow key={order.id} className="hover:bg-muted/20 transition-colors">
+                        <TableRow key={order.id} className="hover:bg-muted/20 transition-colors border-b">
                           <TableCell className="font-black text-primary">#{order.folio}</TableCell>
                           <TableCell className="font-bold">{order.clientName}</TableCell>
                           <TableCell className="text-xs text-muted-foreground font-medium">
@@ -546,7 +548,7 @@ export default function Dashboard() {
                     ) : (
                       <TableRow>
                         <TableCell colSpan={5} className="h-32 text-center font-bold text-muted-foreground uppercase tracking-widest text-xs">
-                          No se encontraron registros activos
+                          No se encontraron registros
                         </TableCell>
                       </TableRow>
                     )}
@@ -558,7 +560,7 @@ export default function Dashboard() {
         )}
 
         {activeTab === "clients" && (
-          <Card className="shadow-xl border-none bg-white">
+          <Card className="shadow-xl border-none bg-white rounded-2xl">
             <CardHeader className="flex flex-col md:flex-row items-start md:items-center justify-between border-b pb-6 mb-4 gap-4 px-8">
               <CardTitle className="text-xl font-bold text-primary">Listado de Clientes</CardTitle>
               <div className="relative w-full md:w-80">
@@ -575,7 +577,7 @@ export default function Dashboard() {
               <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
-                    <TableRow className="bg-muted/40">
+                    <TableRow className="bg-muted/40 border-none">
                       <TableHead className="font-bold py-4 uppercase text-[10px]">RUT</TableHead>
                       <TableHead className="font-bold py-4 uppercase text-[10px]">Nombre / Razón Social</TableHead>
                       <TableHead className="font-bold py-4 uppercase text-[10px]">Email / Teléfono</TableHead>
@@ -585,7 +587,7 @@ export default function Dashboard() {
                   </TableHeader>
                   <TableBody>
                     {filteredClients.map((client) => (
-                      <TableRow key={client.id} className="hover:bg-muted/20 transition-colors">
+                      <TableRow key={client.id} className="hover:bg-muted/20 transition-colors border-b">
                         <TableCell className="font-bold text-primary">{client.rutCliente}</TableCell>
                         <TableCell>
                           <div className="flex flex-col">
@@ -632,7 +634,7 @@ export default function Dashboard() {
         )}
 
         {activeTab === "personnel" && (
-          <Card className="shadow-xl border-none bg-white">
+          <Card className="shadow-xl border-none bg-white rounded-2xl">
             <CardHeader className="flex flex-col md:flex-row items-start md:items-center justify-between border-b pb-6 mb-4 gap-4 px-8">
               <CardTitle className="text-xl font-bold text-primary">Listado de Personal</CardTitle>
               <div className="relative w-full md:w-80">
@@ -649,7 +651,7 @@ export default function Dashboard() {
               <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
-                    <TableRow className="bg-muted/40">
+                    <TableRow className="bg-muted/40 border-none">
                       <TableHead className="font-bold py-4 uppercase text-[10px]">ID</TableHead>
                       <TableHead className="font-bold py-4 uppercase text-[10px]">Nombre Completo</TableHead>
                       <TableHead className="font-bold py-4 uppercase text-[10px]">Rol</TableHead>
@@ -660,7 +662,7 @@ export default function Dashboard() {
                   </TableHeader>
                   <TableBody>
                     {filteredPersonnel.map((p) => (
-                      <TableRow key={p.id} className="hover:bg-muted/20 transition-colors">
+                      <TableRow key={p.id} className="hover:bg-muted/20 transition-colors border-b">
                         <TableCell className="font-black text-primary text-xs">{p.id_t}</TableCell>
                         <TableCell className="font-bold">{p.nombre_t}</TableCell>
                         <TableCell>
