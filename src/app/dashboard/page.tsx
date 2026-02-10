@@ -12,7 +12,7 @@ import {
   Plus, FileText, Search, Settings, LogOut, LayoutDashboard, 
   Eye, Download, Menu, TrendingUp, Users, UserRound, Shield,
   Pencil, Trash2, PieChart as PieChartIcon, BarChart as BarChartIcon,
-  Briefcase
+  Briefcase, Clock
 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
@@ -302,7 +302,7 @@ export default function Dashboard() {
         </header>
 
         {activeTab === "dashboard" && (
-          <div className="grid grid-cols-1 sm:grid-cols-4 gap-6 mb-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
             <Card className="shadow-md border-none bg-white">
               <CardHeader className="pb-2 p-6 flex flex-row items-center justify-between">
                 <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Total Órdenes</p>
@@ -310,6 +310,17 @@ export default function Dashboard() {
               </CardHeader>
               <CardContent className="p-6 pt-0">
                 <p className="text-4xl font-black text-primary">{orders?.length || 0}</p>
+              </CardContent>
+            </Card>
+            <Card className="shadow-md border-none bg-white">
+              <CardHeader className="pb-2 p-6 flex flex-row items-center justify-between">
+                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Pendientes</p>
+                <Clock className="h-4 w-4 text-destructive opacity-30" />
+              </CardHeader>
+              <CardContent className="p-6 pt-0">
+                <p className="text-4xl font-black text-destructive">
+                  {orders?.filter(o => o.status === "Pending" || o.status !== "Completed").length || 0}
+                </p>
               </CardContent>
             </Card>
             <Card className="shadow-md border-none bg-white">
