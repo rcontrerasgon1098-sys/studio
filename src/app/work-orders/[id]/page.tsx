@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Download, Printer, User, Calendar, MapPin, ClipboardCheck, Info, FileText } from "lucide-react";
 import Link from "next/link";
+import Image from "next/image";
 import { generateWorkOrderPDF } from "@/lib/pdf-generator";
 import { useDoc, useUser, useFirestore, useMemoFirebase } from "@/firebase";
 import { doc } from "firebase/firestore";
