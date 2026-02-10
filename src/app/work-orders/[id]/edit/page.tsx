@@ -13,7 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SignaturePad } from "@/components/SignaturePad";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Save, CheckCircle2, Camera, X, Image as ImageIcon } from "lucide-react";
+import { ArrowLeft, Save, CheckCircle2, Camera, X, Image as ImageIcon, Loader2 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import { useUser, useFirestore, useDoc, useMemoFirebase } from "@/firebase";
@@ -37,9 +37,11 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
 
   const [loading, setLoading] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
+  
   const [formData, setFormData] = useState({
     clientName: "",
     clientContact: "",
+    clientId: "",
     signalType: "Simple",
     isCert: false,
     isPlan: false,
@@ -54,8 +56,10 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
     status: "Pending"
   });
 
+  // Inicialización de datos del formulario cuando la orden carga
   useEffect(() => {
     if (order && !isInitialized) {
+      // Si la orden ya está completada, no debería editarse según reglas de negocio
       if (order.status === "Completed") {
         toast({
           variant: "destructive",
@@ -69,6 +73,7 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
       setFormData({
         clientName: order.clientName || "",
         clientContact: order.clientContact || "",
+        clientId: order.clientId || "",
         signalType: order.signalType || "Simple",
         isCert: !!order.isCert,
         isPlan: !!order.isPlan,
@@ -84,7 +89,7 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
       });
       setIsInitialized(true);
     }
-  }, [order, id, router, toast, isInitialized]);
+  }, [order, isInitialized, id, router, toast]);
 
   useEffect(() => {
     if (!isUserLoading && !user) {
@@ -121,14 +126,15 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
     if (!formData.clientName) {
       toast({ 
         variant: "destructive", 
-        title: "Cliente Requerido", 
-        description: "Por favor ingrese el nombre del cliente." 
+        title: "Campo Requerido", 
+        description: "El nombre del cliente es obligatorio." 
       });
       setLoading(false);
       return;
     }
 
-    const hasBothSignatures = formData.techSignatureUrl && formData.clientSignatureUrl;
+    // Una OT pasa a Completed solo si tiene ambas firmas
+    const hasBothSignatures = !!formData.techSignatureUrl && !!formData.clientSignatureUrl;
     const finalStatus = hasBothSignatures ? "Completed" : "Pending";
 
     const updateData = {
@@ -143,10 +149,10 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
     try {
       updateDocumentNonBlocking(docRef, updateData);
       toast({ 
-        title: finalStatus === "Completed" ? "Orden Finalizada" : "Orden Actualizada", 
+        title: finalStatus === "Completed" ? "Orden Finalizada" : "Cambios Guardados", 
         description: finalStatus === "Completed" 
-          ? "La orden se ha completado con éxito." 
-          : "Los cambios han sido guardados."
+          ? "La orden se ha cerrado con éxito." 
+          : "La orden sigue pendiente de firmas."
       });
       router.push("/dashboard");
     } catch (error) {
@@ -155,11 +161,17 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
     }
   };
 
-  if (isUserLoading || isOrderLoading) return <div className="min-h-screen flex items-center justify-center font-black animate-pulse bg-background text-primary">CARGANDO ORDEN...</div>;
-  if (!order) return <div className="min-h-screen flex items-center justify-center">Orden no encontrada.</div>;
+  if (isUserLoading || isOrderLoading || !isInitialized) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-background text-primary gap-4">
+        <Loader2 className="h-10 w-10 animate-spin" />
+        <p className="font-black tracking-tighter text-xl">RECUPERANDO DATOS ICSA...</p>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-background pb-20 md:pb-12">
+    <div className="min-h-screen bg-background pb-24 md:pb-12">
       <header className="bg-white border-b sticky top-0 z-40 shadow-sm">
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2 md:gap-4">
@@ -168,28 +180,24 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
                 <ArrowLeft className="h-6 w-6" />
               </Button>
             </Link>
-            <h1 className="font-bold text-lg md:text-xl text-primary truncate">Reabrir OT #{order.folio}</h1>
+            <h1 className="font-bold text-lg md:text-xl text-primary truncate">Reabrir OT #{order?.folio}</h1>
           </div>
-          <div className="flex gap-2">
-            <Button size="sm" onClick={handleSubmit} disabled={loading} className="bg-primary hover:bg-primary/90 h-10 px-4 md:px-6 font-bold">
-              <Save className="h-4 w-4 md:mr-2" /> <span className="hidden md:inline">{loading ? "Guardando..." : "Guardar Cambios"}</span>
-            </Button>
-          </div>
+          <Button onClick={handleSubmit} disabled={loading} className="bg-primary hover:bg-primary/90 h-10 px-4 md:px-6 font-bold">
+            <Save className="h-4 w-4 md:mr-2" /> <span className="hidden md:inline">{loading ? "Guardando..." : "Guardar"}</span>
+          </Button>
         </div>
       </header>
 
       <main className="container mx-auto px-4 mt-6 max-w-3xl space-y-6">
         <form onSubmit={handleSubmit} className="space-y-6">
           <Card className="shadow-md border-none bg-white">
-            <CardHeader className="bg-secondary/20 rounded-t-lg p-4 md:p-6">
+            <CardHeader className="bg-secondary/20 rounded-t-lg p-4">
               <div className="flex items-center justify-between">
-                <div className="space-y-1">
-                  <CardTitle className="text-primary text-xl">Información del Cliente</CardTitle>
-                  <CardDescription className="text-xs">Editando orden creada el: {order.startDate ? new Date(order.startDate).toLocaleDateString() : "Fecha N/A"}</CardDescription>
+                <div>
+                  <CardTitle className="text-primary text-xl">Datos del Servicio</CardTitle>
+                  <CardDescription className="text-xs">Actualice los campos pendientes de la OT.</CardDescription>
                 </div>
-                <div className="flex flex-col items-end">
-                  <Badge variant="outline" className="text-primary border-primary">PENDIENTE</Badge>
-                </div>
+                <Badge variant="outline" className="bg-white text-primary border-primary font-black">PENDIENTE</Badge>
               </div>
             </CardHeader>
             <CardContent className="pt-6 space-y-6">
@@ -200,7 +208,7 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
                     id="clientName"
                     value={formData.clientName}
                     onChange={e => setFormData({...formData, clientName: e.target.value})}
-                    className="h-14 text-base font-bold"
+                    className="h-14 text-base font-bold bg-muted/20"
                   />
                 </div>
                 <div className="space-y-2">
@@ -265,7 +273,7 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
                         checked={(formData as any)[item.key]}
                         onCheckedChange={(checked) => setFormData({...formData, [item.key]: checked === true})}
                       />
-                      <label htmlFor={item.id} className="text-sm font-semibold cursor-pointer">
+                      <label htmlFor={item.id} className="text-sm font-semibold cursor-pointer select-none">
                         {item.label}
                       </label>
                     </div>
@@ -287,25 +295,41 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
           <Card className="shadow-md border-none bg-white">
             <CardHeader className="p-4 md:p-6 border-b">
               <CardTitle className="text-lg">Multimedia</CardTitle>
-              <CardDescription>Actualice la foto o bosquejo técnico del servicio.</CardDescription>
+              <CardDescription>Capture o suba la foto/bosquejo del servicio.</CardDescription>
             </CardHeader>
             <CardContent className="p-4 md:p-6">
-              <input type="file" ref={fileInputRef} onChange={handleFileChange} accept="image/*" className="hidden" />
+              <input 
+                type="file" 
+                ref={fileInputRef} 
+                onChange={handleFileChange} 
+                accept="image/*" 
+                capture="environment"
+                className="hidden" 
+              />
               {!formData.sketchImageUrl ? (
-                <div onClick={() => fileInputRef.current?.click()} className="border-2 border-dashed rounded-2xl p-6 md:p-10 flex flex-col items-center justify-center text-muted-foreground bg-background/50 hover:bg-background/80 transition-colors cursor-pointer">
+                <div 
+                  onClick={() => fileInputRef.current?.click()} 
+                  className="border-2 border-dashed rounded-2xl p-8 flex flex-col items-center justify-center text-muted-foreground bg-background/50 hover:bg-background/80 transition-all cursor-pointer active:scale-95"
+                >
                   <Camera className="h-12 w-12 mb-3 text-primary opacity-60" />
-                  <p className="text-sm font-bold text-center">Subir foto o bosquejo</p>
+                  <p className="text-sm font-bold text-center">Tocar para tomar foto o subir archivo</p>
                 </div>
               ) : (
                 <div className="space-y-4">
-                  <div className="relative aspect-video rounded-xl overflow-hidden bg-muted group border">
+                  <div className="relative aspect-video rounded-xl overflow-hidden bg-muted group border shadow-inner">
                     <Image src={formData.sketchImageUrl} alt="Preview" fill className="object-contain" />
-                    <Button type="button" variant="destructive" size="icon" className="absolute top-2 right-2 h-8 w-8 rounded-full shadow-lg" onClick={removeImage}>
-                      <X className="h-4 w-4" />
+                    <Button 
+                      type="button" 
+                      variant="destructive" 
+                      size="icon" 
+                      className="absolute top-2 right-2 h-10 w-10 rounded-full shadow-lg" 
+                      onClick={removeImage}
+                    >
+                      <X className="h-5 w-5" />
                     </Button>
                   </div>
                   <Button type="button" variant="outline" className="w-full h-12 font-bold" onClick={() => fileInputRef.current?.click()}>
-                    <ImageIcon className="h-4 w-4 mr-2" /> Cambiar Imagen
+                    <ImageIcon className="h-4 w-4 mr-2" /> Reemplazar Foto
                   </Button>
                 </div>
               )}
@@ -314,12 +338,14 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
 
           <div className="grid grid-cols-1 gap-6 pb-6">
             <Card className="shadow-md border-none bg-white overflow-hidden">
-              <CardContent className="p-4 md:p-6">
+              <CardContent className="p-4">
                 <div className="mb-4">
                   {formData.techSignatureUrl && (
-                    <div className="mb-4 p-2 border rounded-lg bg-background">
-                      <p className="text-[10px] font-bold text-muted-foreground uppercase mb-1">Firma Actual Técnico:</p>
-                      <img src={formData.techSignatureUrl} alt="Tech Sig" className="h-20 object-contain" />
+                    <div className="mb-4 p-2 border rounded-lg bg-background flex flex-col items-center">
+                      <p className="text-[10px] font-bold text-muted-foreground uppercase mb-1">Firma Técnica Registrada:</p>
+                      <div className="relative h-20 w-full max-w-[200px]">
+                        <Image src={formData.techSignatureUrl} alt="Tech Sig" fill className="object-contain" />
+                      </div>
                     </div>
                   )}
                   <SignaturePad 
@@ -330,12 +356,14 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
               </CardContent>
             </Card>
             <Card className="shadow-md border-none bg-white overflow-hidden">
-              <CardContent className="p-4 md:p-6">
+              <CardContent className="p-4">
                 <div className="mb-4">
                   {formData.clientSignatureUrl && (
-                    <div className="mb-4 p-2 border rounded-lg bg-background">
-                      <p className="text-[10px] font-bold text-muted-foreground uppercase mb-1">Firma Actual Cliente:</p>
-                      <img src={formData.clientSignatureUrl} alt="Client Sig" className="h-20 object-contain" />
+                    <div className="mb-4 p-2 border rounded-lg bg-background flex flex-col items-center">
+                      <p className="text-[10px] font-bold text-muted-foreground uppercase mb-1">Firma Cliente Registrada:</p>
+                      <div className="relative h-20 w-full max-w-[200px]">
+                        <Image src={formData.clientSignatureUrl} alt="Client Sig" fill className="object-contain" />
+                      </div>
                     </div>
                   )}
                   <SignaturePad 
@@ -347,9 +375,14 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
             </Card>
           </div>
 
-          <div className="fixed bottom-0 left-0 right-0 p-4 bg-white/80 backdrop-blur-md border-t md:relative md:bg-transparent md:border-none md:p-0">
-            <Button type="submit" size="lg" className="bg-primary hover:bg-primary/90 w-full h-14 text-lg font-black gap-3 shadow-xl active:scale-95 transition-all" disabled={loading}>
-              <CheckCircle2 size={24} /> {formData.techSignatureUrl && formData.clientSignatureUrl ? "Finalizar y Cerrar Orden" : "Actualizar Orden Pendiente"}
+          <div className="fixed bottom-0 left-0 right-0 p-4 bg-white/90 backdrop-blur-md border-t md:relative md:bg-transparent md:border-none md:p-0">
+            <Button 
+              type="submit" 
+              size="lg" 
+              className="bg-primary hover:bg-primary/90 w-full h-16 text-xl font-black gap-3 shadow-xl active:scale-95 transition-all" 
+              disabled={loading}
+            >
+              <CheckCircle2 size={28} /> {formData.techSignatureUrl && formData.clientSignatureUrl ? "Cerrar y Finalizar OT" : "Guardar Avances"}
             </Button>
           </div>
         </form>

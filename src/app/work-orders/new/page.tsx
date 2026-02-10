@@ -117,16 +117,16 @@ export default function NewWorkOrder() {
       toast({ 
         variant: "destructive", 
         title: "Cliente Requerido", 
-        description: "Por favor seleccione o ingrese el nombre del cliente." 
+        description: "Por favor ingrese o seleccione un cliente." 
       });
       setLoading(false);
       return;
     }
 
-    const hasBothSignatures = formData.techSignatureUrl && formData.clientSignatureUrl;
+    const hasBothSignatures = !!formData.techSignatureUrl && !!formData.clientSignatureUrl;
     const finalStatus = hasBothSignatures ? "Completed" : "Pending";
 
-    const orderId = doc(collection(db, "temp")).id;
+    const orderId = doc(collection(db, "ordenes")).id;
     const workOrderData = {
       ...formData,
       id: orderId,
@@ -143,10 +143,10 @@ export default function NewWorkOrder() {
     try {
       setDocumentNonBlocking(orderRef, workOrderData, { merge: true });
       toast({ 
-        title: finalStatus === "Completed" ? "Orden Completada" : "Orden Guardada (Pendiente)", 
+        title: finalStatus === "Completed" ? "Orden Finalizada" : "Orden Guardada", 
         description: finalStatus === "Completed" 
-          ? "La orden se ha finalizado correctamente con ambas firmas." 
-          : "La orden se guardó como pendiente debido a la falta de firmas."
+          ? "La orden se ha completado correctamente." 
+          : "La orden se guardó como pendiente por falta de firmas."
       });
       router.push("/dashboard");
     } catch (error) {
@@ -155,10 +155,10 @@ export default function NewWorkOrder() {
     }
   };
 
-  if (isUserLoading) return <div className="min-h-screen flex items-center justify-center font-black animate-pulse bg-background">IDENTIFICANDO TÉCNICO...</div>;
+  if (isUserLoading) return <div className="min-h-screen flex items-center justify-center font-black animate-pulse bg-background">CARGANDO...</div>;
 
   return (
-    <div className="min-h-screen bg-background pb-20 md:pb-12">
+    <div className="min-h-screen bg-background pb-24 md:pb-12">
       <header className="bg-white border-b sticky top-0 z-40 shadow-sm">
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2 md:gap-4">
@@ -169,44 +169,36 @@ export default function NewWorkOrder() {
             </Link>
             <h1 className="font-bold text-lg md:text-xl text-primary truncate max-w-[180px] md:max-w-none">Nueva OT #{folio}</h1>
           </div>
-          <div className="flex gap-2">
-            <Button size="sm" onClick={handleSubmit} disabled={loading} className="bg-primary hover:bg-primary/90 h-10 px-4 md:px-6 font-bold">
-              <Save className="h-4 w-4 md:mr-2" /> <span className="hidden md:inline">{loading ? "Guardando..." : "Guardar Orden"}</span>
-            </Button>
-          </div>
+          <Button onClick={handleSubmit} disabled={loading} className="bg-primary hover:bg-primary/90 h-10 px-4 md:px-6 font-bold">
+            <Save className="h-4 w-4 md:mr-2" /> <span className="hidden md:inline">Guardar</span>
+          </Button>
         </div>
       </header>
 
       <main className="container mx-auto px-4 mt-6 max-w-3xl space-y-6">
         <form onSubmit={handleSubmit} className="space-y-6">
           <Card className="shadow-md border-none bg-white">
-            <CardHeader className="bg-secondary/20 rounded-t-lg p-4 md:p-6">
-              <div className="flex flex-col gap-3">
-                <div className="flex items-center justify-between">
-                  <div className="space-y-1">
-                    <CardTitle className="text-primary text-xl">Información General</CardTitle>
-                    <CardDescription className="text-xs">Fecha: {new Date().toLocaleDateString()}</CardDescription>
-                  </div>
-                  <div className="flex flex-col items-end gap-1">
-                    <div className="flex items-center gap-2 text-[10px] font-bold text-primary bg-white px-3 py-1.5 rounded-full shadow-sm border border-primary/10">
-                      <Clock className="h-3.5 w-3.5" />
-                      <span>Inicio: {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                    </div>
-                    <div className="flex items-center gap-1 text-[10px] font-bold text-muted-foreground mt-1">
-                      <UserIcon className="h-3 w-3" />
-                      <span>Técnico: {user?.email}</span>
-                    </div>
-                  </div>
+            <CardHeader className="bg-secondary/20 rounded-t-lg p-4">
+              <div className="flex items-center justify-between">
+                <div className="space-y-1">
+                  <CardTitle className="text-primary text-xl">General</CardTitle>
+                  <CardDescription className="text-xs">Identificación del servicio</CardDescription>
+                </div>
+                <div className="text-right">
+                   <div className="flex items-center gap-1 text-[10px] font-bold text-primary bg-white px-2 py-1 rounded-full shadow-sm border">
+                      <Clock className="h-3 w-3" />
+                      {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                   </div>
                 </div>
               </div>
             </CardHeader>
             <CardContent className="pt-6 space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2 flex flex-col">
-                  <Label htmlFor="clientName" className="font-bold mb-1">Cliente / Empresa</Label>
+                <div className="space-y-2">
+                  <Label htmlFor="clientName" className="font-bold">Cliente / Empresa</Label>
                   <div className="flex gap-2">
                     <Input 
-                      placeholder="Nombre del cliente..." 
+                      placeholder="Nombre de empresa..." 
                       value={formData.clientName}
                       onChange={e => setFormData({...formData, clientName: e.target.value})}
                       className="h-14 text-base font-bold"
@@ -221,18 +213,13 @@ export default function NewWorkOrder() {
                         <Command>
                           <CommandInput placeholder="Buscar cliente..." />
                           <CommandList>
-                            <CommandEmpty className="p-4 text-sm">No hay clientes guardados.</CommandEmpty>
+                            <CommandEmpty className="p-4 text-sm">Sin registros.</CommandEmpty>
                             <CommandGroup>
                               {clients?.map((client) => (
-                                <CommandItem
-                                  key={client.id}
-                                  value={client.nombreCliente}
-                                  onSelect={() => handleSelectClient(client)}
-                                  className="py-3"
-                                >
+                                <CommandItem key={client.id} value={client.nombreCliente} onSelect={() => handleSelectClient(client)}>
                                   <div className="flex flex-col">
                                     <span className="font-bold">{client.nombreCliente}</span>
-                                    <span className="text-[10px] text-muted-foreground">{client.rutCliente}</span>
+                                    <span className="text-[10px] opacity-70">{client.rutCliente}</span>
                                   </div>
                                 </CommandItem>
                               ))}
@@ -247,7 +234,7 @@ export default function NewWorkOrder() {
                   <Label htmlFor="contact" className="font-bold">Contacto / Teléfono</Label>
                   <Input 
                     id="contact" 
-                    placeholder="Email o Teléfono" 
+                    placeholder="Contacto o email" 
                     value={formData.clientContact}
                     onChange={e => setFormData({...formData, clientContact: e.target.value})}
                     className="h-14 text-base"
@@ -265,11 +252,8 @@ export default function NewWorkOrder() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label className="font-bold">Tipo de Señal</Label>
-                  <Select 
-                    value={formData.signalType} 
-                    onValueChange={v => setFormData({...formData, signalType: v})}
-                  >
-                    <SelectTrigger className="h-12 text-base">
+                  <Select value={formData.signalType} onValueChange={v => setFormData({...formData, signalType: v})}>
+                    <SelectTrigger className="h-12">
                       <SelectValue placeholder="Seleccionar" />
                     </SelectTrigger>
                     <SelectContent>
@@ -280,30 +264,19 @@ export default function NewWorkOrder() {
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="location" className="font-bold">Ubicación (Edificio/Piso)</Label>
+                  <Label htmlFor="location" className="font-bold">Ubicación</Label>
                   <Input 
                     id="location" 
                     placeholder="Ej. Torre B / Piso 4" 
                     value={formData.location}
                     onChange={e => setFormData({...formData, location: e.target.value})}
-                    className="h-12 text-base"
+                    className="h-12"
                   />
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="cds" className="font-bold">CDS / Canalización</Label>
-                <Input 
-                  id="cds" 
-                  placeholder="Ej. Ducto Principal 2" 
-                  value={formData.cdsCanalization}
-                  onChange={e => setFormData({...formData, cdsCanalization: e.target.value})}
-                  className="h-12 text-base"
-                />
-              </div>
-
               <div className="space-y-4">
-                <Label className="font-bold block mb-2">Checklist de Instalación</Label>
+                <Label className="font-bold block">Checklist</Label>
                 <div className="grid grid-cols-2 gap-4 p-4 bg-muted/30 rounded-xl border border-dashed">
                   {[
                     { id: "cert", label: "Certificación", key: "isCert" },
@@ -314,7 +287,6 @@ export default function NewWorkOrder() {
                     <div key={item.id} className="flex items-center space-x-3">
                       <Checkbox 
                         id={item.id} 
-                        className="h-6 w-6 rounded-md"
                         checked={(formData as any)[item.key]}
                         onCheckedChange={(checked) => setFormData({...formData, [item.key]: checked === true})}
                       />
@@ -327,10 +299,10 @@ export default function NewWorkOrder() {
               </div>
 
               <div className="space-y-2">
-                <Label className="font-bold">Descripción de Trabajos</Label>
+                <Label className="font-bold">Descripción</Label>
                 <Textarea 
-                  placeholder="Detalles adicionales del servicio..." 
-                  className="min-h-[140px] text-base"
+                  placeholder="Detalles del trabajo..." 
+                  className="min-h-[140px]"
                   value={formData.description}
                   onChange={e => setFormData({...formData, description: e.target.value})}
                 />
@@ -339,53 +311,43 @@ export default function NewWorkOrder() {
           </Card>
 
           <Card className="shadow-md border-none bg-white">
-            <CardHeader className="p-4 md:p-6 border-b">
+            <CardHeader className="p-4 border-b">
               <CardTitle className="text-lg">Multimedia</CardTitle>
-              <CardDescription>Carga una foto del bosquejo técnico o registro realizado.</CardDescription>
+              <CardDescription>Evidencia visual del servicio.</CardDescription>
             </CardHeader>
-            <CardContent className="p-4 md:p-6">
+            <CardContent className="p-4">
               <input 
                 type="file" 
                 ref={fileInputRef} 
                 onChange={handleFileChange} 
                 accept="image/*" 
+                capture="environment"
                 className="hidden" 
               />
               {!formData.sketchImageUrl ? (
                 <div 
                   onClick={() => fileInputRef.current?.click()}
-                  className="border-2 border-dashed rounded-2xl p-6 md:p-10 flex flex-col items-center justify-center text-muted-foreground bg-background/50 hover:bg-background/80 transition-colors cursor-pointer active:scale-[0.98]"
+                  className="border-2 border-dashed rounded-2xl p-8 flex flex-col items-center justify-center text-muted-foreground bg-background/50 hover:bg-background/80 transition-all cursor-pointer active:scale-95"
                 >
                   <Camera className="h-12 w-12 mb-3 text-primary opacity-60" />
-                  <p className="text-sm font-bold text-center">Subir foto o bosquejo</p>
-                  <p className="text-[10px] mt-1 uppercase tracking-widest font-medium">JPG, PNG hasta 5MB</p>
+                  <p className="text-sm font-bold text-center">Tocar para Foto o Archivo</p>
                 </div>
               ) : (
                 <div className="space-y-4">
-                  <div className="relative aspect-video rounded-xl overflow-hidden bg-muted group border">
-                    <Image 
-                      src={formData.sketchImageUrl} 
-                      alt="Preview" 
-                      fill 
-                      className="object-contain" 
-                    />
+                  <div className="relative aspect-video rounded-xl overflow-hidden bg-muted group border shadow-inner">
+                    <Image src={formData.sketchImageUrl} alt="Preview" fill className="object-contain" />
                     <Button 
                       type="button" 
                       variant="destructive" 
                       size="icon" 
-                      className="absolute top-2 right-2 h-8 w-8 rounded-full shadow-lg"
+                      className="absolute top-2 right-2 h-10 w-10 rounded-full shadow-lg"
                       onClick={removeImage}
                     >
-                      <X className="h-4 w-4" />
+                      <X className="h-5 w-5" />
                     </Button>
                   </div>
-                  <Button 
-                    type="button" 
-                    variant="outline" 
-                    className="w-full h-12 font-bold"
-                    onClick={() => fileInputRef.current?.click()}
-                  >
-                    <ImageIcon className="h-4 w-4 mr-2" /> Cambiar Imagen
+                  <Button type="button" variant="outline" className="w-full h-12 font-bold" onClick={() => fileInputRef.current?.click()}>
+                    <ImageIcon className="h-4 w-4 mr-2" /> Reemplazar Foto
                   </Button>
                 </div>
               )}
@@ -394,26 +356,20 @@ export default function NewWorkOrder() {
 
           <div className="grid grid-cols-1 gap-6 pb-6">
             <Card className="shadow-md border-none bg-white overflow-hidden">
-              <CardContent className="p-4 md:p-6">
-                <SignaturePad 
-                  label="Firma del Técnico" 
-                  onSave={(dataUrl) => setFormData({...formData, techSignatureUrl: dataUrl})}
-                />
+              <CardContent className="p-4">
+                <SignaturePad label="Firma Técnico" onSave={(dataUrl) => setFormData({...formData, techSignatureUrl: dataUrl})} />
               </CardContent>
             </Card>
             <Card className="shadow-md border-none bg-white overflow-hidden">
-              <CardContent className="p-4 md:p-6">
-                <SignaturePad 
-                  label="Firma del Cliente" 
-                  onSave={(dataUrl) => setFormData({...formData, clientSignatureUrl: dataUrl})}
-                />
+              <CardContent className="p-4">
+                <SignaturePad label="Firma Cliente" onSave={(dataUrl) => setFormData({...formData, clientSignatureUrl: dataUrl})} />
               </CardContent>
             </Card>
           </div>
 
-          <div className="fixed bottom-0 left-0 right-0 p-4 bg-white/80 backdrop-blur-md border-t md:relative md:bg-transparent md:border-none md:p-0">
-            <Button type="submit" size="lg" className="bg-primary hover:bg-primary/90 w-full h-14 text-lg font-black gap-3 shadow-xl active:scale-95 transition-all">
-              <CheckCircle2 size={24} /> Finalizar Orden
+          <div className="fixed bottom-0 left-0 right-0 p-4 bg-white/90 backdrop-blur-md border-t md:relative md:bg-transparent md:border-none md:p-0">
+            <Button type="submit" size="lg" className="bg-primary hover:bg-primary/90 w-full h-16 text-xl font-black gap-3 shadow-xl active:scale-95 transition-all">
+              <CheckCircle2 size={28} /> Finalizar Orden
             </Button>
           </div>
         </form>
