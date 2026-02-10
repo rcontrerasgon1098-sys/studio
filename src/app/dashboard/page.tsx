@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { 
   Plus, FileText, Search, Settings, LogOut, LayoutDashboard, 
-  Eye, Download, Menu, Users, BarChart3, TrendingUp, UserPlus
+  Eye, Download, Menu, Users, BarChart3, TrendingUp, UserPlus, EyeOff
 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
@@ -38,6 +38,7 @@ export default function Dashboard() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [checkingRole, setCheckingRole] = useState(true);
   const [activeTab, setActiveTab] = useState("dashboard");
+  const [showRegPassword, setShowRegPassword] = useState(false);
 
   // Verificar rol de admin
   useEffect(() => {
@@ -228,7 +229,22 @@ export default function Dashboard() {
                       </div>
                       <div className="space-y-2">
                         <Label>Contraseña Temporal</Label>
-                        <Input type="password" placeholder="••••••••" />
+                        <div className="relative">
+                          <Input 
+                            type={showRegPassword ? "text" : "password"} 
+                            placeholder="••••••••" 
+                            className="pr-10"
+                          />
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="absolute right-0 top-0 h-full px-3 text-muted-foreground hover:bg-transparent"
+                            onClick={() => setShowRegPassword(!showRegPassword)}
+                          >
+                            {showRegPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                          </Button>
+                        </div>
                       </div>
                       <Button className="w-full bg-primary font-bold">Crear Usuario Técnico</Button>
                     </div>
