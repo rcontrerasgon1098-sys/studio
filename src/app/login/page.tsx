@@ -35,29 +35,37 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4">
-      <Card className="w-full max-w-md shadow-2xl border-none">
-        <CardHeader className="text-center space-y-2">
+    <div className="min-h-screen flex items-center justify-center bg-background p-4 relative overflow-hidden">
+      {/* Decorative background elements */}
+      <div className="absolute top-0 left-0 w-full h-1 bg-primary/20" />
+      <div className="absolute -top-24 -left-24 w-64 h-64 bg-primary/5 rounded-full blur-3xl" />
+      <div className="absolute -bottom-24 -right-24 w-64 h-64 bg-accent/10 rounded-full blur-3xl" />
+      
+      <Card className="w-full max-w-md shadow-2xl border-none bg-white/90 backdrop-blur-sm relative z-10">
+        <CardHeader className="text-center space-y-4 pt-10">
           {logoImage && (
-            <div className="mx-auto relative w-16 h-16 mb-2">
+            <div className="mx-auto relative w-32 h-32 mb-2 transition-transform hover:scale-105 duration-300">
               <Image
                 src={logoImage.imageUrl}
                 alt="ICSA Logo"
                 fill
                 className="object-contain"
+                priority
               />
             </div>
           )}
-          <CardTitle className="text-2xl font-headline font-bold text-primary flex flex-col items-center gap-1">
-            ICSA
-            <span className="text-xs font-normal text-muted-foreground block">ingeniería comunicaciones S.A.</span>
-          </CardTitle>
-          <CardDescription>Ingresa tus credenciales para acceder</CardDescription>
-        </Header>
-        <CardContent>
-          <form onSubmit={handleLogin} className="space-y-4">
+          <div className="space-y-1">
+            <CardTitle className="text-3xl font-headline font-bold text-primary flex flex-col items-center leading-none">
+              ICSA
+              <span className="text-[10px] font-normal text-muted-foreground uppercase tracking-widest mt-1">ingeniería comunicaciones S.A.</span>
+            </CardTitle>
+            <CardDescription className="text-base pt-2">Portal de Gestión Técnica</CardDescription>
+          </div>
+        </CardHeader>
+        <CardContent className="pb-10">
+          <form onSubmit={handleLogin} className="space-y-5">
             <div className="space-y-2">
-              <Label htmlFor="email">Correo Electrónico</Label>
+              <Label htmlFor="email" className="text-sm font-semibold">Correo Electrónico</Label>
               <Input
                 id="email"
                 type="email"
@@ -65,21 +73,27 @@ export default function LoginPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
+                className="h-12 bg-background border-muted focus:ring-primary"
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password">Contraseña</Label>
+              <Label htmlFor="password" suppressHydrationWarning className="text-sm font-semibold">Contraseña</Label>
               <Input
                 id="password"
                 type="password"
+                placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
+                className="h-12 bg-background border-muted focus:ring-primary"
               />
             </div>
-            <Button type="submit" className="w-full bg-primary h-11" disabled={loading}>
-              {loading ? "Iniciando..." : "Entrar al Portal"}
+            <Button type="submit" className="w-full bg-primary h-12 text-lg font-bold shadow-lg hover:shadow-xl transition-all" disabled={loading}>
+              {loading ? "Iniciando sesión..." : "Entrar al Portal"}
             </Button>
+            <p className="text-center text-xs text-muted-foreground pt-2">
+              Si olvidaste tu acceso, contacta con soporte IT.
+            </p>
           </form>
         </CardContent>
       </Card>
