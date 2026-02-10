@@ -16,8 +16,8 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { generateWorkOrderPDF } from "@/lib/pdf-generator";
 import { PlaceHolderImages } from "@/lib/placeholder-images";
-import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc } from "@/firebase";
-import { collection, collectionGroup, query, orderBy, doc } from "firebase/firestore";
+import { useUser, useFirestore, useCollection, useMemoFirebase } from "@/firebase";
+import { collection, query, orderBy, getFirestore } from "firebase/firestore";
 import { getAuth, signOut } from "firebase/auth";
 
 export default function Dashboard() {
@@ -26,7 +26,6 @@ export default function Dashboard() {
   const router = useRouter();
   const logoImage = PlaceHolderImages.find(img => img.id === "icsa-logo");
   
-  const [isAdmin, setIsAdmin] = useState(false);
   const [activeTab, setActiveTab] = useState("dashboard");
   const [searchTerm, setSearchTerm] = useState("");
 
@@ -36,38 +35,13 @@ export default function Dashboard() {
     }
   }, [user, isUserLoading, router]);
 
-  // Obtenemos el perfil del usuario para verificar el rol
-  const userDocRef = useMemoFirebase(() => {
+  // Simplificamos: Mostramos todas las órdenes de la colección raíz
+  const ordersQuery = useMemoFirebase(() => {
     if (!db || !user) return null;
-    return doc(db, "users", user.uid);
+    return query(collection(db, "ordenes"), orderBy("folio", "desc"));
   }, [db, user]);
 
-  const { data: userProfile, isLoading: isProfileLoading } = useDoc(userDocRef);
-
-  useEffect(() => {
-    if (!isProfileLoading && userProfile) {
-      setIsAdmin(userProfile.rol === 'admin');
-    }
-  }, [userProfile, isProfileLoading]);
-
-  const techOrdersQuery = useMemoFirebase(() => {
-    if (!db || !user || isAdmin || isProfileLoading) return null;
-    return query(
-      collection(db, "users", user.uid, "work_orders"),
-      orderBy("folio", "desc")
-    );
-  }, [db, user, isAdmin, isProfileLoading]);
-
-  const adminOrdersQuery = useMemoFirebase(() => {
-    if (!db || !isAdmin || isProfileLoading) return null;
-    return query(collectionGroup(db, "work_orders"), orderBy("folio", "desc"));
-  }, [db, isAdmin, isProfileLoading]);
-
-  const { data: techOrders } = useCollection(techOrdersQuery);
-  const { data: allOrders } = useCollection(adminOrdersQuery);
-
-  const orders = isAdmin ? allOrders : techOrders;
-  const isLoading = isUserLoading || isProfileLoading;
+  const { data: orders, isLoading: isOrdersLoading } = useCollection(ordersQuery);
 
   const filteredOrders = useMemo(() => {
     if (!orders) return [];
@@ -104,21 +78,12 @@ export default function Dashboard() {
         >
           <LayoutDashboard size={20} /> Dashboard
         </Button>
-        {isAdmin && (
-          <Button 
-            variant={activeTab === "technicians" ? "secondary" : "ghost"} 
-            className={`w-full justify-start gap-3 h-12 font-semibold ${activeTab === "technicians" ? "bg-white/10 text-white border-none" : "text-white/80 hover:bg-white/10"}`}
-            onClick={() => setActiveTab("technicians")}
-          >
-            <Users size={20} /> Técnicos
-          </Button>
-        )}
         <Button 
           variant={activeTab === "orders" ? "secondary" : "ghost"} 
           className={`w-full justify-start gap-3 h-12 font-semibold ${activeTab === "orders" ? "bg-white/10 text-white border-none" : "text-white/80 hover:bg-white/10"}`}
           onClick={() => setActiveTab("orders")}
         >
-          <FileText size={20} /> {isAdmin ? "Todas las Órdenes" : "Mis Órdenes"}
+          <FileText size={20} /> Órdenes
         </Button>
         <Button variant="ghost" className="w-full justify-start gap-3 hover:bg-white/10 h-12 text-white/80 font-medium">
           <Settings size={20} /> Ajustes
@@ -132,7 +97,7 @@ export default function Dashboard() {
     </div>
   );
 
-  if (isLoading) return <div className="min-h-screen flex items-center justify-center text-primary font-black animate-pulse bg-background">CARGANDO ICSA...</div>;
+  if (isUserLoading) return <div className="min-h-screen flex items-center justify-center text-primary font-black animate-pulse bg-background">CARGANDO PORTAL ICSA...</div>;
 
   return (
     <div className="min-h-screen bg-background flex flex-col md:flex-row">
@@ -162,20 +127,14 @@ export default function Dashboard() {
       <main className="flex-1 p-4 md:p-10 overflow-y-auto">
         <header className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
           <div>
-            <h1 className="text-3xl font-black text-primary tracking-tight">
-              {isAdmin ? "Panel Administrativo" : "Panel Técnico"}
-            </h1>
-            <p className="text-muted-foreground font-medium">
-              {isAdmin ? "Gestión Global Operativa" : `Bienvenido, ${user?.email}`}
-            </p>
+            <h1 className="text-3xl font-black text-primary tracking-tight">Portal de Gestión</h1>
+            <p className="text-muted-foreground font-medium">Panel Operativo de ICSA</p>
           </div>
-          {!isAdmin && (
-            <Link href="/work-orders/new">
-              <Button className="bg-accent text-primary font-black hover:bg-accent/90 gap-3 h-14 px-8 text-lg shadow-xl">
-                <Plus size={24} /> Nueva Orden
-              </Button>
-            </Link>
-          )}
+          <Link href="/work-orders/new">
+            <Button className="bg-accent text-primary font-black hover:bg-accent/90 gap-3 h-14 px-8 text-lg shadow-xl">
+              <Plus size={24} /> Nueva Orden
+            </Button>
+          </Link>
         </header>
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-8">
@@ -232,7 +191,6 @@ export default function Dashboard() {
                   <TableRow className="bg-muted/40">
                     <TableHead className="font-bold py-4">Folio</TableHead>
                     <TableHead className="font-bold py-4">Cliente</TableHead>
-                    {isAdmin && <TableHead className="font-bold py-4">Técnico</TableHead>}
                     <TableHead className="font-bold py-4">Fecha</TableHead>
                     <TableHead className="font-bold py-4">Estado</TableHead>
                     <TableHead className="text-right font-bold py-4">Acciones</TableHead>
@@ -243,7 +201,6 @@ export default function Dashboard() {
                     <TableRow key={order.id} className="hover:bg-muted/20 transition-colors">
                       <TableCell className="font-black text-primary">#{order.folio}</TableCell>
                       <TableCell className="font-bold">{order.clientName}</TableCell>
-                      {isAdmin && <TableCell className="text-xs font-medium">{order.technicianEmail || "N/A"}</TableCell>}
                       <TableCell className="text-xs text-muted-foreground">
                         {order.startDate ? new Date(order.startDate).toLocaleDateString() : "N/A"}
                       </TableCell>
@@ -254,7 +211,7 @@ export default function Dashboard() {
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
-                          <Link href={`/work-orders/${order.id}${isAdmin ? `?techId=${order.technicianId}` : ''}`}>
+                          <Link href={`/work-orders/${order.id}`}>
                             <Button variant="ghost" size="icon" className="h-9 w-9">
                               <Eye className="h-5 w-5" />
                             </Button>
@@ -266,10 +223,17 @@ export default function Dashboard() {
                       </TableCell>
                     </TableRow>
                   ))}
-                  {filteredOrders.length === 0 && (
+                  {filteredOrders.length === 0 && !isOrdersLoading && (
                     <TableRow>
-                      <TableCell colSpan={isAdmin ? 6 : 5} className="text-center py-10 text-muted-foreground italic">
+                      <TableCell colSpan={5} className="text-center py-10 text-muted-foreground italic">
                         No se encontraron órdenes.
+                      </TableCell>
+                    </TableRow>
+                  )}
+                  {isOrdersLoading && (
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-center py-10 text-primary animate-pulse">
+                        Cargando información...
                       </TableCell>
                     </TableRow>
                   )}
