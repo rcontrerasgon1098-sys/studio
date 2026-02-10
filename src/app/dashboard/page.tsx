@@ -58,6 +58,11 @@ export default function Dashboard() {
   const [activeTab, setActiveTab] = useState("dashboard");
   const [searchTerm, setSearchTerm] = useState("");
   const [deleteConfirm, setDeleteConfirm] = useState<{ id: string, type: 'clients' | 'personnel' | 'ordenes' } | null>(null);
+  const [mountedDate, setMountedDate] = useState<Date | null>(null);
+
+  useEffect(() => {
+    setMountedDate(new Date());
+  }, []);
 
   useEffect(() => {
     if (!isUserLoading && !user) {
@@ -96,21 +101,35 @@ export default function Dashboard() {
   }, [orders]);
 
   const weeklyOrdersData = useMemo(() => {
-    if (!orders) return [];
+    if (!orders || !mountedDate) return [];
+    
+    // Generamos los últimos 7 días basados en la fecha local del cliente
     const last7Days = Array.from({ length: 7 }, (_, i) => {
-      const d = new Date();
+      const d = new Date(mountedDate);
       d.setDate(d.getDate() - (6 - i));
-      return d.toISOString().split('T')[0];
+      // Formateamos como YYYY-MM-DD en hora LOCAL para la comparación
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
     });
 
-    return last7Days.map(date => {
-      const count = orders.filter(o => o.startDate && o.startDate.startsWith(date)).length;
-      const dayName = new Date(date).toLocaleDateString('es-ES', { weekday: 'short' });
+    return last7Days.map(dateStr => {
+      const count = orders.filter(o => {
+        if (!o.startDate) return false;
+        const orderDate = new Date(o.startDate);
+        const y = orderDate.getFullYear();
+        const m = String(orderDate.getMonth() + 1).padStart(2, '0');
+        const d = String(orderDate.getDate()).padStart(2, '0');
+        return `${y}-${m}-${d}` === dateStr;
+      }).length;
+      
+      const [y, m, d] = dateStr.split('-').map(Number);
+      const dayName = new Date(y, m - 1, d).toLocaleDateString('es-ES', { weekday: 'short' });
       return { day: dayName, ordenes: count };
     });
-  }, [orders]);
+  }, [orders, mountedDate]);
 
-  // Nuevo gráfico: Clientes con más servicios
   const clientOrdersData = useMemo(() => {
     if (!orders) return [];
     const counts: Record<string, number> = {};
