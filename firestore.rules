@@ -18,6 +18,11 @@ service cloud.firestore {
       return isSignedIn() && exists(/databases/$(database)/documents/roles_admin/$(request.auth.uid));
     }
 
+    // Permitir a los administradores lectura global para evitar errores en consultas de grupo
+    match /{document=**} {
+      allow read: if isAdmin();
+    }
+
     match /users/{userId} {
       allow get: if isSignedIn();
       allow list: if isAdmin();
@@ -26,9 +31,10 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
-    // Regla para permitir a los administradores listar todas las órdenes de trabajo mediante consultas de grupo
+    // Regla explícita para consultas de grupo de órdenes de trabajo
     match /{path=**}/work_orders/{workOrderId} {
-      allow read: if isAdmin();
+      allow list: if isAdmin();
+      allow get: if isSignedIn();
     }
 
     match /users/{userId}/work_orders/{workOrderId} {
@@ -45,7 +51,7 @@ service cloud.firestore {
 
     match /clients/{clientId} {
       allow get, list: if isSignedIn();
-      allow create, update, delete: if isAdmin(); // El técnico jamás podrá crear contactos nuevos de cliente
+      allow create, update, delete: if isAdmin();
     }
 
     match /roles_admin/{userId} {

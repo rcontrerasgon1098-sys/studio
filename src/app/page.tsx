@@ -56,11 +56,11 @@ export default function Home() {
           )}
           <div className="container mx-auto px-4 relative z-10 text-center">
             <div className="max-w-4xl mx-auto space-y-8">
-              <h1 className="text-4xl md:text-7xl font-black tracking-tighter text-primary mb-8 leading-[0.9]">
+              <h1 className="text-3xl md:text-5xl font-black tracking-tighter text-primary mb-8 leading-[0.9]">
                 Ordenes de Trabajo <br />
                 <span className="text-accent">Digital</span>
               </h1>
-              <p className="text-xl md:text-2xl text-muted-foreground font-medium max-w-2xl mx-auto leading-relaxed">
+              <p className="text-lg md:text-xl text-muted-foreground font-medium max-w-2xl mx-auto leading-relaxed">
                 Digitaliza tus formularios, captura firmas y gestiona tu equipo con la plataforma líder para ICSA.
               </p>
             </div>
