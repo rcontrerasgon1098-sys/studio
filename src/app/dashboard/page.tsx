@@ -34,8 +34,9 @@ export default function Dashboard() {
   const logoImage = PlaceHolderImages.find(img => img.id === "icsa-logo");
   
   const [isAdmin, setIsAdmin] = useState(false);
-  const [activeTab, setActiveTab] = useState("dashboard");
+  const [activeTab, setActiveTab] = useState("dashboard"); // dashboard, technicians, orders
   const [showRegPassword, setShowRegPassword] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
 
   // Redirigir si no hay usuario
   useEffect(() => {
@@ -77,6 +78,15 @@ export default function Dashboard() {
 
   const orders = isAdmin ? allOrders : techOrders;
   const isLoading = isUserLoading || isRoleLoading;
+
+  // Filtrado de órdenes
+  const filteredOrders = useMemo(() => {
+    if (!orders) return [];
+    return orders.filter(o => 
+      o.folio.toString().includes(searchTerm) || 
+      o.clientName?.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }, [orders, searchTerm]);
 
   // Gráficas
   const chartData = useMemo(() => {
@@ -135,7 +145,11 @@ export default function Dashboard() {
             <Users size={20} /> Técnicos
           </Button>
         )}
-        <Button variant="ghost" className="w-full justify-start gap-3 hover:bg-white/10 h-12 text-white/80 font-medium">
+        <Button 
+          variant={activeTab === "orders" ? "secondary" : "ghost"} 
+          className={`w-full justify-start gap-3 h-12 font-semibold ${activeTab === "orders" ? "bg-white/10 text-white border-none" : "text-white/80 hover:bg-white/10"}`}
+          onClick={() => setActiveTab("orders")}
+        >
           <FileText size={20} /> {isAdmin ? "Todas las Órdenes" : "Mis Órdenes"}
         </Button>
         <Button variant="ghost" className="w-full justify-start gap-3 hover:bg-white/10 h-12 text-white/80 font-medium">
@@ -151,6 +165,80 @@ export default function Dashboard() {
   );
 
   if (isLoading) return <div className="min-h-screen flex items-center justify-center text-primary font-black animate-pulse bg-background">CARGANDO ICSA...</div>;
+
+  const OrdersTable = () => (
+    <Card className="shadow-xl border-none bg-white">
+      <CardHeader className="flex flex-col md:flex-row items-start md:items-center justify-between border-b pb-6 mb-4 gap-4 px-4 md:px-8">
+        <CardTitle className="text-xl font-bold text-primary">
+          {activeTab === "orders" ? (isAdmin ? "Historial Completo de Órdenes" : "Mis Órdenes de Trabajo") : "Órdenes Recientes"}
+        </CardTitle>
+        <div className="relative w-full md:w-80">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
+          <input 
+            placeholder="Buscar por cliente o folio..." 
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-10 pr-4 py-3 bg-background border rounded-xl w-full text-sm outline-none focus:ring-4 focus:ring-primary/10 transition-all"
+          />
+        </div>
+      </CardHeader>
+      <CardContent className="px-2 md:px-8 pb-8">
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader className="bg-muted/40">
+              <TableRow>
+                <TableHead className="font-bold py-4">Folio</TableHead>
+                <TableHead className="font-bold py-4">Cliente</TableHead>
+                <TableHead className="font-bold py-4 hidden sm:table-cell">Fecha</TableHead>
+                <TableHead className="font-bold py-4">Estado</TableHead>
+                <TableHead className="text-right font-bold py-4">Acciones</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredOrders.map((order) => (
+                <TableRow key={order.id} className="hover:bg-muted/20 transition-colors">
+                  <TableCell className="font-black text-primary">#{order.folio}</TableCell>
+                  <TableCell className="font-bold text-xs md:text-sm max-w-[150px] truncate">{order.clientName}</TableCell>
+                  <TableCell className="text-xs text-muted-foreground hidden sm:table-cell">
+                    {new Date(order.startDate).toLocaleDateString()}
+                  </TableCell>
+                  <TableCell>
+                    <Badge className={`${order.status === 'Completed' ? 'bg-accent/15 text-primary' : 'bg-primary/10 text-primary'} border-none text-[10px] md:text-xs px-2 py-0.5`}>
+                      {order.status === 'Completed' ? 'Completado' : 'Pendiente'}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex justify-end gap-1 md:gap-2">
+                      <Link href={`/work-orders/${order.id}${isAdmin ? `?techId=${order.technicianId}` : ''}`}>
+                        <Button variant="ghost" size="icon" className="h-9 w-9 md:h-11 md:w-11 rounded-lg">
+                          <Eye className="h-5 w-5" />
+                        </Button>
+                      </Link>
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="h-9 w-9 md:h-11 md:w-11 rounded-lg text-primary"
+                        onClick={() => generateWorkOrderPDF(order)}
+                      >
+                        <Download className="h-5 w-5" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+              {filteredOrders.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={5} className="text-center py-20 text-muted-foreground italic font-medium">
+                    No se encontraron órdenes registradas.
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </div>
+      </CardContent>
+    </Card>
+  );
 
   return (
     <div className="min-h-screen bg-background flex flex-col md:flex-row">
@@ -330,74 +418,16 @@ export default function Dashboard() {
               </div>
             )}
 
-            <Card className="shadow-xl border-none bg-white">
-              <CardHeader className="flex flex-col md:flex-row items-start md:items-center justify-between border-b pb-6 mb-4 gap-4 px-4 md:px-8">
-                <CardTitle className="text-xl font-bold text-primary">Órdenes Recientes</CardTitle>
-                <div className="relative w-full md:w-80">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
-                  <input 
-                    placeholder="Buscar cliente o folio..." 
-                    className="pl-10 pr-4 py-3 bg-background border rounded-xl w-full text-sm outline-none focus:ring-4 focus:ring-primary/10 transition-all"
-                  />
-                </div>
-              </CardHeader>
-              <CardContent className="px-2 md:px-8 pb-8">
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader className="bg-muted/40">
-                      <TableRow>
-                        <TableHead className="font-bold py-4">Folio</TableHead>
-                        <TableHead className="font-bold py-4">Cliente</TableHead>
-                        <TableHead className="font-bold py-4 hidden sm:table-cell">Fecha</TableHead>
-                        <TableHead className="font-bold py-4">Estado</TableHead>
-                        <TableHead className="text-right font-bold py-4">Acciones</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {orders?.map((order) => (
-                        <TableRow key={order.id} className="hover:bg-muted/20 transition-colors">
-                          <TableCell className="font-black text-primary">#{order.folio}</TableCell>
-                          <TableCell className="font-bold text-xs md:text-sm max-w-[150px] truncate">{order.clientName}</TableCell>
-                          <TableCell className="text-xs text-muted-foreground hidden sm:table-cell">
-                            {new Date(order.startDate).toLocaleDateString()}
-                          </TableCell>
-                          <TableCell>
-                            <Badge className={`${order.status === 'Completed' ? 'bg-accent/15 text-primary' : 'bg-primary/10 text-primary'} border-none text-[10px] md:text-xs px-2 py-0.5`}>
-                              {order.status === 'Completed' ? 'Completado' : 'Pendiente'}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <div className="flex justify-end gap-1 md:gap-2">
-                              <Link href={`/work-orders/${order.id}${isAdmin ? `?techId=${order.technicianId}` : ''}`}>
-                                <Button variant="ghost" size="icon" className="h-9 w-9 md:h-11 md:w-11 rounded-lg">
-                                  <Eye className="h-5 w-5" />
-                                </Button>
-                              </Link>
-                              <Button 
-                                variant="ghost" 
-                                size="icon" 
-                                className="h-9 w-9 md:h-11 md:w-11 rounded-lg text-primary"
-                                onClick={() => generateWorkOrderPDF(order)}
-                              >
-                                <Download className="h-5 w-5" />
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                      {(!orders || orders.length === 0) && (
-                        <TableRow>
-                          <TableCell colSpan={5} className="text-center py-20 text-muted-foreground italic font-medium">
-                            No se encontraron órdenes registradas.
-                          </TableCell>
-                        </TableRow>
-                      )}
-                    </TableBody>
-                  </Table>
-                </div>
-              </CardContent>
-            </Card>
+            <OrdersTable />
           </>
+        ) : activeTab === "orders" ? (
+          <div className="space-y-8">
+            <header>
+              <h1 className="text-3xl font-black text-primary">Listado de Órdenes</h1>
+              <p className="text-muted-foreground font-medium">Consulta y descarga todos los registros operativos</p>
+            </header>
+            <OrdersTable />
+          </div>
         ) : (
           <div className="space-y-8">
             <header>
