@@ -41,7 +41,7 @@ export default function Home() {
       </header>
 
       <main className="flex-1">
-        <section className="relative h-[calc(100vh-96px)] min-h-[500px] flex items-start justify-center pt-12 md:pt-16 overflow-hidden">
+        <section className="relative h-[calc(100vh-96px)] min-h-[500px] flex items-start justify-center pt-24 md:pt-32 overflow-hidden">
           {heroImage && (
             <div className="absolute inset-0 z-0">
               <Image
@@ -57,11 +57,11 @@ export default function Home() {
           )}
           <div className="container mx-auto px-4 relative z-10 text-center">
             <div className="max-w-4xl mx-auto space-y-8">
-              <h1 className="text-6xl md:text-9xl font-black tracking-tighter text-primary leading-[0.85]">
+              <h1 className="text-5xl md:text-7xl font-black tracking-tighter text-primary leading-[0.85]">
                 Ordenes de Trabajo <br />
                 <span className="text-accent">Digital</span>
               </h1>
-              <p className="text-lg md:text-2xl text-muted-foreground font-medium max-w-2xl mx-auto leading-relaxed px-4">
+              <p className="text-base md:text-xl text-muted-foreground font-medium max-w-2xl mx-auto leading-relaxed px-4">
                 Plataforma de gestión operativa para ICSA. Digitaliza tus formularios, captura firmas y optimiza el flujo técnico.
               </p>
             </div>
