@@ -16,9 +16,9 @@ export default function Home() {
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center text-white font-bold text-xl">
-              T
+              I
             </div>
-            <span className="font-headline font-bold text-xl text-primary">Teleconnect</span>
+            <span className="font-headline font-bold text-xl text-primary">ICSA ingeniería comunicaciones S.A.</span>
           </div>
           <nav>
             <Link href="/login">
@@ -92,7 +92,7 @@ export default function Home() {
 
       <footer className="bg-primary text-white py-12">
         <div className="container mx-auto px-4 text-center">
-          <p className="text-sm">© 2024 Teleconnect Workflow. Todos los derechos reservados.</p>
+          <p className="text-sm">© 2024 ICSA ingeniería comunicaciones S.A. Todos los derechos reservados.</p>
         </div>
       </footer>
     </div>

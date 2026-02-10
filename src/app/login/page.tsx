@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState } from "react";
@@ -22,7 +21,6 @@ export default function LoginPage() {
     setLoading(true);
 
     // Mock login for demo purposes
-    // In a real app, use: signInWithEmailAndPassword(auth, email, password)
     setTimeout(() => {
       if (email && password) {
         toast({ title: "Bienvenido", description: "Acceso concedido al panel técnico." });
@@ -41,9 +39,9 @@ export default function LoginPage() {
           <div className="mx-auto bg-primary w-12 h-12 rounded-xl flex items-center justify-center text-white mb-2">
             <Wifi className="h-7 w-7" />
           </div>
-          <CardTitle className="text-2xl font-headline font-bold text-primary">Teleconnect</CardTitle>
+          <CardTitle className="text-2xl font-headline font-bold text-primary">ICSA ingeniería comunicaciones S.A.</CardTitle>
           <CardDescription>Ingresa tus credenciales para acceder</CardDescription>
-        </CardHeader>
+        </Header>
         <CardContent>
           <form onSubmit={handleLogin} className="space-y-4">
             <div className="space-y-2">
@@ -51,7 +49,7 @@ export default function LoginPage() {
               <Input
                 id="email"
                 type="email"
-                placeholder="tecnico@teleconnect.com"
+                placeholder="tecnico@icsa.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required

@@ -1,4 +1,3 @@
-
 "use client";
 
 import { Button } from "@/components/ui/button";
@@ -28,8 +27,8 @@ export default function Dashboard() {
       {/* Sidebar */}
       <aside className="w-64 bg-primary text-white p-6 hidden md:flex flex-col">
         <div className="flex items-center gap-2 mb-10">
-          <div className="w-8 h-8 bg-white text-primary rounded flex items-center justify-center font-bold">T</div>
-          <span className="font-bold text-xl">Teleconnect</span>
+          <div className="w-8 h-8 bg-white text-primary rounded flex items-center justify-center font-bold">I</div>
+          <span className="font-bold text-sm leading-tight">ICSA ingeniería comunicaciones S.A.</span>
         </div>
         <nav className="flex-1 space-y-2">
           <Button variant="secondary" className="w-full justify-start gap-3 bg-white/10 text-white border-none hover:bg-white/20">

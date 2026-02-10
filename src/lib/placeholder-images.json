@@ -3,12 +3,12 @@
     {
       "id": "hero-tech",
       "description": "Telecom technician working on wires",
-      "imageUrl": "https://images.unsplash.com/photo-1725391798478-5fe9cfc8398e?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwzfHx0ZWxlY29tJTIwdGVjaG5pY2lhbnxlbnwwfHx8fDE3NzA2NjYwMDR8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageUrl": "https://images.unsplash.com/photo-1725391798478-5fe9cfc8398e?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHhzfHx0ZWxlY29tJTIwdGVjaG5pY2lhbnxlbnwwfHx8fDE3NzA2NjYwMDR8MA&ixlib=rb-4.1.0&q=80&w=1080",
       "imageHint": "telecom technician"
     },
     {
       "id": "app-logo",
-      "description": "Teleconnect Workflow Logo",
+      "description": "ICSA ingeniería comunicaciones S.A. Logo",
       "imageUrl": "https://images.unsplash.com/photo-1693374925575-ac8fa3ffab14?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxMHx8YWJzdHJhY3QlMjBsb2dvfGVufDB8fHx8MTc3MDY0NDA0OHww&ixlib=rb-4.1.0&q=80&w=1080",
       "imageHint": "abstract logo"
     }

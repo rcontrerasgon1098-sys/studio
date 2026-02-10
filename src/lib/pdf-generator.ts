@@ -1,4 +1,3 @@
-
 import { jsPDF } from "jspdf";
 
 export const generateWorkOrderPDF = (data: any) => {
@@ -10,8 +9,8 @@ export const generateWorkOrderPDF = (data: any) => {
   doc.rect(0, 0, 210, 40, "F");
   
   doc.setTextColor(255, 255, 255);
-  doc.setFontSize(24);
-  doc.text("Teleconnect Workflow", 15, 25);
+  doc.setFontSize(18);
+  doc.text("ICSA ingeniería comunicaciones S.A.", 15, 25);
   doc.setFontSize(12);
   doc.text(`Folio: ${data.folio}`, 160, 25);
 
