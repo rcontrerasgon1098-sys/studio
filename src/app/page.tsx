@@ -17,7 +17,7 @@ export default function Home() {
         <div className="container mx-auto px-4 h-24 flex items-center justify-between">
           <div className="flex items-center gap-4">
             {logoImage && (
-              <div className="relative w-20 h-20">
+              <div className="relative w-28 h-28">
                 <Image
                   src={logoImage.imageUrl}
                   alt="ICSA Logo"
@@ -59,7 +59,7 @@ export default function Home() {
           <div className="container mx-auto px-4 relative z-10 text-center md:text-left">
             <div className="max-w-3xl">
               <h1 className="text-5xl md:text-7xl font-headline font-extrabold tracking-tight text-primary mb-6 leading-[1.1]">
-                Gestión Digital de Órdenes de Trabajo
+                Ordenes de Trabajo Digital
               </h1>
               <p className="text-xl md:text-2xl text-muted-foreground mb-10 font-medium">
                 Digitaliza tus formularios, captura firmas y gestiona tu equipo con la plataforma líder para ICSA.
