@@ -1,3 +1,4 @@
+
 "use client";
 
 import { Button } from "@/components/ui/button";
@@ -55,21 +56,14 @@ export default function Home() {
             </div>
           )}
           <div className="container mx-auto px-4 relative z-10 text-center">
-            <div className="max-w-4xl mx-auto space-y-6">
-              <h1 className="text-3xl md:text-4xl lg:text-5xl font-black tracking-tighter text-primary leading-tight">
+            <div className="max-w-4xl mx-auto space-y-4">
+              <h1 className="text-3xl md:text-4xl font-black tracking-tighter text-primary leading-tight">
                 Ordenes de Trabajo <br />
                 <span className="text-accent">Digital</span>
               </h1>
-              <p className="text-base md:text-lg text-muted-foreground font-medium max-w-2xl mx-auto leading-relaxed">
-                Digitaliza tus formularios, captura firmas y gestiona tu equipo con la plataforma líder para ICSA.
+              <p className="text-sm md:text-base text-muted-foreground font-medium max-w-xl mx-auto leading-relaxed">
+                Plataforma de gestión operativa para ICSA. Digitaliza tus formularios, captura firmas y optimiza el flujo técnico.
               </p>
-              <div className="pt-8">
-                <Link href="/login">
-                  <Button size="lg" className="bg-primary h-14 px-10 text-xl font-black rounded-2xl shadow-2xl">
-                    Comenzar Ahora
-                  </Button>
-                </Link>
-              </div>
             </div>
           </div>
         </section>
