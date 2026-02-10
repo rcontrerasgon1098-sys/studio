@@ -28,7 +28,10 @@ export default function Dashboard() {
       <aside className="w-64 bg-primary text-white p-6 hidden md:flex flex-col">
         <div className="flex items-center gap-2 mb-10">
           <div className="w-8 h-8 bg-white text-primary rounded flex items-center justify-center font-bold">I</div>
-          <span className="font-bold text-sm leading-tight">ICSA ingeniería comunicaciones S.A.</span>
+          <div className="flex flex-col leading-none">
+            <span className="font-bold text-base">ICSA</span>
+            <span className="text-[10px] font-normal opacity-80">ingeniería comunicaciones S.A.</span>
+          </div>
         </div>
         <nav className="flex-1 space-y-2">
           <Button variant="secondary" className="w-full justify-start gap-3 bg-white/10 text-white border-none hover:bg-white/20">
@@ -66,7 +69,7 @@ export default function Dashboard() {
           {[
             { label: "Órdenes Hoy", value: "12", color: "text-primary" },
             { label: "Completadas", value: "84", color: "text-accent" },
-            { label: "Pendientes", value: "3", color: "text-orange-500" }
+            { label: "Pendientes", value: "3", color: "text-primary" }
           ].map((stat, i) => (
             <Card key={i} className="shadow-sm border-none bg-white">
               <CardHeader className="pb-2">

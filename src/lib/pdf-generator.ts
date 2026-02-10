@@ -9,8 +9,11 @@ export const generateWorkOrderPDF = (data: any) => {
   doc.rect(0, 0, 210, 40, "F");
   
   doc.setTextColor(255, 255, 255);
-  doc.setFontSize(18);
-  doc.text("ICSA ingeniería comunicaciones S.A.", 15, 25);
+  doc.setFontSize(22);
+  doc.text("ICSA", 15, 23);
+  doc.setFontSize(10);
+  doc.text("ingeniería comunicaciones S.A.", 15, 30);
+  
   doc.setFontSize(12);
   doc.text(`Folio: ${data.folio}`, 160, 25);
 

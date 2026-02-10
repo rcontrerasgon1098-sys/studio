@@ -39,7 +39,10 @@ export default function LoginPage() {
           <div className="mx-auto bg-primary w-12 h-12 rounded-xl flex items-center justify-center text-white mb-2">
             <Wifi className="h-7 w-7" />
           </div>
-          <CardTitle className="text-2xl font-headline font-bold text-primary">ICSA ingeniería comunicaciones S.A.</CardTitle>
+          <CardTitle className="text-2xl font-headline font-bold text-primary flex flex-col items-center gap-1">
+            ICSA
+            <span className="text-sm font-normal text-muted-foreground block">ingeniería comunicaciones S.A.</span>
+          </CardTitle>
           <CardDescription>Ingresa tus credenciales para acceder</CardDescription>
         </Header>
         <CardContent>

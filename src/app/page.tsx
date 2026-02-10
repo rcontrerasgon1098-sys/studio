@@ -18,7 +18,10 @@ export default function Home() {
             <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center text-white font-bold text-xl">
               I
             </div>
-            <span className="font-headline font-bold text-xl text-primary">ICSA ingeniería comunicaciones S.A.</span>
+            <div className="flex flex-col leading-tight">
+              <span className="font-headline font-bold text-xl text-primary">ICSA</span>
+              <span className="text-xs font-normal text-muted-foreground">ingeniería comunicaciones S.A.</span>
+            </div>
           </div>
           <nav>
             <Link href="/login">
