@@ -107,7 +107,7 @@ export default function Dashboard() {
     deleteDocumentNonBlocking(docRef);
     toast({
       title: "Registro eliminado",
-      description: "El elemento ha sido removido del sistema."
+      description: "El elemento ha sido removido del sistema con éxito."
     });
     setDeleteConfirm(null);
   };
@@ -153,9 +153,6 @@ export default function Dashboard() {
           onClick={() => { setActiveTab("personnel"); setSearchTerm(""); }}
         >
           <UserRound size={20} /> Personal
-        </Button>
-        <Button variant="ghost" className="w-full justify-start gap-3 hover:bg-white/10 h-12 text-white/80 font-medium">
-          <Settings size={20} /> Ajustes
         </Button>
       </nav>
       <div className="px-4 mt-auto">
@@ -312,12 +309,21 @@ export default function Dashboard() {
                         <TableCell className="text-right">
                           <div className="flex justify-end gap-2">
                             <Link href={`/work-orders/${order.id}`}>
-                              <Button variant="ghost" size="icon" className="h-9 w-9">
+                              <Button variant="ghost" size="icon" className="h-9 w-9" title="Ver detalle">
                                 <Eye className="h-5 w-5" />
                               </Button>
                             </Link>
-                            <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => generateWorkOrderPDF(order)}>
+                            <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => generateWorkOrderPDF(order)} title="Descargar PDF">
                               <Download className="h-5 w-5" />
+                            </Button>
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              className="h-9 w-9 text-destructive" 
+                              title="Eliminar orden"
+                              onClick={() => setDeleteConfirm({ id: order.id, type: 'ordenes' })}
+                            >
+                              <Trash2 className="h-5 w-5" />
                             </Button>
                           </div>
                         </TableCell>
@@ -381,7 +387,7 @@ export default function Dashboard() {
                         <TableCell className="text-right">
                           <div className="flex justify-end gap-2">
                             <Link href={`/clients/${client.id}/edit`}>
-                              <Button variant="ghost" size="icon" className="h-9 w-9 text-primary">
+                              <Button variant="ghost" size="icon" className="h-9 w-9 text-primary" title="Editar cliente">
                                 <Pencil className="h-5 w-5" />
                               </Button>
                             </Link>
@@ -389,6 +395,7 @@ export default function Dashboard() {
                               variant="ghost" 
                               size="icon" 
                               className="h-9 w-9 text-destructive"
+                              title="Eliminar cliente"
                               onClick={() => setDeleteConfirm({ id: client.id, type: 'clients' })}
                             >
                               <Trash2 className="h-5 w-5" />
@@ -452,7 +459,7 @@ export default function Dashboard() {
                         <TableCell className="text-right">
                           <div className="flex justify-end gap-2">
                             <Link href={`/technicians/${p.id}/edit`}>
-                              <Button variant="ghost" size="icon" className="h-9 w-9 text-primary">
+                              <Button variant="ghost" size="icon" className="h-9 w-9 text-primary" title="Editar personal">
                                 <Pencil className="h-5 w-5" />
                               </Button>
                             </Link>
@@ -460,6 +467,7 @@ export default function Dashboard() {
                               variant="ghost" 
                               size="icon" 
                               className="h-9 w-9 text-destructive"
+                              title="Eliminar personal"
                               onClick={() => setDeleteConfirm({ id: p.id, type: 'personnel' })}
                             >
                               <Trash2 className="h-5 w-5" />
@@ -476,18 +484,19 @@ export default function Dashboard() {
         )}
       </main>
 
+      {/* Diálogo de Confirmación de Eliminación Global */}
       <AlertDialog open={!!deleteConfirm} onOpenChange={() => setDeleteConfirm(null)}>
-        <AlertDialogContent>
+        <AlertDialogContent className="max-w-[400px]">
           <AlertDialogHeader>
-            <AlertDialogTitle>¿Está absolutamente seguro?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Esta acción no se puede deshacer. Esto eliminará permanentemente el registro de la base de datos de ICSA.
+            <AlertDialogTitle className="text-primary font-black">¿Confirmar eliminación?</AlertDialogTitle>
+            <AlertDialogDescription className="text-sm font-medium">
+              Esta acción es permanente e irreversible. El registro será borrado definitivamente del sistema de ICSA.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} className="bg-destructive hover:bg-destructive/90">
-              Eliminar Permanentemente
+          <AlertDialogFooter className="gap-2 sm:gap-0">
+            <AlertDialogCancel className="font-bold border-primary/20 text-primary hover:bg-primary/5">Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} className="bg-destructive hover:bg-destructive/90 font-black">
+              Sí, Eliminar Registro
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
