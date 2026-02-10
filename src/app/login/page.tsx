@@ -37,8 +37,8 @@ export default function LoginPage() {
     } catch (error: any) {
       console.error("Auth error:", error);
       let message = "Error de conexión. Verifique sus datos.";
-      if (error.code === 'auth/invalid-credential') message = "Credenciales inválidas. Contacte a su administrador.";
-      if (error.code === 'auth/user-not-found') message = "Usuario no registrado.";
+      if (error.code === 'auth/invalid-credential') message = "Credenciales inválidas. Asegúrese de haber configurado el acceso demo o contacte a un administrador.";
+      if (error.code === 'auth/user-not-found') message = "Usuario no registrado. Use el botón de configuración demo abajo.";
       
       toast({ 
         variant: "destructive", 
@@ -57,35 +57,51 @@ export default function LoginPage() {
     const adminPassword = "admin123456";
 
     try {
-      let userCredential;
+      let user;
       try {
-        userCredential = await signInWithEmailAndPassword(auth, adminEmail, adminPassword);
-      } catch (e: any) {
-        if (e.code === 'auth/user-not-found' || e.code === 'auth/invalid-credential') {
-          userCredential = await createUserWithEmailAndPassword(auth, adminEmail, adminPassword);
+        // Intentar iniciar sesión primero
+        const userCredential = await signInWithEmailAndPassword(auth, adminEmail, adminPassword);
+        user = userCredential.user;
+      } catch (signInError: any) {
+        // Si no existe, intentar crear
+        if (signInError.code === 'auth/user-not-found' || signInError.code === 'auth/invalid-credential') {
+          try {
+            const createCredential = await createUserWithEmailAndPassword(auth, adminEmail, adminPassword);
+            user = createCredential.user;
+          } catch (createError: any) {
+            if (createError.code === 'auth/email-already-in-use') {
+              // Si ya existe pero el login falló arriba, es que la contraseña es distinta en el sistema
+              throw new Error("El usuario ya existe con otra contraseña. Por favor, use las credenciales correctas o contacte soporte.");
+            }
+            throw createError;
+          }
         } else {
-          throw e;
+          throw signInError;
         }
       }
 
-      const user = userCredential.user;
-      await setDoc(doc(db, "roles_admin", user.uid), {
-        email: adminEmail,
-        role: "administrator",
-        setupDate: new Date().toISOString()
-      });
+      if (user) {
+        // Asegurar que el documento de rol exista
+        await setDoc(doc(db, "roles_admin", user.uid), {
+          email: adminEmail,
+          role: "administrator",
+          setupDate: new Date().toISOString()
+        }, { merge: true });
 
-      toast({ 
-        title: "Admin Configurado", 
-        description: "Cuenta admin@icsa.com lista con permisos totales." 
-      });
-      router.push("/dashboard");
+        toast({ 
+          title: "Configuración Exitosa", 
+          description: "Acceso admin@icsa.com preparado correctamente." 
+        });
+        
+        // Pequeña pausa para asegurar la persistencia antes de redirigir
+        setTimeout(() => router.push("/dashboard"), 500);
+      }
     } catch (error: any) {
       console.error("Setup error:", error);
       toast({ 
         variant: "destructive", 
         title: "Error de Configuración", 
-        description: error.message 
+        description: error.message || "No se pudo preparar la cuenta de administrador."
       });
     } finally {
       setSetupLoading(false);
@@ -194,7 +210,7 @@ export default function LoginPage() {
 
             <div className="pt-4">
               <p className="text-center text-[10px] text-muted-foreground font-medium opacity-60 px-8">
-                El registro de nuevos técnicos debe ser realizado únicamente por un administrador autorizado desde el panel interno.
+                Haga clic en el botón de configuración demo si es la primera vez que accede. Esto creará el usuario admin@icsa.com automáticamente.
               </p>
             </div>
           </form>
