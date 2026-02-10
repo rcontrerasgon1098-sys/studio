@@ -13,46 +13,75 @@ import { SignaturePad } from "@/components/SignaturePad";
 import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, Save, Camera, CheckCircle2, Clock } from "lucide-react";
 import Link from "next/link";
+import { useUser, useFirestore } from "@/firebase";
+import { collection, doc, setDoc, serverTimestamp } from "firebase/firestore";
+import { setDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 
 export default function NewWorkOrder() {
   const router = useRouter();
   const { toast } = useToast();
+  const { user } = useUser();
+  const db = useFirestore();
+  
   const [loading, setLoading] = useState(false);
   const [folio, setFolio] = useState(0);
 
   // Form State
   const [formData, setFormData] = useState({
-    clientData: { name: "", contact: "" },
-    specs: { signalType: "Simple", isCert: false, isPlan: false, isSwitch: false, isHub: false, location: "", cds: "" },
+    clientName: "",
+    clientContact: "",
+    signalType: "Simple",
+    isCert: false,
+    isPlan: false,
+    connectionSwitch: false,
+    hubConnection: false,
+    location: "",
+    cdsCanalization: "",
     description: "",
-    signatures: { techUrl: "", clientUrl: "" },
-    timestamps: { start: "", end: "" },
-    sketchUrl: ""
+    techSignatureUrl: "",
+    clientSignatureUrl: "",
+    sketchImageUrl: "",
+    status: "Completed"
   });
 
   useEffect(() => {
+    // Generar folio aleatorio para el prototipo (en producción sería incremental en backend)
     setFolio(Math.floor(Math.random() * 90000) + 10000);
-    setFormData(prev => ({
-      ...prev,
-      timestamps: { ...prev.timestamps, start: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }
-    }));
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!user || !db) return;
+    
     setLoading(true);
 
-    if (!formData.signatures.techUrl || !formData.signatures.clientUrl) {
+    if (!formData.techSignatureUrl || !formData.clientSignatureUrl) {
       toast({ variant: "destructive", title: "Firmas Requeridas", description: "Por favor captura ambas firmas antes de continuar." });
       setLoading(false);
       return;
     }
 
-    setTimeout(() => {
+    const orderId = doc(collection(db, "temp")).id;
+    const workOrderData = {
+      ...formData,
+      id: orderId,
+      folio: folio,
+      technicianId: user.uid,
+      startDate: new Date().toISOString(),
+      endDate: new Date().toISOString(),
+      clientId: "generic_client" // Simplificado para el MVP
+    };
+
+    const orderRef = doc(db, "users", user.uid, "work_orders", orderId);
+    
+    try {
+      setDocumentNonBlocking(orderRef, workOrderData, { merge: true });
       toast({ title: "Orden Guardada", description: "La orden ha sido sincronizada con éxito." });
-      setLoading(false);
       router.push("/dashboard");
-    }, 1500);
+    } catch (error) {
+      setLoading(false);
+      toast({ variant: "destructive", title: "Error", description: "No se pudo guardar la orden." });
+    }
   };
 
   return (
@@ -77,7 +106,6 @@ export default function NewWorkOrder() {
 
       <main className="container mx-auto px-4 mt-6 max-w-3xl space-y-6">
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Header Info Card */}
           <Card className="shadow-md border-none bg-white">
             <CardHeader className="bg-secondary/20 rounded-t-lg p-4 md:p-6">
               <div className="flex flex-col gap-3">
@@ -88,7 +116,7 @@ export default function NewWorkOrder() {
                   </div>
                   <div className="flex items-center gap-2 text-xs font-bold text-primary bg-white px-3 py-1.5 rounded-full shadow-sm border border-primary/10">
                     <Clock className="h-3.5 w-3.5" />
-                    <span>Inicio: {formData.timestamps.start}</span>
+                    <span>Inicio: {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                   </div>
                 </div>
               </div>
@@ -100,8 +128,8 @@ export default function NewWorkOrder() {
                   <Input 
                     id="clientName" 
                     placeholder="Ej. Juan Pérez" 
-                    value={formData.clientData.name}
-                    onChange={e => setFormData({...formData, clientData: {...formData.clientData, name: e.target.value}})}
+                    value={formData.clientName}
+                    onChange={e => setFormData({...formData, clientName: e.target.value})}
                     required
                     className="h-12 text-base"
                   />
@@ -111,8 +139,8 @@ export default function NewWorkOrder() {
                   <Input 
                     id="clientContact" 
                     placeholder="Ej. 555-0123" 
-                    value={formData.clientData.contact}
-                    onChange={e => setFormData({...formData, clientData: {...formData.clientData, contact: e.target.value}})}
+                    value={formData.clientContact}
+                    onChange={e => setFormData({...formData, clientContact: e.target.value})}
                     required
                     className="h-12 text-base"
                   />
@@ -121,7 +149,6 @@ export default function NewWorkOrder() {
             </CardContent>
           </Card>
 
-          {/* Technical Details */}
           <Card className="shadow-md border-none bg-white overflow-hidden">
             <CardHeader className="p-4 md:p-6 border-b">
               <CardTitle className="text-lg">Detalles Técnicos</CardTitle>
@@ -131,8 +158,8 @@ export default function NewWorkOrder() {
                 <div className="space-y-2">
                   <Label className="font-bold">Tipo de Señal</Label>
                   <Select 
-                    value={formData.specs.signalType} 
-                    onValueChange={v => setFormData({...formData, specs: {...formData.specs, signalType: v}})}
+                    value={formData.signalType} 
+                    onValueChange={v => setFormData({...formData, signalType: v})}
                   >
                     <SelectTrigger className="h-12 text-base">
                       <SelectValue placeholder="Seleccionar" />
@@ -149,7 +176,8 @@ export default function NewWorkOrder() {
                   <Input 
                     id="location" 
                     placeholder="Ej. Torre B / Piso 4" 
-                    onChange={e => setFormData({...formData, specs: {...formData.specs, location: e.target.value}})}
+                    value={formData.location}
+                    onChange={e => setFormData({...formData, location: e.target.value})}
                     className="h-12 text-base"
                   />
                 </div>
@@ -160,7 +188,8 @@ export default function NewWorkOrder() {
                 <Input 
                   id="cds" 
                   placeholder="Ej. Ducto Principal 2" 
-                  onChange={e => setFormData({...formData, specs: {...formData.specs, cds: e.target.value}})}
+                  value={formData.cdsCanalization}
+                  onChange={e => setFormData({...formData, cdsCanalization: e.target.value})}
                   className="h-12 text-base"
                 />
               </div>
@@ -171,14 +200,15 @@ export default function NewWorkOrder() {
                   {[
                     { id: "cert", label: "Certificación", key: "isCert" },
                     { id: "plan", label: "Planos", key: "isPlan" },
-                    { id: "switch", label: "Switch", key: "isSwitch" },
-                    { id: "hub", label: "Hub", key: "isHub" }
+                    { id: "switch", label: "Switch", key: "connectionSwitch" },
+                    { id: "hub", label: "Hub", key: "hubConnection" }
                   ].map((item) => (
                     <div key={item.id} className="flex items-center space-x-3">
                       <Checkbox 
                         id={item.id} 
                         className="h-6 w-6 rounded-md"
-                        onCheckedChange={(checked) => setFormData({...formData, specs: {...formData.specs, [item.key]: checked === true}})}
+                        checked={(formData as any)[item.key]}
+                        onCheckedChange={(checked) => setFormData({...formData, [item.key]: checked === true})}
                       />
                       <label htmlFor={item.id} className="text-sm font-semibold cursor-pointer">
                         {item.label}
@@ -200,7 +230,6 @@ export default function NewWorkOrder() {
             </CardContent>
           </Card>
 
-          {/* Sketch / Photo */}
           <Card className="shadow-md border-none bg-white">
             <CardHeader className="p-4 md:p-6 border-b">
               <CardTitle className="text-lg">Multimedia</CardTitle>
@@ -215,13 +244,12 @@ export default function NewWorkOrder() {
             </CardContent>
           </Card>
 
-          {/* Signatures - Vertical on mobile */}
           <div className="grid grid-cols-1 gap-6 pb-6">
             <Card className="shadow-md border-none bg-white overflow-hidden">
               <CardContent className="p-4 md:p-6">
                 <SignaturePad 
                   label="Firma del Técnico" 
-                  onSave={(dataUrl) => setFormData({...formData, signatures: {...formData.signatures, techUrl: dataUrl}})}
+                  onSave={(dataUrl) => setFormData({...formData, techSignatureUrl: dataUrl})}
                 />
               </CardContent>
             </Card>
@@ -229,7 +257,7 @@ export default function NewWorkOrder() {
               <CardContent className="p-4 md:p-6">
                 <SignaturePad 
                   label="Firma del Cliente" 
-                  onSave={(dataUrl) => setFormData({...formData, signatures: {...formData.signatures, clientUrl: dataUrl}})}
+                  onSave={(dataUrl) => setFormData({...formData, clientSignatureUrl: dataUrl})}
                 />
               </CardContent>
             </Card>

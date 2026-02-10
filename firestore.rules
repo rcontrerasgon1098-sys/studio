@@ -3,62 +3,21 @@ service cloud.firestore {
   match /databases/{database}/documents {
 
     /**
-     * TELECONNECT WORKFLOW SECURITY RULES
-     * 
-     * Core Philosophy:
-     * This ruleset implements a strict ownership-based model for technicians while granting 
-     * global visibility to administrators. It prioritizes path-based authorization to ensure 
-     * that technicians can only interact with their own data trees, while leveraging a 
-     * dedicated roles collection for administrative overrides.
-     * 
-     * Data Structure:
-     * - /users/{userId}: Core profile data.
-     * - /users/{userId}/work_orders/{workOrderId}: Work orders nested under the owning technician.
-     * - /clients/{clientId}: Global client registry.
-     * - /roles_admin/{userId}: Presence of a document here identifies a user as an administrator.
-     * 
-     * Key Security Decisions:
-     * 1. Authorization via Hierarchy: Work orders are segregated by technician ID in the path, 
-     *    making 'list' operations secure by default (technicians list their own path).
-     * 2. Administrative Override: Admins are granted 'get' and 'list' access across all 
-     *    technician paths to facilitate reporting and oversight.
-     * 3. Identity Consistency: Rules enforce that the 'technicianId' field inside a work order 
-     *    document must match the userId in the path during creation and remains immutable.
-     * 4. Denormalization for Performance: The system relies on the path variable {userId} 
-     *    matching the auth.uid for zero-cost ownership checks.
+     * ICSA WORKFLOW SECURITY RULES
      */
 
-    // --- GLOBAL HELPER FUNCTIONS ---
-
-    /** Checks if the user is authenticated. */
     function isSignedIn() {
       return request.auth != null;
     }
 
-    /** Checks if the authenticated user matches the provided userId. */
     function isOwner(userId) {
       return isSignedIn() && request.auth.uid == userId;
     }
 
-    /** Checks if the user exists in the admin roles collection. */
     function isAdmin() {
       return isSignedIn() && exists(/databases/$(database)/documents/roles_admin/$(request.auth.uid));
     }
 
-    /** Verifies ownership for updates/deletes and ensures the document exists. */
-    function isExistingOwner(userId) {
-      return isOwner(userId) && resource != null;
-    }
-
-    // --- COLLECTION RULES ---
-
-    /**
-     * @description Rules for user profiles. Users can manage their own profile; admins can see all.
-     * @path /users/{userId}
-     * @allow Authenticated user (create) where UID matches document ID.
-     * @deny Create request where UID does not match document ID.
-     * @principle Self-creation and ownership.
-     */
     match /users/{userId} {
       allow get: if isSignedIn();
       allow list: if isAdmin();
@@ -67,52 +26,32 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
-    /**
-     * @description Secure management of work orders. Technicians own their data; admins view all.
-     * @path /users/{userId}/work_orders/{workOrderId}
-     * @allow Technician (list) on their own path /users/tech123/work_orders.
-     * @deny Technician (get) on another technician's work order.
-     * @principle Path-based ownership combined with Role-based global access.
-     */
+    // Regla para permitir a los administradores listar todas las órdenes de trabajo mediante consultas de grupo
+    match /{path=**}/work_orders/{workOrderId} {
+      allow read: if isAdmin();
+    }
+
     match /users/{userId}/work_orders/{workOrderId} {
-      // Admins can see all orders; Technicians see only theirs.
       allow get, list: if isOwner(userId) || isAdmin();
       
-      // On create, enforce that the tech is creating in their own path and linking their ID correctly.
       allow create: if isOwner(userId) 
                     && request.resource.data.technicianId == userId;
       
-      // On update, technicianId must be immutable to prevent "stealing" or moving orders.
-      allow update: if isExistingOwner(userId)
+      allow update: if (isOwner(userId) || isAdmin())
                     && request.resource.data.technicianId == resource.data.technicianId;
       
-      allow delete: if isExistingOwner(userId) || isAdmin();
+      allow delete: if isOwner(userId) || isAdmin();
     }
 
-    /**
-     * @description Client registry. Readable by all staff, manageable by admins.
-     * @path /clients/{clientId}
-     * @allow Technician (get) to reference client in a work order.
-     * @deny Technician (update) to change client contact details.
-     * @principle Public/Shared read with privileged writes.
-     */
     match /clients/{clientId} {
       allow get, list: if isSignedIn();
-      allow create, update, delete: if isAdmin();
+      allow create, update, delete: if isSignedIn(); // Permitir a técnicos crear clientes sobre la marcha
     }
 
-    /**
-     * @description Administrative roles registry (Existence Over Content).
-     * @path /roles_admin/{userId}
-     * @allow Admin (get) to verify their own status.
-     * @deny Authenticated user (create) to grant themselves admin rights.
-     * @principle Protected role management.
-     */
     match /roles_admin/{userId} {
-      allow get: if isOwner(userId) || isAdmin();
+      allow get: if isSignedIn();
       allow list: if isAdmin();
-      // Writes are disabled to prevent self-elevation. These should be managed via Admin SDK/Console.
-      allow create, update, delete: if false;
+      allow create, update, delete: if false; // Solo vía consola/admin sdk
     }
   }
 }
