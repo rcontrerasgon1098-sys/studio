@@ -10,15 +10,14 @@ import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
 import Image from "next/image";
 import { PlaceHolderImages } from "@/lib/placeholder-images";
-import { ArrowLeft, UserPlus, LogIn } from "lucide-react";
+import { ArrowLeft, LogIn } from "lucide-react";
 import Link from "next/link";
-import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword } from "firebase/auth";
+import { getAuth, signInWithEmailAndPassword } from "firebase/auth";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const [isRegistering, setIsRegistering] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
   const logoImage = PlaceHolderImages.find(img => img.id === "icsa-logo");
@@ -29,24 +28,18 @@ export default function LoginPage() {
 
     const auth = getAuth();
     try {
-      if (isRegistering) {
-        await createUserWithEmailAndPassword(auth, email, password);
-        toast({ title: "Cuenta creada", description: "Ya puedes acceder al panel técnico." });
-      } else {
-        await signInWithEmailAndPassword(auth, email, password);
-        toast({ title: "Bienvenido", description: "Acceso concedido al panel técnico." });
-      }
+      await signInWithEmailAndPassword(auth, email, password);
+      toast({ title: "Bienvenido", description: "Acceso concedido al portal ICSA." });
       router.push("/dashboard");
     } catch (error: any) {
       console.error("Auth error:", error);
       let message = "Error de conexión. Verifique sus datos.";
-      if (error.code === 'auth/weak-password') message = "La contraseña debe tener al menos 6 caracteres.";
-      if (error.code === 'auth/email-already-in-use') message = "Este correo ya está registrado.";
-      if (error.code === 'auth/invalid-credential') message = "Credenciales inválidas.";
+      if (error.code === 'auth/invalid-credential') message = "Credenciales inválidas. Contacte a su administrador.";
+      if (error.code === 'auth/user-not-found') message = "Usuario no registrado.";
       
       toast({ 
         variant: "destructive", 
-        title: "Error", 
+        title: "Error de Acceso", 
         description: message 
       });
       setLoading(false);
@@ -71,7 +64,7 @@ export default function LoginPage() {
         
         <CardHeader className="text-center space-y-4 pt-16">
           {logoImage && (
-            <div className="mx-auto relative w-48 h-48 transition-transform hover:scale-110 duration-500 drop-shadow-xl">
+            <div className="mx-auto relative w-48 h-48 transition-transform hover:scale-105 duration-500 drop-shadow-xl">
               <Image
                 src={logoImage.imageUrl}
                 alt="ICSA Logo"
@@ -87,7 +80,7 @@ export default function LoginPage() {
               <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-[0.3em] mt-2">ingeniería comunicaciones S.A.</span>
             </CardTitle>
             <CardDescription className="text-lg pt-2 font-medium">
-              {isRegistering ? "Registro de Nuevo Técnico" : "Portal de Gestión Técnica"}
+              Portal de Gestión Técnica
             </CardDescription>
           </div>
         </CardHeader>
@@ -98,7 +91,7 @@ export default function LoginPage() {
               <Input
                 id="email"
                 type="email"
-                placeholder="tecnico@icsa.com"
+                placeholder="usuario@icsa.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
@@ -118,21 +111,13 @@ export default function LoginPage() {
               />
             </div>
             <Button type="submit" className="w-full bg-primary h-12 text-lg font-black shadow-lg transition-all active:scale-95" disabled={loading}>
-              {loading ? "Procesando..." : isRegistering ? "Crear Mi Cuenta" : "Entrar al Portal"}
+              <LogIn className="mr-2" size={20} />
+              {loading ? "Verificando..." : "Entrar al Portal"}
             </Button>
             
-            <div className="flex flex-col gap-3 pt-2">
-              <Button 
-                type="button" 
-                variant="ghost" 
-                className="text-primary font-bold gap-2"
-                onClick={() => setIsRegistering(!isRegistering)}
-              >
-                {isRegistering ? <LogIn size={18} /> : <UserPlus size={18} />}
-                {isRegistering ? "¿Ya tienes cuenta? Inicia sesión" : "¿No tienes cuenta? Regístrate aquí"}
-              </Button>
-              <p className="text-center text-[10px] text-muted-foreground font-medium opacity-60">
-                Uso exclusivo para personal autorizado de ICSA.
+            <div className="pt-4">
+              <p className="text-center text-[10px] text-muted-foreground font-medium opacity-60 px-8">
+                El registro de nuevos técnicos debe ser realizado únicamente por un administrador autorizado.
               </p>
             </div>
           </form>
