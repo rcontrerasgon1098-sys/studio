@@ -13,7 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SignaturePad } from "@/components/SignaturePad";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Save, CheckCircle2, Camera, X, Image as ImageIcon, Loader2 } from "lucide-react";
+import { ArrowLeft, Save, CheckCircle2, Camera, X, Image as ImageIcon, Loader2, User, CreditCard } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import { useUser, useFirestore, useDoc, useMemoFirebase } from "@/firebase";
@@ -50,16 +50,18 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
     location: "",
     cdsCanalization: "",
     description: "",
+    techName: "",
+    techRut: "",
     techSignatureUrl: "",
+    clientReceiverName: "",
+    clientReceiverRut: "",
     clientSignatureUrl: "",
     sketchImageUrl: "",
     status: "Pending"
   });
 
-  // Inicialización de datos del formulario cuando la orden carga
   useEffect(() => {
     if (order && !isInitialized) {
-      // Si la orden ya está completada, no debería editarse según reglas de negocio
       if (order.status === "Completed") {
         toast({
           variant: "destructive",
@@ -82,7 +84,11 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
         location: order.location || "",
         cdsCanalization: order.cdsCanalization || "",
         description: order.description || "",
+        techName: order.techName || "",
+        techRut: order.techRut || "",
         techSignatureUrl: order.techSignatureUrl || "",
+        clientReceiverName: order.clientReceiverName || "",
+        clientReceiverRut: order.clientReceiverRut || "",
         clientSignatureUrl: order.clientSignatureUrl || "",
         sketchImageUrl: order.sketchImageUrl || "",
         status: order.status || "Pending"
@@ -123,17 +129,6 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
     
     setLoading(true);
 
-    if (!formData.clientName) {
-      toast({ 
-        variant: "destructive", 
-        title: "Campo Requerido", 
-        description: "El nombre del cliente es obligatorio." 
-      });
-      setLoading(false);
-      return;
-    }
-
-    // Una OT pasa a Completed solo si tiene ambas firmas
     const hasBothSignatures = !!formData.techSignatureUrl && !!formData.clientSignatureUrl;
     const finalStatus = hasBothSignatures ? "Completed" : "Pending";
 
@@ -293,11 +288,11 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
           </Card>
 
           <Card className="shadow-md border-none bg-white">
-            <CardHeader className="p-4 md:p-6 border-b">
+            <CardHeader className="p-4 border-b">
               <CardTitle className="text-lg">Multimedia</CardTitle>
-              <CardDescription>Capture o suba la foto/bosquejo del servicio.</CardDescription>
+              <CardDescription>Evidencia visual del servicio.</CardDescription>
             </CardHeader>
-            <CardContent className="p-4 md:p-6">
+            <CardContent className="p-4">
               <input 
                 type="file" 
                 ref={fileInputRef} 
@@ -308,11 +303,11 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
               />
               {!formData.sketchImageUrl ? (
                 <div 
-                  onClick={() => fileInputRef.current?.click()} 
+                  onClick={() => fileInputRef.current?.click()}
                   className="border-2 border-dashed rounded-2xl p-8 flex flex-col items-center justify-center text-muted-foreground bg-background/50 hover:bg-background/80 transition-all cursor-pointer active:scale-95"
                 >
                   <Camera className="h-12 w-12 mb-3 text-primary opacity-60" />
-                  <p className="text-sm font-bold text-center">Tocar para tomar foto o subir archivo</p>
+                  <p className="text-sm font-bold text-center">Tocar para Foto o Archivo</p>
                 </div>
               ) : (
                 <div className="space-y-4">
@@ -322,7 +317,7 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
                       type="button" 
                       variant="destructive" 
                       size="icon" 
-                      className="absolute top-2 right-2 h-10 w-10 rounded-full shadow-lg" 
+                      className="absolute top-2 right-2 h-10 w-10 rounded-full shadow-lg"
                       onClick={removeImage}
                     >
                       <X className="h-5 w-5" />
@@ -338,39 +333,60 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
 
           <div className="grid grid-cols-1 gap-6 pb-6">
             <Card className="shadow-md border-none bg-white overflow-hidden">
-              <CardContent className="p-4">
-                <div className="mb-4">
-                  {formData.techSignatureUrl && (
-                    <div className="mb-4 p-2 border rounded-lg bg-background flex flex-col items-center">
-                      <p className="text-[10px] font-bold text-muted-foreground uppercase mb-1">Firma Técnica Registrada:</p>
-                      <div className="relative h-20 w-full max-w-[200px]">
-                        <Image src={formData.techSignatureUrl} alt="Tech Sig" fill className="object-contain" />
-                      </div>
-                    </div>
-                  )}
-                  <SignaturePad 
-                    label="Actualizar Firma Técnico" 
-                    onSave={(dataUrl) => setFormData({...formData, techSignatureUrl: dataUrl})}
-                  />
+              <CardHeader className="border-b bg-muted/20 p-4">
+                <CardTitle className="text-sm font-bold">Validación Técnico ICSA</CardTitle>
+              </CardHeader>
+              <CardContent className="p-4 space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label className="text-xs font-bold flex items-center gap-1"><User className="h-3 w-3" /> Nombre Técnico</Label>
+                    <Input 
+                      placeholder="Nombre completo" 
+                      value={formData.techName} 
+                      onChange={e => setFormData({...formData, techName: e.target.value})}
+                      className="h-10"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-xs font-bold flex items-center gap-1"><CreditCard className="h-3 w-3" /> RUT Técnico</Label>
+                    <Input 
+                      placeholder="RUT" 
+                      value={formData.techRut} 
+                      onChange={e => setFormData({...formData, techRut: e.target.value})}
+                      className="h-10"
+                    />
+                  </div>
                 </div>
+                <SignaturePad label="Actualizar Firma Técnico" onSave={(dataUrl) => setFormData({...formData, techSignatureUrl: dataUrl})} />
               </CardContent>
             </Card>
+
             <Card className="shadow-md border-none bg-white overflow-hidden">
-              <CardContent className="p-4">
-                <div className="mb-4">
-                  {formData.clientSignatureUrl && (
-                    <div className="mb-4 p-2 border rounded-lg bg-background flex flex-col items-center">
-                      <p className="text-[10px] font-bold text-muted-foreground uppercase mb-1">Firma Cliente Registrada:</p>
-                      <div className="relative h-20 w-full max-w-[200px]">
-                        <Image src={formData.clientSignatureUrl} alt="Client Sig" fill className="object-contain" />
-                      </div>
-                    </div>
-                  )}
-                  <SignaturePad 
-                    label="Actualizar Firma Cliente" 
-                    onSave={(dataUrl) => setFormData({...formData, clientSignatureUrl: dataUrl})}
-                  />
+              <CardHeader className="border-b bg-muted/20 p-4">
+                <CardTitle className="text-sm font-bold">Validación Recepción Terreno</CardTitle>
+              </CardHeader>
+              <CardContent className="p-4 space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label className="text-xs font-bold flex items-center gap-1"><User className="h-3 w-3" /> Nombre Receptor</Label>
+                    <Input 
+                      placeholder="Nombre de quien recibe" 
+                      value={formData.clientReceiverName} 
+                      onChange={e => setFormData({...formData, clientReceiverName: e.target.value})}
+                      className="h-10"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-xs font-bold flex items-center gap-1"><CreditCard className="h-3 w-3" /> RUT Receptor</Label>
+                    <Input 
+                      placeholder="RUT" 
+                      value={formData.clientReceiverRut} 
+                      onChange={e => setFormData({...formData, clientReceiverRut: e.target.value})}
+                      className="h-10"
+                    />
+                  </div>
                 </div>
+                <SignaturePad label="Actualizar Firma Cliente / Recepción" onSave={(dataUrl) => setFormData({...formData, clientSignatureUrl: dataUrl})} />
               </CardContent>
             </Card>
           </div>

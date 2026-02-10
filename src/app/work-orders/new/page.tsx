@@ -12,7 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SignaturePad } from "@/components/SignaturePad";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Save, Camera, CheckCircle2, Clock, User as UserIcon, Search, X, Image as ImageIcon } from "lucide-react";
+import { ArrowLeft, Save, Camera, CheckCircle2, Clock, Search, X, Image as ImageIcon, User, CreditCard } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import { useUser, useFirestore, useCollection, useMemoFirebase } from "@/firebase";
@@ -51,7 +51,11 @@ export default function NewWorkOrder() {
     location: "",
     cdsCanalization: "",
     description: "",
+    techName: "",
+    techRut: "",
     techSignatureUrl: "",
+    clientReceiverName: "",
+    clientReceiverRut: "",
     clientSignatureUrl: "",
     sketchImageUrl: "",
     status: "Pending"
@@ -356,13 +360,60 @@ export default function NewWorkOrder() {
 
           <div className="grid grid-cols-1 gap-6 pb-6">
             <Card className="shadow-md border-none bg-white overflow-hidden">
-              <CardContent className="p-4">
+              <CardHeader className="border-b bg-muted/20 p-4">
+                <CardTitle className="text-sm font-bold">Validación Técnico ICSA</CardTitle>
+              </CardHeader>
+              <CardContent className="p-4 space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label className="text-xs font-bold flex items-center gap-1"><User className="h-3 w-3" /> Nombre Técnico</Label>
+                    <Input 
+                      placeholder="Nombre completo" 
+                      value={formData.techName} 
+                      onChange={e => setFormData({...formData, techName: e.target.value})}
+                      className="h-10"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-xs font-bold flex items-center gap-1"><CreditCard className="h-3 w-3" /> RUT Técnico</Label>
+                    <Input 
+                      placeholder="RUT" 
+                      value={formData.techRut} 
+                      onChange={e => setFormData({...formData, techRut: e.target.value})}
+                      className="h-10"
+                    />
+                  </div>
+                </div>
                 <SignaturePad label="Firma Técnico" onSave={(dataUrl) => setFormData({...formData, techSignatureUrl: dataUrl})} />
               </CardContent>
             </Card>
+
             <Card className="shadow-md border-none bg-white overflow-hidden">
-              <CardContent className="p-4">
-                <SignaturePad label="Firma Cliente" onSave={(dataUrl) => setFormData({...formData, clientSignatureUrl: dataUrl})} />
+              <CardHeader className="border-b bg-muted/20 p-4">
+                <CardTitle className="text-sm font-bold">Validación Recepción Terreno</CardTitle>
+              </CardHeader>
+              <CardContent className="p-4 space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label className="text-xs font-bold flex items-center gap-1"><User className="h-3 w-3" /> Nombre Receptor</Label>
+                    <Input 
+                      placeholder="Nombre de quien recibe" 
+                      value={formData.clientReceiverName} 
+                      onChange={e => setFormData({...formData, clientReceiverName: e.target.value})}
+                      className="h-10"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-xs font-bold flex items-center gap-1"><CreditCard className="h-3 w-3" /> RUT Receptor</Label>
+                    <Input 
+                      placeholder="RUT" 
+                      value={formData.clientReceiverRut} 
+                      onChange={e => setFormData({...formData, clientReceiverRut: e.target.value})}
+                      className="h-10"
+                    />
+                  </div>
+                </div>
+                <SignaturePad label="Firma Cliente / Recepción" onSave={(dataUrl) => setFormData({...formData, clientSignatureUrl: dataUrl})} />
               </CardContent>
             </Card>
           </div>

@@ -1,3 +1,4 @@
+
 import { jsPDF } from "jspdf";
 
 const LOGO_URL = "https://raw.githubusercontent.com/rcontrerasgon1098-sys/foto-ICSA/main/C5EDD674-8764-4E88-846B-BD9B9F1A18F2.png";
@@ -30,10 +31,8 @@ export const generateWorkOrderPDF = async (data: any) => {
   // Add ICSA Logo (Rectangular format)
   try {
     const logoBase64 = await toDataURL(LOGO_URL);
-    // Logo en el lado izquierdo - Ajustado a rectangular (80x30)
     doc.addImage(logoBase64, "PNG", 10, 5, 80, 30);
   } catch (e) {
-    // Fallback if logo fails
     doc.setTextColor(255, 255, 255);
     doc.setFontSize(22);
     doc.text("ICSA", 15, 23);
@@ -41,7 +40,6 @@ export const generateWorkOrderPDF = async (data: any) => {
   
   doc.setTextColor(255, 255, 255);
   doc.setFontSize(9);
-  // Texto desplazado a la derecha para no solapar con el logo rectangular
   doc.text("ingeniería comunicaciones S.A.", 95, 23);
   
   doc.setFontSize(12);
@@ -81,7 +79,6 @@ export const generateWorkOrderPDF = async (data: any) => {
   doc.text(`CDS/Canalización: ${data.cdsCanalization || "N/A"}`, 15, 132);
   doc.text(`Tipo de Señal: ${data.signalType || "Simple"}`, 15, 139);
   
-  // Checklist Row
   const cert = data.isCert ? "SÍ" : "NO";
   const plan = data.isPlan ? "SÍ" : "NO";
   const sw = data.connectionSwitch ? "SÍ" : "NO";
@@ -111,25 +108,29 @@ export const generateWorkOrderPDF = async (data: any) => {
 
   // Signatures at the bottom
   const sigY = 265;
-  if (data.techSignatureUrl) {
-    doc.setTextColor(100, 100, 100);
-    doc.setFontSize(8);
-    doc.text("FIRMA TÉCNICO", 15, sigY - 2);
-    try {
-        doc.addImage(data.techSignatureUrl, "PNG", 15, sigY, 50, 20);
-    } catch(e) {
-        doc.text("[Imagen de firma no disponible]", 15, sigY + 10);
+  doc.setFontSize(8);
+  doc.setTextColor(100, 100, 100);
+
+  // Tech Signature Info
+  if (data.techName || data.techRut || data.techSignatureUrl) {
+    doc.text("VALIDACIÓN TÉCNICO ICSA", 15, sigY - 12);
+    doc.setTextColor(0,0,0);
+    doc.text(`Nombre: ${data.techName || "N/A"}`, 15, sigY - 7);
+    doc.text(`RUT: ${data.techRut || "N/A"}`, 15, sigY - 2);
+    if (data.techSignatureUrl) {
+      try { doc.addImage(data.techSignatureUrl, "PNG", 15, sigY, 50, 20); } catch(e) {}
     }
   }
 
-  if (data.clientSignatureUrl) {
-    doc.setTextColor(100, 100, 100);
-    doc.setFontSize(8);
-    doc.text("FIRMA CLIENTE", 130, sigY - 2);
-    try {
-        doc.addImage(data.clientSignatureUrl, "PNG", 130, sigY, 50, 20);
-    } catch(e) {
-        doc.text("[Imagen de firma no disponible]", 130, sigY + 10);
+  // Client Signature Info
+  doc.setTextColor(100, 100, 100);
+  if (data.clientReceiverName || data.clientReceiverRut || data.clientSignatureUrl) {
+    doc.text("VALIDACIÓN RECEPCIÓN TERRENO", 130, sigY - 12);
+    doc.setTextColor(0,0,0);
+    doc.text(`Nombre: ${data.clientReceiverName || "N/A"}`, 130, sigY - 7);
+    doc.text(`RUT: ${data.clientReceiverRut || "N/A"}`, 130, sigY - 2);
+    if (data.clientSignatureUrl) {
+      try { doc.addImage(data.clientSignatureUrl, "PNG", 130, sigY, 50, 20); } catch(e) {}
     }
   }
 

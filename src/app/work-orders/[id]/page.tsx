@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Download, Printer, User, Calendar, MapPin, ClipboardCheck, Info, Pencil } from "lucide-react";
+import { ArrowLeft, Download, Printer, User, Calendar, MapPin, ClipboardCheck, Info, Pencil, CreditCard } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import { generateWorkOrderPDF } from "@/lib/pdf-generator";
@@ -15,7 +15,6 @@ import { doc } from "firebase/firestore";
 
 export default function WorkOrderView({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
-  const { user } = useUser();
   const db = useFirestore();
 
   const orderRef = useMemoFirebase(() => {
@@ -159,7 +158,13 @@ export default function WorkOrderView({ params }: { params: Promise<{ id: string
             <CardHeader className="p-4 pb-0">
               <CardTitle className="text-xs font-bold text-muted-foreground uppercase">Firma Técnico</CardTitle>
             </CardHeader>
-            <CardContent className="p-4 pt-2">
+            <CardContent className="p-4 pt-2 space-y-3">
+              {(order.techName || order.techRut) && (
+                <div className="text-[11px] space-y-1 p-2 bg-muted/20 rounded-lg">
+                  <p className="font-bold uppercase flex items-center gap-1"><User className="h-3 w-3" /> {order.techName || "N/A"}</p>
+                  <p className="text-muted-foreground flex items-center gap-1"><CreditCard className="h-3 w-3" /> {order.techRut || "N/A"}</p>
+                </div>
+              )}
               {order.techSignatureUrl ? (
                 <div className="relative h-32 w-full bg-background/50 rounded-xl border border-dashed flex items-center justify-center">
                    <Image src={order.techSignatureUrl} alt="Tech Sig" fill className="object-contain" />
@@ -173,9 +178,15 @@ export default function WorkOrderView({ params }: { params: Promise<{ id: string
           </Card>
           <Card className="shadow-md border-none bg-white">
             <CardHeader className="p-4 pb-0">
-              <CardTitle className="text-xs font-bold text-muted-foreground uppercase">Firma Cliente</CardTitle>
+              <CardTitle className="text-xs font-bold text-muted-foreground uppercase">Firma Cliente / Receptor</CardTitle>
             </CardHeader>
-            <CardContent className="p-4 pt-2">
+            <CardContent className="p-4 pt-2 space-y-3">
+              {(order.clientReceiverName || order.clientReceiverRut) && (
+                <div className="text-[11px] space-y-1 p-2 bg-muted/20 rounded-lg">
+                  <p className="font-bold uppercase flex items-center gap-1"><User className="h-3 w-3" /> {order.clientReceiverName || "N/A"}</p>
+                  <p className="text-muted-foreground flex items-center gap-1"><CreditCard className="h-3 w-3" /> {order.clientReceiverRut || "N/A"}</p>
+                </div>
+              )}
               {order.clientSignatureUrl ? (
                  <div className="relative h-32 w-full bg-background/50 rounded-xl border border-dashed flex items-center justify-center">
                     <Image src={order.clientSignatureUrl} alt="Client Sig" fill className="object-contain" />
