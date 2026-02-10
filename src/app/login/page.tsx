@@ -10,33 +10,44 @@ import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
 import Image from "next/image";
 import { PlaceHolderImages } from "@/lib/placeholder-images";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, UserPlus, LogIn } from "lucide-react";
 import Link from "next/link";
-import { getAuth, signInWithEmailAndPassword } from "firebase/auth";
+import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword } from "firebase/auth";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [isRegistering, setIsRegistering] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
   const logoImage = PlaceHolderImages.find(img => img.id === "icsa-logo");
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
     const auth = getAuth();
     try {
-      await signInWithEmailAndPassword(auth, email, password);
-      toast({ title: "Bienvenido", description: "Acceso concedido al panel técnico." });
+      if (isRegistering) {
+        await createUserWithEmailAndPassword(auth, email, password);
+        toast({ title: "Cuenta creada", description: "Ya puedes acceder al panel técnico." });
+      } else {
+        await signInWithEmailAndPassword(auth, email, password);
+        toast({ title: "Bienvenido", description: "Acceso concedido al panel técnico." });
+      }
       router.push("/dashboard");
     } catch (error: any) {
-      console.error("Login error:", error);
+      console.error("Auth error:", error);
+      let message = "Error de conexión. Verifique sus datos.";
+      if (error.code === 'auth/weak-password') message = "La contraseña debe tener al menos 6 caracteres.";
+      if (error.code === 'auth/email-already-in-use') message = "Este correo ya está registrado.";
+      if (error.code === 'auth/invalid-credential') message = "Credenciales inválidas.";
+      
       toast({ 
         variant: "destructive", 
         title: "Error", 
-        description: "Credenciales inválidas o error de conexión. Verifique su correo y contraseña." 
+        description: message 
       });
       setLoading(false);
     }
@@ -58,9 +69,9 @@ export default function LoginPage() {
           </Link>
         </div>
         
-        <CardHeader className="text-center space-y-6 pt-16">
+        <CardHeader className="text-center space-y-4 pt-16">
           {logoImage && (
-            <div className="mx-auto relative w-56 h-56 mb-4 transition-transform hover:scale-110 duration-500 drop-shadow-xl">
+            <div className="mx-auto relative w-48 h-48 transition-transform hover:scale-110 duration-500 drop-shadow-xl">
               <Image
                 src={logoImage.imageUrl}
                 alt="ICSA Logo"
@@ -70,16 +81,18 @@ export default function LoginPage() {
               />
             </div>
           )}
-          <div className="space-y-2">
-            <CardTitle className="text-4xl font-headline font-black text-primary flex flex-col items-center leading-none tracking-tighter">
+          <div className="space-y-1">
+            <CardTitle className="text-4xl font-black text-primary flex flex-col items-center leading-none tracking-tighter">
               ICSA
-              <span className="text-[12px] font-medium text-muted-foreground uppercase tracking-[0.3em] mt-2">ingeniería comunicaciones S.A.</span>
+              <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-[0.3em] mt-2">ingeniería comunicaciones S.A.</span>
             </CardTitle>
-            <CardDescription className="text-lg pt-4 font-medium">Portal de Gestión Técnica</CardDescription>
+            <CardDescription className="text-lg pt-2 font-medium">
+              {isRegistering ? "Registro de Nuevo Técnico" : "Portal de Gestión Técnica"}
+            </CardDescription>
           </div>
         </CardHeader>
-        <CardContent className="pb-12 pt-6">
-          <form onSubmit={handleLogin} className="space-y-6">
+        <CardContent className="pb-8 pt-4">
+          <form onSubmit={handleAuth} className="space-y-5">
             <div className="space-y-2">
               <Label htmlFor="email" className="text-sm font-bold ml-1">Correo Electrónico</Label>
               <Input
@@ -89,7 +102,7 @@ export default function LoginPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                className="h-14 bg-background border-muted focus:ring-primary text-lg"
+                className="h-12 bg-background border-muted focus:ring-primary"
               />
             </div>
             <div className="space-y-2">
@@ -101,15 +114,27 @@ export default function LoginPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                className="h-14 bg-background border-muted focus:ring-primary text-lg"
+                className="h-12 bg-background border-muted focus:ring-primary"
               />
             </div>
-            <Button type="submit" className="w-full bg-primary h-14 text-xl font-black shadow-xl hover:shadow-2xl transition-all hover:scale-[1.02] active:scale-95" disabled={loading}>
-              {loading ? "Verificando..." : "Entrar al Portal"}
+            <Button type="submit" className="w-full bg-primary h-12 text-lg font-black shadow-lg transition-all active:scale-95" disabled={loading}>
+              {loading ? "Procesando..." : isRegistering ? "Crear Mi Cuenta" : "Entrar al Portal"}
             </Button>
-            <p className="text-center text-xs text-muted-foreground pt-4 font-medium opacity-60">
-              Uso exclusivo para personal autorizado de ICSA.
-            </p>
+            
+            <div className="flex flex-col gap-3 pt-2">
+              <Button 
+                type="button" 
+                variant="ghost" 
+                className="text-primary font-bold gap-2"
+                onClick={() => setIsRegistering(!isRegistering)}
+              >
+                {isRegistering ? <LogIn size={18} /> : <UserPlus size={18} />}
+                {isRegistering ? "¿Ya tienes cuenta? Inicia sesión" : "¿No tienes cuenta? Regístrate aquí"}
+              </Button>
+              <p className="text-center text-[10px] text-muted-foreground font-medium opacity-60">
+                Uso exclusivo para personal autorizado de ICSA.
+              </p>
+            </div>
           </form>
         </CardContent>
       </Card>
