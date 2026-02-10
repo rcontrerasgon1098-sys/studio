@@ -1,8 +1,7 @@
+
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Wifi, ClipboardCheck, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import { PlaceHolderImages } from "@/lib/placeholder-images";
@@ -12,7 +11,7 @@ export default function Home() {
   const logoImage = PlaceHolderImages.find(img => img.id === "icsa-logo");
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    <div className="min-h-screen bg-background text-foreground flex flex-col">
       <header className="sticky top-0 z-50 w-full border-b bg-white/80 backdrop-blur-md">
         <div className="container mx-auto px-4 h-24 flex items-center justify-between">
           <div className="flex items-center gap-4">
@@ -41,7 +40,7 @@ export default function Home() {
         </div>
       </header>
 
-      <main>
+      <main className="flex-1">
         <section className="relative h-[600px] flex items-center overflow-hidden">
           {heroImage && (
             <div className="absolute inset-0 z-0">
@@ -64,44 +63,6 @@ export default function Home() {
               <p className="text-xl md:text-3xl text-muted-foreground mb-10 font-medium max-w-2xl mx-auto">
                 Digitaliza tus formularios, captura firmas y gestiona tu equipo con la plataforma líder para ICSA.
               </p>
-            </div>
-          </div>
-        </section>
-
-        <section className="py-24 bg-white">
-          <div className="container mx-auto px-4">
-            <div className="text-center mb-16 space-y-4">
-              <h2 className="text-4xl md:text-5xl font-headline font-bold text-primary">Nuestras Soluciones</h2>
-              <p className="text-muted-foreground text-lg max-w-2xl mx-auto">Eficiencia tecnológica para ingeniería en telecomunicaciones.</p>
-            </div>
-            <div className="grid md:grid-cols-3 gap-10">
-              {[
-                {
-                  icon: <ClipboardCheck className="h-12 w-12 text-primary" />,
-                  title: "Formularios Digitales",
-                  desc: "Replica tus formularios físicos en un entorno dinámico y fácil de usar, eliminando el papeleo."
-                },
-                {
-                  icon: <Wifi className="h-12 w-12 text-primary" />,
-                  title: "Sincronización Cloud",
-                  desc: "Accede y sincroniza las órdenes de trabajo desde cualquier lugar con la potencia de Firebase."
-                },
-                {
-                  icon: <ShieldCheck className="h-12 w-12 text-primary" />,
-                  title: "Firma Digital",
-                  desc: "Captura el consentimiento legal de técnicos y clientes de forma segura directamente en el dispositivo."
-                }
-              ].map((feature, i) => (
-                <Card key={i} className="border-none shadow-xl hover:shadow-2xl transition-all duration-300 bg-background group">
-                  <CardContent className="p-10 text-center">
-                    <div className="mb-8 inline-block p-5 bg-secondary rounded-3xl group-hover:scale-110 transition-transform">
-                      {feature.icon}
-                    </div>
-                    <h3 className="font-bold text-2xl mb-4 text-primary">{feature.title}</h3>
-                    <p className="text-muted-foreground leading-relaxed text-base">{feature.desc}</p>
-                  </CardContent>
-                </Card>
-              ))}
             </div>
           </div>
         </section>
