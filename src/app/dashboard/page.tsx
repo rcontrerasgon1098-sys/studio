@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -268,6 +268,12 @@ export default function Dashboard() {
               </Button>
             </SheetTrigger>
             <SheetContent side="left" className="bg-primary p-0 border-none w-72">
+              <div className="sr-only">
+                <SheetHeader>
+                  <SheetTitle>Menú de Navegación</SheetTitle>
+                  <SheetDescription>Portal operativo de ICSA ingeniería comunicaciones S.A.</SheetDescription>
+                </SheetHeader>
+              </div>
               <SidebarContent />
             </SheetContent>
           </Sheet>
