@@ -17,7 +17,7 @@ import {
   Plus, FileText, Search, LogOut, LayoutDashboard, 
   Eye, Download, Menu, TrendingUp, Users, UserRound, Shield,
   Pencil, Trash2, PieChart as PieChartIcon, BarChart as BarChartIcon,
-  Briefcase, Clock, Calendar as CalendarIcon, FilterX, Loader2
+  Briefcase, Clock, Calendar as CalendarIcon, FilterX, Loader2, RefreshCw
 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
@@ -65,6 +65,8 @@ export default function Dashboard() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [dateFilter, setDateFilter] = useState<Date | undefined>(undefined);
   const [deleteConfirm, setDeleteConfirm] = useState<{ id: string, type: 'clients' | 'personnel' | 'ordenes' } | null>(null);
+  const [purgeConfirm, setPurgeConfirm] = useState(false);
+  const [isPurging, setIsPurging] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [mountedDate, setMountedDate] = useState<Date | null>(null);
 
@@ -79,7 +81,6 @@ export default function Dashboard() {
     }
   }, [user, isUserLoading, router]);
 
-  // Cambiado a ordenar por fecha de inicio para mayor robustez
   const ordersQuery = useMemoFirebase(() => {
     if (!db) return null;
     return query(collection(db, "ordenes"), orderBy("startDate", "desc"));
@@ -98,6 +99,8 @@ export default function Dashboard() {
   }, [db]);
   const { data: personnel } = useCollection(personnelQuery);
 
+  const isAdmin = user?.email === "admin@icsa.com";
+
   const orderStatsData = useMemo(() => {
     if (!orders) return [];
     const completed = orders.filter(o => o.status === "Completed").length;
@@ -110,8 +113,8 @@ export default function Dashboard() {
 
   const weeklyOrdersData = useMemo(() => {
     if (!orders || !mountedDate) return [];
-    const monday = startOfWeek(mountedDate, { weekStartsOn: 1 });
-    const weekDays = Array.from({ length: 7 }, (_, i) => addDays(monday, i));
+    const startOfCurrentWeek = startOfWeek(mountedDate, { weekStartsOn: 1 });
+    const weekDays = Array.from({ length: 7 }, (_, i) => addDays(startOfCurrentWeek, i));
 
     return weekDays.map(date => {
       const count = orders.filter(o => {
@@ -119,8 +122,8 @@ export default function Dashboard() {
         return isSameDay(new Date(o.startDate), date);
       }).length;
       
-      const dayNames = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"];
-      const dayIndex = (date.getDay() + 6) % 7; // Ajuste para que Lunes sea 0
+      const dayNames = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
+      const dayIndex = (date.getDay() + 6) % 7; 
       
       return { 
         day: dayNames[dayIndex], 
@@ -188,9 +191,33 @@ export default function Dashboard() {
     deleteDocumentNonBlocking(docRef);
     toast({
       title: "Registro eliminado",
-      description: "El elemento ha sido removido del sistema con éxito."
+      description: "El elemento ha sido removido del sistema."
     });
     setDeleteConfirm(null);
+  };
+
+  const handlePurgeOrders = async () => {
+    if (!orders || !db || !isAdmin) return;
+    setIsPurging(true);
+    try {
+      orders.forEach(order => {
+        const orderRef = doc(db, "ordenes", order.id);
+        deleteDocumentNonBlocking(orderRef);
+      });
+      toast({
+        title: "Base de datos limpia",
+        description: "Se han eliminado todas las órdenes previas con éxito."
+      });
+      setPurgeConfirm(false);
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "No se pudieron eliminar todos los registros."
+      });
+    } finally {
+      setIsPurging(false);
+    }
   };
 
   const clearFilters = () => {
@@ -249,7 +276,16 @@ export default function Dashboard() {
           <UserRound size={20} /> Personal
         </Button>
       </nav>
-      <div className="px-4 mt-auto">
+      <div className="px-4 mt-auto space-y-2">
+        {isAdmin && (
+          <Button 
+            variant="ghost" 
+            className="w-full justify-start gap-3 hover:bg-destructive/20 text-white/50 hover:text-white h-12"
+            onClick={() => setPurgeConfirm(true)}
+          >
+            <RefreshCw size={20} /> Resetear OTs
+          </Button>
+        )}
         <Button onClick={handleLogout} variant="ghost" className="w-full justify-start gap-3 hover:bg-white/20 text-white/70 hover:text-white h-12">
           <LogOut size={20} /> Salir
         </Button>
@@ -275,8 +311,8 @@ export default function Dashboard() {
             </SheetTrigger>
             <SheetContent side="left" className="bg-primary p-0 border-none w-72">
               <SheetHeader className="sr-only">
-                <SheetTitle>Menú Lateral de Navegación</SheetTitle>
-                <SheetDescription>Acceda a las secciones de órdenes, clientes y personal.</SheetDescription>
+                <SheetTitle>Menú Lateral</SheetTitle>
+                <SheetDescription>Navegación principal de la app</SheetDescription>
               </SheetHeader>
               <SidebarContent />
             </SheetContent>
@@ -421,7 +457,7 @@ export default function Dashboard() {
                 <TrendingUp className="h-5 w-5 text-accent" />
                 <div>
                   <CardTitle className="text-lg font-bold text-primary">Actividad Semanal</CardTitle>
-                  <CardDescription>Carga de trabajo por día (Lunes a Domingo)</CardDescription>
+                  <CardDescription>Carga de trabajo por día (Semana actual)</CardDescription>
                 </div>
               </CardHeader>
               <CardContent className="h-[300px]">
@@ -485,7 +521,7 @@ export default function Dashboard() {
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0" align="end">
-                    <h3 className="sr-only">Selector de Fecha</h3>
+                    <h3 className="sr-only">Calendario</h3>
                     <Calendar
                       mode="single"
                       selected={dateFilter}
@@ -552,7 +588,7 @@ export default function Dashboard() {
                                 variant="ghost" 
                                 size="icon" 
                                 className="h-10 w-10 text-destructive" 
-                                title="Eliminar orden"
+                                title="Eliminar"
                                 onClick={() => setDeleteConfirm({ id: order.id, type: 'ordenes' })}
                               >
                                 <Trash2 className="h-5 w-5" />
@@ -625,7 +661,7 @@ export default function Dashboard() {
                         <TableCell className="text-right">
                           <div className="flex justify-end gap-2">
                             <Link href={`/clients/${client.id}/edit`}>
-                              <Button variant="ghost" size="icon" className="h-10 w-10 text-primary" title="Editar cliente">
+                              <Button variant="ghost" size="icon" className="h-10 w-10 text-primary" title="Editar">
                                 <Pencil className="h-5 w-5" />
                               </Button>
                             </Link>
@@ -633,7 +669,7 @@ export default function Dashboard() {
                               variant="ghost" 
                               size="icon" 
                               className="h-10 w-10 text-destructive"
-                              title="Eliminar cliente"
+                              title="Eliminar"
                               onClick={() => setDeleteConfirm({ id: client.id, type: 'clients' })}
                             >
                               <Trash2 className="h-5 w-5" />
@@ -696,7 +732,7 @@ export default function Dashboard() {
                         <TableCell className="text-right">
                           <div className="flex justify-end gap-2">
                             <Link href={`/technicians/${p.id}/edit`}>
-                              <Button variant="ghost" size="icon" className="h-10 w-10 text-primary" title="Editar personal">
+                              <Button variant="ghost" size="icon" className="h-10 w-10 text-primary" title="Editar">
                                 <Pencil className="h-5 w-5" />
                               </Button>
                             </Link>
@@ -704,7 +740,7 @@ export default function Dashboard() {
                               variant="ghost" 
                               size="icon" 
                               className="h-10 w-10 text-destructive"
-                              title="Eliminar personal"
+                              title="Eliminar"
                               onClick={() => setDeleteConfirm({ id: p.id, type: 'personnel' })}
                             >
                               <Trash2 className="h-5 w-5" />
@@ -721,18 +757,41 @@ export default function Dashboard() {
         )}
       </main>
 
+      {/* Confirmación eliminación individual */}
       <AlertDialog open={!!deleteConfirm} onOpenChange={() => setDeleteConfirm(null)}>
         <AlertDialogContent className="max-w-[400px] rounded-2xl">
           <AlertDialogHeader>
             <AlertDialogTitle className="text-primary font-black text-xl uppercase tracking-tighter">¿Confirmar eliminación?</AlertDialogTitle>
-            <AlertDialogDescription className="text-sm font-medium leading-relaxed">
-              Esta acción es permanente e irreversible. El registro será borrado definitivamente de los servidores de ICSA.
+            <AlertDialogDescription className="text-sm font-medium">
+              Esta acción es permanente e irreversible. El registro será borrado definitivamente.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="gap-2 sm:gap-2 pt-4">
-            <AlertDialogCancel className="font-bold border-primary/20 text-primary h-12 rounded-xl">Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} className="bg-destructive hover:bg-destructive/90 font-black h-12 rounded-xl shadow-lg">
-              Eliminar Definitivamente
+            <AlertDialogCancel className="font-bold h-12 rounded-xl">Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} className="bg-destructive hover:bg-destructive/90 font-black h-12 rounded-xl">
+              Eliminar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Confirmación Purga Total (Sólo Admin) */}
+      <AlertDialog open={purgeConfirm} onOpenChange={setPurgeConfirm}>
+        <AlertDialogContent className="max-w-[400px] rounded-2xl border-destructive/20">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-destructive font-black text-xl uppercase tracking-tighter">Borrado Masivo</AlertDialogTitle>
+            <AlertDialogDescription className="text-sm font-medium">
+              ¿Estás seguro de que quieres eliminar <strong>TODAS</strong> las órdenes registradas? Esta acción limpiará el historial para usar solo los nuevos folios.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="gap-2 sm:gap-2 pt-4">
+            <AlertDialogCancel className="font-bold h-12 rounded-xl">Cancelar</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handlePurgeOrders} 
+              disabled={isPurging}
+              className="bg-destructive hover:bg-destructive/90 font-black h-12 rounded-xl"
+            >
+              {isPurging ? "Borrando..." : "Borrar Todo el Historial"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
