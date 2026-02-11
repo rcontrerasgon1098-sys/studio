@@ -13,12 +13,12 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SignaturePad } from "@/components/SignaturePad";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Save, CheckCircle2, Camera, X, Image as ImageIcon, Loader2, User, CreditCard, Sparkles } from "lucide-react";
+import { ArrowLeft, Save, CheckCircle2, Camera, X, Image as ImageIcon, Loader2, User, CreditCard, Sparkles, UserCheck } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import { useUser, useFirestore, useDoc, useMemoFirebase, useCollection } from "@/firebase";
 import { doc, collection, query, where } from "firebase/firestore";
-import { updateDocumentNonBlocking } from "@/firebase/non-blocking-updates";
+import { updateDocumentNonBlocking, setDocumentNonBlocking, deleteDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 import { validateRut } from "@/lib/rut-utils";
 
 export default function EditWorkOrder({ params }: { params: Promise<{ id: string }> }) {
@@ -44,6 +44,7 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
 
   const [loading, setLoading] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
+  const [saveSignatureToProfile, setSaveSignatureToProfile] = useState(false);
   
   const [formData, setFormData] = useState({
     clientName: "",
@@ -159,26 +160,22 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
     
     setLoading(true);
 
-    // Validar RUT del técnico si está presente
     if (formData.techRut && !validateRut(formData.techRut)) {
-      toast({ 
-        variant: "destructive", 
-        title: "RUT Técnico Inválido", 
-        description: "El RUT del técnico no es correcto." 
-      });
+      toast({ variant: "destructive", title: "RUT Técnico Inválido", description: "El RUT del técnico no es correcto." });
       setLoading(false);
       return;
     }
 
-    // Validar RUT del receptor si está presente
     if (formData.clientReceiverRut && !validateRut(formData.clientReceiverRut)) {
-      toast({ 
-        variant: "destructive", 
-        title: "RUT Receptor Inválido", 
-        description: "El RUT de quien recibe no es correcto." 
-      });
+      toast({ variant: "destructive", title: "RUT Receptor Inválido", description: "El RUT de quien recibe no es correcto." });
       setLoading(false);
       return;
+    }
+
+    // Guardar firma en el perfil si se solicitó
+    if (saveSignatureToProfile && formData.techSignatureUrl && techProfiles && techProfiles.length > 0) {
+      const techRef = doc(db, "personnel", techProfiles[0].id);
+      updateDocumentNonBlocking(techRef, { signatureUrl: formData.techSignatureUrl });
     }
 
     const isValidationComplete = !!formData.techSignatureUrl && 
@@ -194,22 +191,34 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
       updatedBy: user.email
     };
 
-    const docRef = doc(db, "ordenes", id);
-    
-    try {
-      updateDocumentNonBlocking(docRef, updateData);
-      toast({ 
-        title: finalStatus === "Completed" ? "Orden Finalizada" : "Cambios Guardados", 
-        description: finalStatus === "Completed" 
-          ? "La orden se ha cerrado con éxito." 
-          : "La orden sigue pendiente de firmas o RUT del receptor."
-      });
-      router.push("/dashboard");
-    } catch (error) {
-      setLoading(false);
-      toast({ variant: "destructive", title: "Error", description: "No se pudo actualizar la orden." });
+    if (finalStatus === "Completed") {
+      // Mover al historial
+      const historyRef = doc(db, "historial", id);
+      const originalRef = doc(db, "ordenes", id);
+      try {
+        setDocumentNonBlocking(historyRef, updateData, { merge: true });
+        deleteDocumentNonBlocking(originalRef);
+        toast({ title: "Orden Finalizada", description: "La orden se ha movido al historial con éxito." });
+        router.push("/dashboard");
+      } catch (error) {
+        setLoading(false);
+        toast({ variant: "destructive", title: "Error", description: "No se pudo finalizar la orden." });
+      }
+    } else {
+      // Solo actualizar orden actual
+      const docRef = doc(db, "ordenes", id);
+      try {
+        updateDocumentNonBlocking(docRef, updateData);
+        toast({ title: "Avances Guardados", description: "La orden sigue pendiente de firmas o RUT del receptor." });
+        router.push("/dashboard");
+      } catch (error) {
+        setLoading(false);
+        toast({ variant: "destructive", title: "Error", description: "No se pudo actualizar la orden." });
+      }
     }
   };
+
+  const hasSavedSignature = techProfiles && techProfiles.length > 0 && !!techProfiles[0].signatureUrl;
 
   if (isUserLoading || isOrderLoading || !isInitialized) {
     return (
@@ -284,10 +293,7 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label className="font-bold">Tipo de Señal</Label>
-                  <Select 
-                    value={formData.signalType} 
-                    onValueChange={v => setFormData({...formData, signalType: v})}
-                  >
+                  <Select value={formData.signalType} onValueChange={v => setFormData({...formData, signalType: v})}>
                     <SelectTrigger className="h-12 text-base">
                       <SelectValue placeholder="Seleccionar" />
                     </SelectTrigger>
@@ -391,7 +397,10 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
           <div className="grid grid-cols-1 gap-6 pb-6">
             <Card className="shadow-md border-none bg-white overflow-hidden">
               <CardHeader className="border-b bg-muted/20 p-4">
-                <CardTitle className="text-sm font-bold">Validación Técnico ICSA</CardTitle>
+                <CardTitle className="text-sm font-bold flex items-center justify-between">
+                  Validación Técnico ICSA
+                  {hasSavedSignature && <Badge variant="secondary" className="bg-primary/10 text-primary border-none gap-1 font-bold text-[9px]"><UserCheck size={10} /> Firma guardada</Badge>}
+                </CardTitle>
               </CardHeader>
               <CardContent className="p-4 space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -430,7 +439,20 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
                     </Button>
                   </div>
                 ) : (
-                  <SignaturePad label="Actualizar Firma Técnico" onSave={(dataUrl) => setFormData({...formData, techSignatureUrl: dataUrl})} />
+                  <div className="space-y-4">
+                    <SignaturePad label="Actualizar Firma Técnico" onSave={(dataUrl) => setFormData({...formData, techSignatureUrl: dataUrl})} />
+                    {!hasSavedSignature && formData.techSignatureUrl === "" && (
+                      <div className="flex items-center space-x-2 bg-accent/5 p-3 rounded-xl border border-accent/20">
+                        <Checkbox 
+                          id="saveSignature" 
+                          checked={saveSignatureToProfile} 
+                          onCheckedChange={(checked) => setSaveSignatureToProfile(checked === true)}
+                          className="border-accent data-[state=checked]:bg-accent"
+                        />
+                        <Label htmlFor="saveSignature" className="text-xs font-bold cursor-pointer text-primary">¿Recordar esta firma para futuras órdenes?</Label>
+                      </div>
+                    )}
+                  </div>
                 )}
               </CardContent>
             </Card>

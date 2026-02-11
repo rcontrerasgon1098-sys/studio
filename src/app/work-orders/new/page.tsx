@@ -12,12 +12,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SignaturePad } from "@/components/SignaturePad";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Save, Camera, CheckCircle2, Clock, Search, X, Image as ImageIcon, User, CreditCard, Sparkles } from "lucide-react";
+import { ArrowLeft, Save, Camera, CheckCircle2, Clock, Search, X, Image as ImageIcon, User, CreditCard, Sparkles, UserCheck } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import { useUser, useFirestore, useCollection, useMemoFirebase } from "@/firebase";
 import { collection, doc, query, orderBy, where } from "firebase/firestore";
-import { setDocumentNonBlocking } from "@/firebase/non-blocking-updates";
+import { setDocumentNonBlocking, updateDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { validateRut } from "@/lib/rut-utils";
@@ -32,6 +32,7 @@ export default function NewWorkOrder() {
   const [loading, setLoading] = useState(false);
   const [folio, setFolio] = useState(0);
   const [openClientSearch, setOpenClientSearch] = useState(false);
+  const [saveSignatureToProfile, setSaveSignatureToProfile] = useState(false);
 
   const clientsQuery = useMemoFirebase(() => {
     if (!db) return null;
@@ -91,15 +92,15 @@ export default function NewWorkOrder() {
       const tech = techProfiles[0];
       setFormData(prev => ({
         ...prev,
-        techName: tech.nombre_t || "",
-        techRut: tech.rut_t || "",
+        techName: prev.techName || tech.nombre_t || "",
+        techRut: prev.techRut || tech.rut_t || "",
         techSignatureUrl: prev.techSignatureUrl || tech.signatureUrl || ""
       }));
       
       if (tech.signatureUrl && !formData.techSignatureUrl) {
         toast({
           title: "Firma cargada",
-          description: "Se ha aplicado su firma digital guardada.",
+          description: "Se ha aplicado su firma digital guardada en el perfil.",
           icon: <Sparkles className="h-4 w-4 text-accent" />
         });
       }
@@ -186,6 +187,12 @@ export default function NewWorkOrder() {
       return;
     }
 
+    // Guardar firma en el perfil si se solicitó
+    if (saveSignatureToProfile && formData.techSignatureUrl && techProfiles && techProfiles.length > 0) {
+      const techRef = doc(db, "personnel", techProfiles[0].id);
+      updateDocumentNonBlocking(techRef, { signatureUrl: formData.techSignatureUrl });
+    }
+
     const isValidationComplete = !!formData.techSignatureUrl && 
                                 !!formData.clientSignatureUrl && 
                                 !!formData.clientReceiverRut;
@@ -205,14 +212,16 @@ export default function NewWorkOrder() {
       endDate: new Date().toISOString(),
     };
 
-    const orderRef = doc(db, "ordenes", orderId);
+    // Si está completada, va al historial, si no, a ordenes
+    const targetCollection = finalStatus === "Completed" ? "historial" : "ordenes";
+    const orderRef = doc(db, targetCollection, orderId);
     
     try {
       setDocumentNonBlocking(orderRef, workOrderData, { merge: true });
       toast({ 
         title: finalStatus === "Completed" ? "Orden Finalizada" : "Orden Guardada", 
         description: finalStatus === "Completed" 
-          ? "La orden se ha completado correctamente." 
+          ? "La orden se ha movido al historial correctamente." 
           : "La orden se guardó como pendiente por falta de firmas o RUT del receptor."
       });
       router.push("/dashboard");
@@ -221,6 +230,8 @@ export default function NewWorkOrder() {
       toast({ variant: "destructive", title: "Error", description: "No se pudo guardar la orden." });
     }
   };
+
+  const hasSavedSignature = techProfiles && techProfiles.length > 0 && !!techProfiles[0].signatureUrl;
 
   if (isUserLoading) return <div className="min-h-screen flex items-center justify-center font-black animate-pulse bg-background">CARGANDO...</div>;
 
@@ -435,7 +446,10 @@ export default function NewWorkOrder() {
           <div className="grid grid-cols-1 gap-6 pb-6">
             <Card className="shadow-md border-none bg-white overflow-hidden">
               <CardHeader className="border-b bg-muted/20 p-4">
-                <CardTitle className="text-sm font-bold">Validación Técnico ICSA</CardTitle>
+                <CardTitle className="text-sm font-bold flex items-center justify-between">
+                  Validación Técnico ICSA
+                  {hasSavedSignature && <Badge variant="secondary" className="bg-primary/10 text-primary border-none gap-1 font-bold text-[9px]"><UserCheck size={10} /> Firma cargada</Badge>}
+                </CardTitle>
               </CardHeader>
               <CardContent className="p-4 space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -474,7 +488,20 @@ export default function NewWorkOrder() {
                     </Button>
                   </div>
                 ) : (
-                  <SignaturePad label="Firma Técnico" onSave={(dataUrl) => setFormData({...formData, techSignatureUrl: dataUrl})} />
+                  <div className="space-y-4">
+                    <SignaturePad label="Firma Técnico" onSave={(dataUrl) => setFormData({...formData, techSignatureUrl: dataUrl})} />
+                    {!hasSavedSignature && formData.techSignatureUrl === "" && (
+                      <div className="flex items-center space-x-2 bg-accent/5 p-3 rounded-xl border border-accent/20">
+                        <Checkbox 
+                          id="saveSignature" 
+                          checked={saveSignatureToProfile} 
+                          onCheckedChange={(checked) => setSaveSignatureToProfile(checked === true)}
+                          className="border-accent data-[state=checked]:bg-accent"
+                        />
+                        <Label htmlFor="saveSignature" className="text-xs font-bold cursor-pointer text-primary">¿Guardar esta firma para futuras órdenes?</Label>
+                      </div>
+                    )}
+                  </div>
                 )}
               </CardContent>
             </Card>
