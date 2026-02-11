@@ -67,14 +67,16 @@ export default function NewWorkOrder() {
     status: "Pending"
   });
 
-  useEffect(() => {
-    // Nueva lógica de Folio: YYMM + 4 dígitos aleatorios
+  const generateFolio = () => {
     const now = new Date();
     const year = now.getFullYear().toString().slice(-2);
     const month = (now.getMonth() + 1).toString().padStart(2, '0');
     const random = Math.floor(1000 + Math.random() * 9000);
-    const generatedFolio = parseInt(`${year}${month}${random}`);
-    setFolio(generatedFolio);
+    return parseInt(`${year}${month}${random}`);
+  };
+
+  useEffect(() => {
+    setFolio(generateFolio());
   }, []);
 
   useEffect(() => {
@@ -165,11 +167,14 @@ export default function NewWorkOrder() {
                                 
     const finalStatus = isValidationComplete ? "Completed" : "Pending";
 
+    // Aseguramos que el folio no sea 0
+    const finalFolio = folio || generateFolio();
+
     const orderId = doc(collection(db, "ordenes")).id;
     const workOrderData = {
       ...formData,
       id: orderId,
-      folio: folio,
+      folio: finalFolio,
       status: finalStatus,
       technicianId: user.uid,
       technicianEmail: user.email,
@@ -206,7 +211,7 @@ export default function NewWorkOrder() {
                 <ArrowLeft className="h-6 w-6" />
               </Button>
             </Link>
-            <h1 className="font-bold text-lg md:text-xl text-primary truncate max-w-[180px] md:max-w-none">Nueva OT #{folio}</h1>
+            <h1 className="font-bold text-lg md:text-xl text-primary truncate max-w-[180px] md:max-w-none">Nueva OT #{folio || '...'}</h1>
           </div>
           <Button onClick={handleSubmit} disabled={loading} className="bg-primary hover:bg-primary/90 h-10 px-4 md:px-6 font-bold">
             <Save className="h-4 w-4 md:mr-2" /> <span className="hidden md:inline">Guardar</span>

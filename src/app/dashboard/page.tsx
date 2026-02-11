@@ -17,7 +17,7 @@ import {
   Plus, FileText, Search, LogOut, LayoutDashboard, 
   Eye, Download, Menu, TrendingUp, Users, UserRound, Shield,
   Pencil, Trash2, PieChart as PieChartIcon, BarChart as BarChartIcon,
-  Briefcase, Clock, Calendar as CalendarIcon, FilterX
+  Briefcase, Clock, Calendar as CalendarIcon, FilterX, Loader2
 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
@@ -79,11 +79,12 @@ export default function Dashboard() {
     }
   }, [user, isUserLoading, router]);
 
+  // Cambiado a ordenar por fecha de inicio para mayor robustez
   const ordersQuery = useMemoFirebase(() => {
     if (!db) return null;
-    return query(collection(db, "ordenes"), orderBy("folio", "desc"));
+    return query(collection(db, "ordenes"), orderBy("startDate", "desc"));
   }, [db]);
-  const { data: orders } = useCollection(ordersQuery);
+  const { data: orders, isLoading: isOrdersLoading } = useCollection(ordersQuery);
 
   const clientsQuery = useMemoFirebase(() => {
     if (!db) return null;
@@ -118,9 +119,11 @@ export default function Dashboard() {
         return isSameDay(new Date(o.startDate), date);
       }).length;
       
-      const dayName = format(date, 'eeee', { locale: es });
+      const dayNames = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"];
+      const dayIndex = (date.getDay() + 6) % 7; // Ajuste para que Lunes sea 0
+      
       return { 
-        day: dayName.charAt(0).toUpperCase() + dayName.slice(1), 
+        day: dayNames[dayIndex], 
         ordenes: count 
       };
     });
@@ -143,8 +146,11 @@ export default function Dashboard() {
   const filteredOrders = useMemo(() => {
     if (!orders) return [];
     return orders.filter(o => {
-      const matchesSearch = o.folio?.toString().includes(searchTerm) || 
-                            o.clientName?.toLowerCase().includes(searchTerm.toLowerCase());
+      const folioStr = o.folio?.toString() || "";
+      const clientStr = o.clientName?.toLowerCase() || "";
+      const term = searchTerm.toLowerCase();
+      
+      const matchesSearch = folioStr.includes(searchTerm) || clientStr.includes(term);
       const matchesStatus = statusFilter === "all" || o.status === statusFilter;
       let matchesDate = true;
       if (dateFilter && o.startDate) {
@@ -503,7 +509,16 @@ export default function Dashboard() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredOrders.length > 0 ? (
+                    {isOrdersLoading ? (
+                      <TableRow>
+                        <TableCell colSpan={5} className="h-32 text-center">
+                          <div className="flex flex-col items-center justify-center gap-2 text-muted-foreground">
+                            <Loader2 className="h-8 w-8 animate-spin" />
+                            <p className="font-bold uppercase tracking-widest text-[10px]">Cargando registros...</p>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ) : filteredOrders.length > 0 ? (
                       filteredOrders.map((order) => (
                         <TableRow key={order.id} className="hover:bg-muted/20 transition-colors border-b">
                           <TableCell className="font-black text-primary">#{order.folio}</TableCell>
