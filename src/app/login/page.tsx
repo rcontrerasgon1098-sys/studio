@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from "react";
@@ -11,8 +12,9 @@ import Image from "next/image";
 import { PlaceHolderImages } from "@/lib/placeholder-images";
 import { ArrowLeft, LogIn, Eye, EyeOff } from "lucide-react";
 import Link from "next/link";
-import { getAuth, signInWithEmailAndPassword } from "firebase/auth";
-import { doc, getFirestore, setDoc } from "firebase/firestore";
+import { signInWithEmailAndPassword } from "firebase/auth";
+import { doc, setDoc } from "firebase/firestore";
+import { useAuth, useFirestore } from "@/firebase";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -21,21 +23,19 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
+  const auth = useAuth();
+  const db = useFirestore();
   const logoImage = PlaceHolderImages.find(img => img.id === "icsa-logo");
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!auth || !db) return;
     setLoading(true);
-
-    const auth = getAuth();
-    const db = getFirestore();
 
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 
-      // Aseguramos que el perfil del usuario exista con los campos necesarios para las reglas
-      // Si es admin@icsa.com, forzamos el rol admin
       const isSystemAdmin = email === "admin@icsa.com";
       
       await setDoc(doc(db, "users", user.uid), {
@@ -115,7 +115,7 @@ export default function LoginPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password" suppressHydrationWarning className="text-xs font-bold ml-1 uppercase opacity-60">Contraseña</Label>
+              <Label htmlFor="password" global-hydration-warning className="text-xs font-bold ml-1 uppercase opacity-60">Contraseña</Label>
               <div className="relative">
                 <Input
                   id="password"

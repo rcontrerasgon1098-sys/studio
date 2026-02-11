@@ -24,9 +24,9 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { generateWorkOrderPDF } from "@/lib/pdf-generator";
 import { PlaceHolderImages } from "@/lib/placeholder-images";
-import { useUser, useFirestore, useCollection, useMemoFirebase } from "@/firebase";
+import { useFirebase, useCollection, useMemoFirebase } from "@/firebase";
 import { collection, query, orderBy, doc } from "firebase/firestore";
-import { getAuth, signOut } from "firebase/auth";
+import { signOut } from "firebase/auth";
 import { deleteDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 import { cn } from "@/lib/utils";
 import {
@@ -55,8 +55,7 @@ import {
 } from "recharts";
 
 export default function Dashboard() {
-  const { user, isUserLoading } = useUser();
-  const db = useFirestore();
+  const { user, isUserLoading, auth, firestore: db } = useFirebase();
   const router = useRouter();
   const { toast } = useToast();
   const logoImage = PlaceHolderImages.find(img => img.id === "icsa-logo");
@@ -66,9 +65,11 @@ export default function Dashboard() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [dateFilter, setDateFilter] = useState<Date | undefined>(undefined);
   const [deleteConfirm, setDeleteConfirm] = useState<{ id: string, type: 'clients' | 'personnel' | 'ordenes' } | null>(null);
+  const [mounted, setMounted] = useState(false);
   const [mountedDate, setMountedDate] = useState<Date | null>(null);
 
   useEffect(() => {
+    setMounted(true);
     setMountedDate(new Date());
   }, []);
 
@@ -108,8 +109,6 @@ export default function Dashboard() {
 
   const weeklyOrdersData = useMemo(() => {
     if (!orders || !mountedDate) return [];
-    
-    // Configurar el inicio de la semana el lunes (weekStartsOn: 1)
     const monday = startOfWeek(mountedDate, { weekStartsOn: 1 });
     const weekDays = Array.from({ length: 7 }, (_, i) => addDays(monday, i));
 
@@ -146,14 +145,11 @@ export default function Dashboard() {
     return orders.filter(o => {
       const matchesSearch = o.folio?.toString().includes(searchTerm) || 
                             o.clientName?.toLowerCase().includes(searchTerm.toLowerCase());
-      
       const matchesStatus = statusFilter === "all" || o.status === statusFilter;
-      
       let matchesDate = true;
       if (dateFilter && o.startDate) {
         matchesDate = isSameDay(new Date(o.startDate), dateFilter);
       }
-      
       return matchesSearch && matchesStatus && matchesDate;
     });
   }, [orders, searchTerm, statusFilter, dateFilter]);
@@ -175,7 +171,7 @@ export default function Dashboard() {
   }, [personnel, searchTerm]);
 
   const handleLogout = async () => {
-    const auth = getAuth();
+    if (!auth) return;
     await signOut(auth);
     router.push("/login");
   };
@@ -255,7 +251,7 @@ export default function Dashboard() {
     </div>
   );
 
-  if (isUserLoading) return <div className="min-h-screen flex items-center justify-center text-primary font-black animate-pulse bg-background uppercase tracking-tighter">Cargando Portal ICSA...</div>;
+  if (isUserLoading || !mounted) return <div className="min-h-screen flex items-center justify-center text-primary font-black animate-pulse bg-background uppercase tracking-tighter">Cargando Portal ICSA...</div>;
 
   return (
     <div className="min-h-screen bg-background flex flex-col md:flex-row">
@@ -354,7 +350,7 @@ export default function Dashboard() {
           </div>
         )}
 
-        {activeTab === "analytics" && (
+        {activeTab === "analytics" && mounted && (
           <div className="space-y-8 mb-8">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
               <Card className="shadow-xl border-none bg-white rounded-2xl">
