@@ -12,6 +12,7 @@ import Image from "next/image";
 import { generateWorkOrderPDF } from "@/lib/pdf-generator";
 import { useUser, useFirestore } from "@/firebase";
 import { doc, getDoc } from "firebase/firestore";
+import { cn } from "@/lib/utils";
 
 export default function WorkOrderView({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
