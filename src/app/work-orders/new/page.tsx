@@ -109,6 +109,7 @@ export default function NewWorkOrder() {
   const handleSelectClient = (client: any) => {
     const email = client.emailClientes || "";
     const phone = client.telefonoCliente || "";
+    // Combinar email y teléfono automáticamente en el campo de contacto
     const contactInfo = [email, phone].filter(Boolean).join(" / ");
 
     setFormData({
