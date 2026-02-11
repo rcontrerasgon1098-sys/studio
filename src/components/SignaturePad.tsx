@@ -1,9 +1,10 @@
+
 "use client";
 
-import React, { useRef, useEffect } from "react";
+import React, { useRef, useState } from "react";
 import SignatureCanvas from "react-signature-canvas";
 import { Button } from "@/components/ui/button";
-import { RotateCcw } from "lucide-react";
+import { RotateCcw, Check } from "lucide-react";
 
 interface SignaturePadProps {
   label: string;
@@ -12,25 +13,22 @@ interface SignaturePadProps {
 
 export function SignaturePad({ label, onSave }: SignaturePadProps) {
   const sigCanvas = useRef<SignatureCanvas>(null);
+  const [hasSignature, setHasSignature] = useState(false);
 
   const clear = () => {
     sigCanvas.current?.clear();
+    setHasSignature(false);
   };
 
-  const handleEnd = () => {
-    if (sigCanvas.current) {
+  const handleBegin = () => {
+    setHasSignature(true);
+  };
+
+  const handleConfirm = () => {
+    if (sigCanvas.current && !sigCanvas.current.isEmpty()) {
       onSave(sigCanvas.current.getTrimmedCanvas().toDataURL("image/png"));
     }
   };
-
-  // Adjust canvas size on mount/resize
-  useEffect(() => {
-    const handleResize = () => {
-      // Re-render handled by the component's internal sizing
-    };
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, []);
 
   return (
     <div className="space-y-3">
@@ -47,16 +45,29 @@ export function SignaturePad({ label, onSave }: SignaturePadProps) {
           Limpiar
         </Button>
       </div>
-      <div className="border-2 rounded-xl bg-background overflow-hidden touch-none border-dashed border-primary/20">
+      <div className="border-2 rounded-xl bg-background overflow-hidden touch-none border-dashed border-primary/20 shadow-inner">
         <SignatureCanvas
           ref={sigCanvas}
+          onBegin={handleBegin}
           canvasProps={{
             className: "w-full h-48",
           }}
-          onEnd={handleEnd}
         />
       </div>
-      <p className="text-[10px] text-center text-muted-foreground italic">Firme dentro del cuadro punteado</p>
+      <div className="flex flex-col gap-2">
+        <Button 
+          type="button"
+          disabled={!hasSignature}
+          onClick={handleConfirm}
+          className="w-full bg-accent text-primary font-black h-12 gap-2 shadow-md active:scale-95 transition-all"
+        >
+          <Check className="h-5 w-5" />
+          Confirmar Firma
+        </Button>
+        <p className="text-[10px] text-center text-muted-foreground italic">
+          Dibuje su firma completa y luego presione "Confirmar Firma"
+        </p>
+      </div>
     </div>
   );
 }
