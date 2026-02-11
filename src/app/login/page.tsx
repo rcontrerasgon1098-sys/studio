@@ -115,7 +115,7 @@ export default function LoginPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password" global-hydration-warning className="text-xs font-bold ml-1 uppercase opacity-60">Contraseña</Label>
+              <Label htmlFor="password" className="text-xs font-bold ml-1 uppercase opacity-60">Contraseña</Label>
               <div className="relative">
                 <Input
                   id="password"
