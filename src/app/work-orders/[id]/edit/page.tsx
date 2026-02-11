@@ -20,6 +20,16 @@ import { useUser, useFirestore, useDoc, useMemoFirebase, useCollection } from "@
 import { doc, collection, query, where } from "firebase/firestore";
 import { updateDocumentNonBlocking, setDocumentNonBlocking, deleteDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 import { validateRut } from "@/lib/rut-utils";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 export default function EditWorkOrder({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -44,7 +54,8 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
 
   const [loading, setLoading] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
-  const [saveSignatureToProfile, setSaveSignatureToProfile] = useState(false);
+  const [showSaveSignatureDialog, setShowSaveSignatureDialog] = useState(false);
+  const [tempSignature, setTempSignature] = useState("");
   
   const [formData, setFormData] = useState({
     clientName: "",
@@ -154,6 +165,30 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
+  const handleTechSignatureConfirm = (dataUrl: string) => {
+    const hasSavedSignature = techProfiles && techProfiles.length > 0 && !!techProfiles[0].signatureUrl;
+    
+    if (!hasSavedSignature) {
+      setTempSignature(dataUrl);
+      setShowSaveSignatureDialog(true);
+    } else {
+      setFormData({...formData, techSignatureUrl: dataUrl});
+    }
+  };
+
+  const saveSignatureToProfile = () => {
+    if (db && techProfiles && techProfiles.length > 0) {
+      const techRef = doc(db, "personnel", techProfiles[0].id);
+      updateDocumentNonBlocking(techRef, { signatureUrl: tempSignature });
+      toast({
+        title: "Firma Guardada",
+        description: "Su firma se cargará automáticamente en el futuro."
+      });
+    }
+    setFormData({...formData, techSignatureUrl: tempSignature});
+    setShowSaveSignatureDialog(false);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user || !db || !id) return;
@@ -172,12 +207,6 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
       return;
     }
 
-    // Guardar firma en el perfil si se solicitó
-    if (saveSignatureToProfile && formData.techSignatureUrl && techProfiles && techProfiles.length > 0) {
-      const techRef = doc(db, "personnel", techProfiles[0].id);
-      updateDocumentNonBlocking(techRef, { signatureUrl: formData.techSignatureUrl });
-    }
-
     const isValidationComplete = !!formData.techSignatureUrl && 
                                 !!formData.clientSignatureUrl && 
                                 !!formData.clientReceiverRut;
@@ -192,7 +221,6 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
     };
 
     if (finalStatus === "Completed") {
-      // Mover al historial
       const historyRef = doc(db, "historial", id);
       const originalRef = doc(db, "ordenes", id);
       try {
@@ -205,7 +233,6 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
         toast({ variant: "destructive", title: "Error", description: "No se pudo finalizar la orden." });
       }
     } else {
-      // Solo actualizar orden actual
       const docRef = doc(db, "ordenes", id);
       try {
         updateDocumentNonBlocking(docRef, updateData);
@@ -440,18 +467,7 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
                   </div>
                 ) : (
                   <div className="space-y-4">
-                    <SignaturePad label="Actualizar Firma Técnico" onSave={(dataUrl) => setFormData({...formData, techSignatureUrl: dataUrl})} />
-                    {!hasSavedSignature && formData.techSignatureUrl === "" && (
-                      <div className="flex items-center space-x-2 bg-accent/5 p-3 rounded-xl border border-accent/20">
-                        <Checkbox 
-                          id="saveSignature" 
-                          checked={saveSignatureToProfile} 
-                          onCheckedChange={(checked) => setSaveSignatureToProfile(checked === true)}
-                          className="border-accent data-[state=checked]:bg-accent"
-                        />
-                        <Label htmlFor="saveSignature" className="text-xs font-bold cursor-pointer text-primary">¿Recordar esta firma para futuras órdenes?</Label>
-                      </div>
-                    )}
+                    <SignaturePad label="Actualizar Firma Técnico" onSave={handleTechSignatureConfirm} />
                   </div>
                 )}
               </CardContent>
@@ -516,6 +532,28 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
           </div>
         </form>
       </main>
+
+      <AlertDialog open={showSaveSignatureDialog} onOpenChange={setShowSaveSignatureDialog}>
+        <AlertDialogContent className="rounded-2xl max-w-[400px]">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-primary font-black uppercase tracking-tighter">Guardar Firma</AlertDialogTitle>
+            <AlertDialogDescription>
+              ¿Desea guardar esta firma para que se cargue automáticamente en sus futuras órdenes de trabajo?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="gap-2 sm:gap-2 pt-4">
+            <AlertDialogCancel className="h-12 font-bold" onClick={() => {
+              setFormData({...formData, techSignatureUrl: tempSignature});
+              setShowSaveSignatureDialog(false);
+            }}>
+              Solo esta vez
+            </AlertDialogCancel>
+            <AlertDialogAction className="h-12 bg-primary font-black" onClick={saveSignatureToProfile}>
+              Sí, guardar firma
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
