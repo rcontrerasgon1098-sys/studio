@@ -20,6 +20,7 @@ import { collection, doc, query, orderBy, where } from "firebase/firestore";
 import { setDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { validateRut } from "@/lib/rut-utils";
 
 export default function NewWorkOrder() {
   const router = useRouter();
@@ -156,6 +157,28 @@ export default function NewWorkOrder() {
         variant: "destructive", 
         title: "Cliente Requerido", 
         description: "Por favor ingrese o seleccione un cliente." 
+      });
+      setLoading(false);
+      return;
+    }
+
+    // Validar RUT del técnico si está presente
+    if (formData.techRut && !validateRut(formData.techRut)) {
+      toast({ 
+        variant: "destructive", 
+        title: "RUT Técnico Inválido", 
+        description: "El RUT del técnico no es correcto." 
+      });
+      setLoading(false);
+      return;
+    }
+
+    // Validar RUT del receptor si está presente
+    if (formData.clientReceiverRut && !validateRut(formData.clientReceiverRut)) {
+      toast({ 
+        variant: "destructive", 
+        title: "RUT Receptor Inválido", 
+        description: "El RUT de quien recibe no es correcto." 
       });
       setLoading(false);
       return;

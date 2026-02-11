@@ -16,6 +16,7 @@ import { useUser, useFirestore, useDoc, useMemoFirebase } from "@/firebase";
 import { doc } from "firebase/firestore";
 import { updateDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 import { SignaturePad } from "@/components/SignaturePad";
+import { validateRut } from "@/lib/rut-utils";
 
 export default function EditTechnician({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
@@ -70,6 +71,16 @@ export default function EditTechnician({ params }: { params: Promise<{ id: strin
         variant: "destructive", 
         title: "Campos Requeridos", 
         description: "Nombre, RUT, Email y Rol son obligatorios." 
+      });
+      setLoading(false);
+      return;
+    }
+
+    if (!validateRut(formData.rut_t)) {
+      toast({ 
+        variant: "destructive", 
+        title: "RUT Inválido", 
+        description: "El RUT ingresado no es válido." 
       });
       setLoading(false);
       return;

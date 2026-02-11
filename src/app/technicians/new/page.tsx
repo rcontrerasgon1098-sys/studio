@@ -14,6 +14,7 @@ import Link from "next/link";
 import { useUser, useFirestore } from "@/firebase";
 import { collection, doc } from "firebase/firestore";
 import { setDocumentNonBlocking } from "@/firebase/non-blocking-updates";
+import { validateRut } from "@/lib/rut-utils";
 
 export default function NewTechnician() {
   const router = useRouter();
@@ -49,6 +50,16 @@ export default function NewTechnician() {
         variant: "destructive", 
         title: "Campos Requeridos", 
         description: "Nombre, RUT, Email y Rol son obligatorios." 
+      });
+      setLoading(false);
+      return;
+    }
+
+    if (!validateRut(formData.rut_t)) {
+      toast({ 
+        variant: "destructive", 
+        title: "RUT Inválido", 
+        description: "El RUT del técnico no es válido." 
       });
       setLoading(false);
       return;

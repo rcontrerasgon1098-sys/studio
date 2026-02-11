@@ -19,6 +19,7 @@ import Image from "next/image";
 import { useUser, useFirestore, useDoc, useMemoFirebase, useCollection } from "@/firebase";
 import { doc, collection, query, where } from "firebase/firestore";
 import { updateDocumentNonBlocking } from "@/firebase/non-blocking-updates";
+import { validateRut } from "@/lib/rut-utils";
 
 export default function EditWorkOrder({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -157,6 +158,28 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
     if (!user || !db || !id) return;
     
     setLoading(true);
+
+    // Validar RUT del técnico si está presente
+    if (formData.techRut && !validateRut(formData.techRut)) {
+      toast({ 
+        variant: "destructive", 
+        title: "RUT Técnico Inválido", 
+        description: "El RUT del técnico no es correcto." 
+      });
+      setLoading(false);
+      return;
+    }
+
+    // Validar RUT del receptor si está presente
+    if (formData.clientReceiverRut && !validateRut(formData.clientReceiverRut)) {
+      toast({ 
+        variant: "destructive", 
+        title: "RUT Receptor Inválido", 
+        description: "El RUT de quien recibe no es correcto." 
+      });
+      setLoading(false);
+      return;
+    }
 
     const isValidationComplete = !!formData.techSignatureUrl && 
                                 !!formData.clientSignatureUrl && 

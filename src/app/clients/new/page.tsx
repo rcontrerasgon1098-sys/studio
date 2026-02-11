@@ -14,6 +14,7 @@ import Link from "next/link";
 import { useUser, useFirestore } from "@/firebase";
 import { collection, doc } from "firebase/firestore";
 import { setDocumentNonBlocking } from "@/firebase/non-blocking-updates";
+import { validateRut } from "@/lib/rut-utils";
 
 export default function NewClient() {
   const router = useRouter();
@@ -52,6 +53,16 @@ export default function NewClient() {
         variant: "destructive", 
         title: "Campos Requeridos", 
         description: "Nombre y RUT son obligatorios." 
+      });
+      setLoading(false);
+      return;
+    }
+
+    if (!validateRut(formData.rutCliente)) {
+      toast({ 
+        variant: "destructive", 
+        title: "RUT Inválido", 
+        description: "El RUT ingresado no es válido según el dígito verificador." 
       });
       setLoading(false);
       return;
