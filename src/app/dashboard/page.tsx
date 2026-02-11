@@ -17,7 +17,7 @@ import {
   Plus, FileText, Search, LogOut, LayoutDashboard, 
   Eye, Download, Menu, TrendingUp, Users, UserRound, Shield,
   Pencil, Trash2, PieChart as PieChartIcon, BarChart as BarChartIcon,
-  Briefcase, Clock, Calendar as CalendarIcon, FilterX, Loader2, RefreshCw
+  Briefcase, Clock, Calendar as CalendarIcon, FilterX, Loader2, RefreshCw, History
 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
@@ -40,19 +40,6 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
-import { 
-  BarChart, 
-  Bar, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip as RechartsTooltip, 
-  ResponsiveContainer, 
-  PieChart, 
-  Pie, 
-  Cell,
-  Legend
-} from "recharts";
 
 export default function Dashboard() {
   const { user, isUserLoading, auth, firestore: db } = useFirebase();
@@ -64,15 +51,11 @@ export default function Dashboard() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [dateFilter, setDateFilter] = useState<Date | undefined>(undefined);
-  const [deleteConfirm, setDeleteConfirm] = useState<{ id: string, type: 'clients' | 'personnel' | 'ordenes' } | null>(null);
-  const [purgeConfirm, setPurgeConfirm] = useState(false);
-  const [isPurging, setIsPurging] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState<{ id: string, type: 'clients' | 'personnel' | 'ordenes' | 'historial' } | null>(null);
   const [mounted, setMounted] = useState(false);
-  const [mountedDate, setMountedDate] = useState<Date | null>(null);
 
   useEffect(() => {
     setMounted(true);
-    setMountedDate(new Date());
   }, []);
 
   useEffect(() => {
@@ -86,6 +69,12 @@ export default function Dashboard() {
     return query(collection(db, "ordenes"), orderBy("startDate", "desc"));
   }, [db]);
   const { data: orders, isLoading: isOrdersLoading } = useCollection(ordersQuery);
+
+  const historyQuery = useMemoFirebase(() => {
+    if (!db) return null;
+    return query(collection(db, "historial"), orderBy("startDate", "desc"));
+  }, [db]);
+  const { data: history, isLoading: isHistoryLoading } = useCollection(historyQuery);
 
   const clientsQuery = useMemoFirebase(() => {
     if (!db) return null;
@@ -101,58 +90,12 @@ export default function Dashboard() {
 
   const isAdmin = user?.email === "admin@icsa.com";
 
-  const orderStatsData = useMemo(() => {
-    if (!orders) return [];
-    const completed = orders.filter(o => o.status === "Completed").length;
-    const pending = orders.filter(o => o.status !== "Completed").length;
-    return [
-      { name: "Completadas", value: completed, color: "hsl(var(--accent))" },
-      { name: "Pendientes", value: pending, color: "hsl(var(--primary))" },
-    ];
-  }, [orders]);
-
-  const weeklyOrdersData = useMemo(() => {
-    if (!orders || !mountedDate) return [];
-    const startOfCurrentWeek = startOfWeek(mountedDate, { weekStartsOn: 1 });
-    const weekDays = Array.from({ length: 7 }, (_, i) => addDays(startOfCurrentWeek, i));
-
-    return weekDays.map(date => {
-      const count = orders.filter(o => {
-        if (!o.startDate) return false;
-        return isSameDay(new Date(o.startDate), date);
-      }).length;
-      
-      const dayNames = ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"];
-      const dayIndex = (date.getDay() + 6) % 7; 
-      
-      return { 
-        day: dayNames[dayIndex], 
-        ordenes: count 
-      };
-    });
-  }, [orders, mountedDate]);
-
-  const clientOrdersData = useMemo(() => {
-    if (!orders) return [];
-    const counts: Record<string, number> = {};
-    orders.forEach(o => {
-      const name = o.clientName || "Sin Nombre";
-      counts[name] = (counts[name] || 0) + 1;
-    });
-    
-    return Object.entries(counts)
-      .map(([name, count]) => ({ name, ordenes: count }))
-      .sort((a, b) => b.ordenes - a.ordenes)
-      .slice(0, 5);
-  }, [orders]);
-
   const filteredOrders = useMemo(() => {
     if (!orders) return [];
     return orders.filter(o => {
       const folioStr = o.folio?.toString() || "";
       const clientStr = o.clientName?.toLowerCase() || "";
       const term = searchTerm.toLowerCase();
-      
       const matchesSearch = folioStr.includes(searchTerm) || clientStr.includes(term);
       const matchesStatus = statusFilter === "all" || o.status === statusFilter;
       let matchesDate = true;
@@ -162,6 +105,21 @@ export default function Dashboard() {
       return matchesSearch && matchesStatus && matchesDate;
     });
   }, [orders, searchTerm, statusFilter, dateFilter]);
+
+  const filteredHistory = useMemo(() => {
+    if (!history) return [];
+    return history.filter(o => {
+      const folioStr = o.folio?.toString() || "";
+      const clientStr = o.clientName?.toLowerCase() || "";
+      const term = searchTerm.toLowerCase();
+      const matchesSearch = folioStr.includes(searchTerm) || clientStr.includes(term);
+      let matchesDate = true;
+      if (dateFilter && o.startDate) {
+        matchesDate = isSameDay(new Date(o.startDate), dateFilter);
+      }
+      return matchesSearch && matchesDate;
+    });
+  }, [history, searchTerm, dateFilter]);
 
   const filteredClients = useMemo(() => {
     if (!clients) return [];
@@ -189,35 +147,8 @@ export default function Dashboard() {
     if (!deleteConfirm || !db) return;
     const docRef = doc(db, deleteConfirm.type, deleteConfirm.id);
     deleteDocumentNonBlocking(docRef);
-    toast({
-      title: "Registro eliminado",
-      description: "El elemento ha sido removido del sistema."
-    });
+    toast({ title: "Registro eliminado", description: "El elemento ha sido removido del sistema." });
     setDeleteConfirm(null);
-  };
-
-  const handlePurgeOrders = async () => {
-    if (!orders || !db || !isAdmin) return;
-    setIsPurging(true);
-    try {
-      orders.forEach(order => {
-        const orderRef = doc(db, "ordenes", order.id);
-        deleteDocumentNonBlocking(orderRef);
-      });
-      toast({
-        title: "Base de datos limpia",
-        description: "Se han eliminado todas las órdenes previas con éxito."
-      });
-      setPurgeConfirm(false);
-    } catch (error) {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "No se pudieron eliminar todos los registros."
-      });
-    } finally {
-      setIsPurging(false);
-    }
   };
 
   const clearFilters = () => {
@@ -242,50 +173,41 @@ export default function Dashboard() {
       <nav className="flex-1 space-y-2 px-4">
         <Button 
           variant={activeTab === "dashboard" ? "secondary" : "ghost"} 
-          className={cn("w-full justify-start gap-3 h-12 font-semibold", activeTab === "dashboard" ? "bg-white/10 text-white border-none" : "text-white/80 hover:bg-white/10")}
+          className={cn("w-full justify-start gap-3 h-12 font-semibold", activeTab === "dashboard" ? "bg-white/10 text-white" : "text-white/80 hover:bg-white/10")}
           onClick={() => { setActiveTab("dashboard"); clearFilters(); }}
         >
           <LayoutDashboard size={20} /> Inicio
         </Button>
         <Button 
           variant={activeTab === "orders" ? "secondary" : "ghost"} 
-          className={cn("w-full justify-start gap-3 h-12 font-semibold", activeTab === "orders" ? "bg-white/10 text-white border-none" : "text-white/80 hover:bg-white/10")}
+          className={cn("w-full justify-start gap-3 h-12 font-semibold", activeTab === "orders" ? "bg-white/10 text-white" : "text-white/80 hover:bg-white/10")}
           onClick={() => { setActiveTab("orders"); clearFilters(); }}
         >
-          <FileText size={20} /> Órdenes
+          <FileText size={20} /> Órdenes Activas
         </Button>
         <Button 
-          variant={activeTab === "analytics" ? "secondary" : "ghost"} 
-          className={cn("w-full justify-start gap-3 h-12 font-semibold", activeTab === "analytics" ? "bg-white/10 text-white border-none" : "text-white/80 hover:bg-white/10")}
-          onClick={() => { setActiveTab("analytics"); clearFilters(); }}
+          variant={activeTab === "history" ? "secondary" : "ghost"} 
+          className={cn("w-full justify-start gap-3 h-12 font-semibold", activeTab === "history" ? "bg-white/10 text-white" : "text-white/80 hover:bg-white/10")}
+          onClick={() => { setActiveTab("history"); clearFilters(); }}
         >
-          <PieChartIcon size={20} /> Reportes
+          <History size={20} /> Historial
         </Button>
         <Button 
           variant={activeTab === "clients" ? "secondary" : "ghost"} 
-          className={cn("w-full justify-start gap-3 h-12 font-semibold", activeTab === "clients" ? "bg-white/10 text-white border-none" : "text-white/80 hover:bg-white/10")}
+          className={cn("w-full justify-start gap-3 h-12 font-semibold", activeTab === "clients" ? "bg-white/10 text-white" : "text-white/80 hover:bg-white/10")}
           onClick={() => { setActiveTab("clients"); clearFilters(); }}
         >
           <Users size={20} /> Clientes
         </Button>
         <Button 
           variant={activeTab === "personnel" ? "secondary" : "ghost"} 
-          className={cn("w-full justify-start gap-3 h-12 font-semibold", activeTab === "personnel" ? "bg-white/10 text-white border-none" : "text-white/80 hover:bg-white/10")}
+          className={cn("w-full justify-start gap-3 h-12 font-semibold", activeTab === "personnel" ? "bg-white/10 text-white" : "text-white/80 hover:bg-white/10")}
           onClick={() => { setActiveTab("personnel"); clearFilters(); }}
         >
           <UserRound size={20} /> Personal
         </Button>
       </nav>
-      <div className="px-4 mt-auto space-y-2">
-        {isAdmin && (
-          <Button 
-            variant="ghost" 
-            className="w-full justify-start gap-3 hover:bg-destructive/20 text-white/50 hover:text-white h-12"
-            onClick={() => setPurgeConfirm(true)}
-          >
-            <RefreshCw size={20} /> Resetear OTs
-          </Button>
-        )}
+      <div className="px-4 mt-auto">
         <Button onClick={handleLogout} variant="ghost" className="w-full justify-start gap-3 hover:bg-white/20 text-white/70 hover:text-white h-12">
           <LogOut size={20} /> Salir
         </Button>
@@ -293,7 +215,7 @@ export default function Dashboard() {
     </div>
   );
 
-  if (isUserLoading || !mounted) return <div className="min-h-screen flex items-center justify-center text-primary font-black animate-pulse bg-background uppercase tracking-tighter">Cargando Portal ICSA...</div>;
+  if (isUserLoading || !mounted) return <div className="min-h-screen flex items-center justify-center text-primary font-black animate-pulse bg-background">CARGANDO...</div>;
 
   return (
     <div className="min-h-screen bg-background flex flex-col md:flex-row">
@@ -305,497 +227,272 @@ export default function Dashboard() {
         <div className="flex items-center gap-3">
           <Sheet>
             <SheetTrigger asChild>
-              <Button variant="ghost" size="icon" className="text-white hover:bg-white/10">
+              <Button variant="ghost" size="icon" className="text-white">
                 <Menu size={24} />
               </Button>
             </SheetTrigger>
             <SheetContent side="left" className="bg-primary p-0 border-none w-72">
-              <SheetHeader className="sr-only">
-                <SheetTitle>Menú Lateral</SheetTitle>
-                <SheetDescription>Navegación principal de la app</SheetDescription>
-              </SheetHeader>
               <SidebarContent />
             </SheetContent>
           </Sheet>
-          <div className="flex flex-col">
-            <span className="font-black text-xl text-white leading-none">ICSA</span>
-            <span className="text-[7px] text-white/70 uppercase tracking-widest">ingeniería comunicaciones S.A.</span>
-          </div>
+          <span className="font-black text-xl text-white">ICSA</span>
         </div>
       </header>
 
-      <main className="flex-1 p-4 md:p-10 overflow-y-auto pb-24 md:pb-10">
+      <main className="flex-1 p-4 md:p-10 overflow-y-auto">
         <header className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
           <div>
-            <h1 className="text-3xl font-black text-primary tracking-tight">
-              {activeTab === "clients" ? `Gestión de Clientes (${clients?.length || 0})` : 
-               activeTab === "personnel" ? `Gestión de Personal (${personnel?.length || 0})` : 
-               activeTab === "orders" ? "Historial de Órdenes" : 
-               activeTab === "analytics" ? "Estadísticas y Reportes" : "Portal de Gestión"}
+            <h1 className="text-3xl font-black text-primary tracking-tight uppercase">
+              {activeTab === "dashboard" ? "Inicio - Pendientes" : 
+               activeTab === "orders" ? "Gestión de Órdenes" : 
+               activeTab === "history" ? "Historial de Trabajo" : 
+               activeTab === "clients" ? "Clientes" : "Personal"}
             </h1>
-            <p className="text-muted-foreground font-medium uppercase text-[10px] tracking-widest">Panel Operativo de ICSA</p>
           </div>
-          <div className="flex gap-2">
-            {activeTab === "clients" && (
-              <Link href="/clients/new">
-                <Button className="bg-accent text-primary font-black hover:bg-accent/90 gap-3 h-14 px-8 text-lg shadow-xl rounded-xl">
-                  <Plus size={24} /> Nuevo Cliente
-                </Button>
-              </Link>
-            )}
-            {activeTab === "personnel" && (
-              <Link href="/technicians/new">
-                <Button className="bg-accent text-primary font-black hover:bg-accent/90 gap-3 h-14 px-8 text-lg shadow-xl rounded-xl">
-                  <Plus size={24} /> Nuevo Personal
-                </Button>
-              </Link>
-            )}
-            {(activeTab === "dashboard" || activeTab === "orders") && (
-              <Link href="/work-orders/new">
-                <Button className="bg-accent text-primary font-black hover:bg-accent/90 gap-3 h-14 px-8 text-lg shadow-xl rounded-xl">
-                  <Plus size={24} /> Nueva Orden
-                </Button>
-              </Link>
-            )}
-          </div>
+          {(activeTab === "dashboard" || activeTab === "orders") && (
+            <Link href="/work-orders/new">
+              <Button className="bg-accent text-primary font-black h-12 px-6 shadow-lg rounded-xl">
+                <Plus size={20} className="mr-2" /> Nueva Orden
+              </Button>
+            </Link>
+          )}
         </header>
 
+        {/* Dashboard / Pendientes View */}
         {activeTab === "dashboard" && (
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-8">
-            <Card className="shadow-md border-none bg-white rounded-2xl overflow-hidden">
-              <CardHeader className="pb-2 p-6 flex flex-row items-center justify-between bg-primary/5">
-                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Total Órdenes</p>
-                <FileText className="h-4 w-4 text-primary opacity-30" />
-              </CardHeader>
-              <CardContent className="p-6 pt-4">
-                <p className="text-4xl font-black text-primary">{orders?.length || 0}</p>
-              </CardContent>
-            </Card>
-            <Card className="shadow-md border-none bg-white rounded-2xl overflow-hidden">
-              <CardHeader className="pb-2 p-6 flex flex-row items-center justify-between bg-destructive/5">
-                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Pendientes</p>
-                <Clock className="h-4 w-4 text-destructive opacity-30" />
-              </CardHeader>
-              <CardContent className="p-6 pt-4">
-                <p className="text-4xl font-black text-destructive">
-                  {orders?.filter(o => o.status === "Pending" || o.status !== "Completed").length || 0}
-                </p>
-              </CardContent>
-            </Card>
-            <Card className="shadow-md border-none bg-white rounded-2xl overflow-hidden">
-              <CardHeader className="pb-2 p-6 flex flex-row items-center justify-between bg-accent/5">
-                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Completadas</p>
-                <TrendingUp className="h-4 w-4 text-accent opacity-30" />
-              </CardHeader>
-              <CardContent className="p-6 pt-4">
-                <p className="text-4xl font-black text-accent">
-                  {orders?.filter(o => o.status === "Completed").length || 0}
-                </p>
-              </CardContent>
-            </Card>
-          </div>
-        )}
-
-        {activeTab === "analytics" && mounted && (
-          <div className="space-y-8 mb-8">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-              <Card className="shadow-xl border-none bg-white rounded-2xl">
-                <CardHeader className="border-b pb-4 mb-4 flex flex-row items-center gap-2">
-                  <PieChartIcon className="h-5 w-5 text-primary" />
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <Card className="bg-white border-none shadow-md">
+                <CardContent className="p-6 flex items-center justify-between">
                   <div>
-                    <CardTitle className="text-lg font-bold text-primary">Estado de Órdenes</CardTitle>
-                    <CardDescription>Distribución de cumplimiento</CardDescription>
+                    <p className="text-xs font-bold text-muted-foreground uppercase">Órdenes Pendientes</p>
+                    <p className="text-3xl font-black text-primary">{orders?.filter(o => o.status === "Pending").length || 0}</p>
                   </div>
-                </CardHeader>
-                <CardContent className="h-[350px] flex items-center justify-center">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={orderStatsData}
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={80}
-                        outerRadius={110}
-                        paddingAngle={5}
-                        dataKey="value"
-                      >
-                        {orderStatsData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.color} />
-                        ))}
-                      </Pie>
-                      <RechartsTooltip />
-                      <Legend verticalAlign="bottom" height={36}/>
-                    </PieChart>
-                  </ResponsiveContainer>
+                  <Clock className="h-8 w-8 text-primary opacity-20" />
                 </CardContent>
               </Card>
-
-              <Card className="shadow-xl border-none bg-white rounded-2xl">
-                <CardHeader className="border-b pb-4 mb-4 flex flex-row items-center gap-2">
-                  <BarChartIcon className="h-5 w-5 text-primary" />
+              <Card className="bg-white border-none shadow-md">
+                <CardContent className="p-6 flex items-center justify-between">
                   <div>
-                    <CardTitle className="text-lg font-bold text-primary">Servicios por Cliente</CardTitle>
-                    <CardDescription>Top clientes con más solicitudes</CardDescription>
+                    <p className="text-xs font-bold text-muted-foreground uppercase">Historial (Total)</p>
+                    <p className="text-3xl font-black text-accent">{history?.length || 0}</p>
                   </div>
-                </CardHeader>
-                <CardContent className="h-[350px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={clientOrdersData} layout="vertical">
-                      <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} opacity={0.1} />
-                      <XAxis type="number" hide />
-                      <YAxis dataKey="name" type="category" axisLine={false} tickLine={false} width={120} style={{ fontSize: '10px', fontWeight: 'bold' }} />
-                      <RechartsTooltip cursor={{fill: 'transparent'}} />
-                      <Bar dataKey="ordenes" fill="hsl(var(--primary))" radius={[0, 4, 4, 0]} barSize={30} />
-                    </BarChart>
-                  </ResponsiveContainer>
+                  <History className="h-8 w-8 text-accent opacity-20" />
                 </CardContent>
               </Card>
             </div>
-
+            
             <Card className="shadow-xl border-none bg-white rounded-2xl">
-              <CardHeader className="border-b pb-4 mb-4 flex flex-row items-center gap-2">
-                <TrendingUp className="h-5 w-5 text-accent" />
-                <div>
-                  <CardTitle className="text-lg font-bold text-primary">Actividad Semanal</CardTitle>
-                  <CardDescription>Carga de trabajo por día (Semana actual)</CardDescription>
-                </div>
+              <CardHeader className="border-b">
+                <CardTitle className="text-lg font-bold">Listado de Pendientes</CardTitle>
               </CardHeader>
-              <CardContent className="h-[300px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={weeklyOrdersData}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.1} />
-                    <XAxis dataKey="day" axisLine={false} tickLine={false} style={{ fontSize: '11px', fontWeight: 'bold' }} />
-                    <YAxis axisLine={false} tickLine={false} />
-                    <RechartsTooltip cursor={{fill: 'transparent'}} />
-                    <Bar dataKey="ordenes" fill="hsl(var(--accent))" radius={[4, 4, 0, 0]} barSize={50} />
-                  </BarChart>
-                </ResponsiveContainer>
+              <CardContent className="p-0">
+                <OrderTable orders={orders?.filter(o => o.status === "Pending") || []} isLoading={isOrdersLoading} type="ordenes" setDeleteConfirm={setDeleteConfirm} />
               </CardContent>
             </Card>
           </div>
         )}
 
-        {(activeTab === "dashboard" || activeTab === "orders") && (
-          <Card className="shadow-xl border-none bg-white mb-8 rounded-2xl">
-            <CardHeader className="flex flex-col items-stretch border-b pb-6 mb-4 gap-4 px-4 md:px-8">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-xl font-bold text-primary">Listado de Órdenes</CardTitle>
-                <Button variant="ghost" size="sm" onClick={clearFilters} className="text-muted-foreground hover:text-primary gap-2 h-8 uppercase font-bold text-[10px]">
-                  <FilterX className="h-4 w-4" /> Limpiar Filtros
-                </Button>
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-3">
-                <div className="relative col-span-1 md:col-span-1">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
-                  <Input 
-                    placeholder="Folio o cliente..." 
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10 h-12 bg-background border-none rounded-xl w-full text-sm font-medium"
-                  />
-                </div>
-                
-                <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger className="h-12 bg-background border-none rounded-xl font-medium">
-                    <SelectValue placeholder="Estado" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todos los estados</SelectItem>
-                    <SelectItem value="Pending">Pendientes</SelectItem>
-                    <SelectItem value="Completed">Completadas</SelectItem>
-                  </SelectContent>
-                </Select>
-
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className={cn(
-                        "h-12 justify-start text-left font-medium bg-background border-none rounded-xl",
-                        !dateFilter && "text-muted-foreground"
-                      )}
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {dateFilter ? format(dateFilter, "PPP", { locale: es }) : "Filtrar por fecha"}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="end">
-                    <h3 className="sr-only">Calendario</h3>
-                    <Calendar
-                      mode="single"
-                      selected={dateFilter}
-                      onSelect={setDateFilter}
-                      initialFocus
-                    />
-                  </PopoverContent>
-                </Popover>
-              </div>
-            </CardHeader>
-            <CardContent className="px-4 md:px-8 pb-8">
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="bg-muted/40 border-none">
-                      <TableHead className="font-bold py-4 uppercase text-[10px]">Folio</TableHead>
-                      <TableHead className="font-bold py-4 uppercase text-[10px]">Cliente</TableHead>
-                      <TableHead className="font-bold py-4 uppercase text-[10px]">Fecha</TableHead>
-                      <TableHead className="font-bold py-4 uppercase text-[10px]">Estado</TableHead>
-                      <TableHead className="text-right font-bold py-4 uppercase text-[10px]">Acciones</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {isOrdersLoading ? (
-                      <TableRow>
-                        <TableCell colSpan={5} className="h-32 text-center">
-                          <div className="flex flex-col items-center justify-center gap-2 text-muted-foreground">
-                            <Loader2 className="h-8 w-8 animate-spin" />
-                            <p className="font-bold uppercase tracking-widest text-[10px]">Cargando registros...</p>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ) : filteredOrders.length > 0 ? (
-                      filteredOrders.map((order) => (
-                        <TableRow key={order.id} className="hover:bg-muted/20 transition-colors border-b">
-                          <TableCell className="font-black text-primary">#{order.folio}</TableCell>
-                          <TableCell className="font-bold">{order.clientName}</TableCell>
-                          <TableCell className="text-xs text-muted-foreground font-medium">
-                            {order.startDate ? format(new Date(order.startDate), "dd/MM/yyyy") : "N/A"}
-                          </TableCell>
-                          <TableCell>
-                            <Badge className={cn("border-none text-[10px] px-2 py-0.5 uppercase font-bold", order.status === 'Completed' ? 'bg-accent/15 text-primary' : 'bg-primary/10 text-primary')}>
-                              {order.status === 'Completed' ? 'Completado' : 'Pendiente'}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <div className="flex justify-end gap-2">
-                              <Link href={`/work-orders/${order.id}`}>
-                                <Button variant="ghost" size="icon" className="h-10 w-10" title="Ver detalle">
-                                  <Eye className="h-5 w-5" />
-                                </Button>
-                              </Link>
-                              {order.status === "Pending" && (
-                                <Link href={`/work-orders/${order.id}/edit`}>
-                                  <Button variant="ghost" size="icon" className="h-10 w-10 text-primary" title="Editar / Firmar">
-                                    <Pencil className="h-5 w-5" />
-                                  </Button>
-                                </Link>
-                              )}
-                              <Button variant="ghost" size="icon" className="h-10 w-10" onClick={() => generateWorkOrderPDF(order)} title="Descargar PDF">
-                                <Download className="h-5 w-5" />
-                              </Button>
-                              <Button 
-                                variant="ghost" 
-                                size="icon" 
-                                className="h-10 w-10 text-destructive" 
-                                title="Eliminar"
-                                onClick={() => setDeleteConfirm({ id: order.id, type: 'ordenes' })}
-                              >
-                                <Trash2 className="h-5 w-5" />
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))
-                    ) : (
-                      <TableRow>
-                        <TableCell colSpan={5} className="h-32 text-center font-bold text-muted-foreground uppercase tracking-widest text-xs">
-                          No se encontraron registros
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
-            </CardContent>
+        {/* Orders View */}
+        {activeTab === "orders" && (
+          <Card className="shadow-xl border-none bg-white rounded-2xl">
+             <CardHeader className="border-b space-y-4">
+               <div className="flex items-center justify-between">
+                 <CardTitle className="text-lg font-bold">Todas las Órdenes Activas</CardTitle>
+                 <Button variant="ghost" size="sm" onClick={clearFilters} className="text-[10px] font-bold uppercase"><FilterX className="mr-2 h-3 w-3" /> Limpiar</Button>
+               </div>
+               <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                 <div className="relative">
+                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                   <Input placeholder="Buscar..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-10 h-10 bg-muted/20 border-none" />
+                 </div>
+                 <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" className={cn("h-10 justify-start text-left font-medium bg-muted/20 border-none", !dateFilter && "text-muted-foreground")}>
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {dateFilter ? format(dateFilter, "PPP", { locale: es }) : "Filtrar por fecha"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="end">
+                      <Calendar mode="single" selected={dateFilter} onSelect={setDateFilter} initialFocus />
+                    </PopoverContent>
+                 </Popover>
+               </div>
+             </CardHeader>
+             <CardContent className="p-0">
+               <OrderTable orders={filteredOrders} isLoading={isOrdersLoading} type="ordenes" setDeleteConfirm={setDeleteConfirm} />
+             </CardContent>
           </Card>
         )}
 
+        {/* History View */}
+        {activeTab === "history" && (
+          <Card className="shadow-xl border-none bg-white rounded-2xl">
+             <CardHeader className="border-b space-y-4">
+               <div className="flex items-center justify-between">
+                 <CardTitle className="text-lg font-bold">Órdenes Completadas</CardTitle>
+                 <Button variant="ghost" size="sm" onClick={clearFilters} className="text-[10px] font-bold uppercase"><FilterX className="mr-2 h-3 w-3" /> Limpiar</Button>
+               </div>
+               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                 <div className="relative">
+                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                   <Input placeholder="Buscar en historial..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-10 h-10 bg-muted/20 border-none" />
+                 </div>
+                 <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" className={cn("h-10 justify-start text-left font-medium bg-muted/20 border-none", !dateFilter && "text-muted-foreground")}>
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {dateFilter ? format(dateFilter, "PPP", { locale: es }) : "Fecha específica"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="end">
+                      <Calendar mode="single" selected={dateFilter} onSelect={setDateFilter} initialFocus />
+                    </PopoverContent>
+                 </Popover>
+               </div>
+             </CardHeader>
+             <CardContent className="p-0">
+               <OrderTable orders={filteredHistory} isLoading={isHistoryLoading} type="historial" setDeleteConfirm={setDeleteConfirm} />
+             </CardContent>
+          </Card>
+        )}
+
+        {/* Clients View */}
         {activeTab === "clients" && (
           <Card className="shadow-xl border-none bg-white rounded-2xl">
-            <CardHeader className="flex flex-col md:flex-row items-start md:items-center justify-between border-b pb-6 mb-4 gap-4 px-8">
-              <CardTitle className="text-xl font-bold text-primary">Listado de Clientes</CardTitle>
-              <div className="relative w-full md:w-80">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
-                <Input 
-                  placeholder="Buscar nombre o RUT..." 
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 h-12 bg-background border-none rounded-xl w-full text-sm font-medium"
-                />
-              </div>
+            <CardHeader className="border-b flex flex-row items-center justify-between">
+              <CardTitle className="text-lg font-bold">Listado de Clientes</CardTitle>
+              <Input placeholder="Buscar cliente..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="w-64 h-10" />
             </CardHeader>
-            <CardContent className="px-8 pb-8">
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="bg-muted/40 border-none">
-                      <TableHead className="font-bold py-4 uppercase text-[10px]">RUT</TableHead>
-                      <TableHead className="font-bold py-4 uppercase text-[10px]">Nombre / Razón Social</TableHead>
-                      <TableHead className="font-bold py-4 uppercase text-[10px]">Email / Teléfono</TableHead>
-                      <TableHead className="font-bold py-4 uppercase text-[10px]">Estado</TableHead>
-                      <TableHead className="text-right font-bold py-4 uppercase text-[10px]">Acciones</TableHead>
+            <CardContent className="p-0">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-muted/40">
+                    <TableHead className="font-bold">RUT</TableHead>
+                    <TableHead className="font-bold">Nombre</TableHead>
+                    <TableHead className="font-bold">Estado</TableHead>
+                    <TableHead className="text-right font-bold">Acciones</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredClients.map((client) => (
+                    <TableRow key={client.id}>
+                      <TableCell className="font-medium">{client.rutCliente}</TableCell>
+                      <TableCell>{client.nombreCliente}</TableCell>
+                      <TableCell>
+                        <Badge className={client.estadoCliente === 'Activo' ? 'bg-accent/20 text-primary' : 'bg-destructive/10 text-destructive'}>{client.estadoCliente}</Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-2">
+                          <Link href={`/clients/${client.id}/edit`}><Button variant="ghost" size="icon"><Pencil size={16} /></Button></Link>
+                          <Button variant="ghost" size="icon" onClick={() => setDeleteConfirm({ id: client.id, type: 'clients' })} className="text-destructive"><Trash2 size={16} /></Button>
+                        </div>
+                      </TableCell>
                     </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredClients.map((client) => (
-                      <TableRow key={client.id} className="hover:bg-muted/20 transition-colors border-b">
-                        <TableCell className="font-bold text-primary">{client.rutCliente}</TableCell>
-                        <TableCell>
-                          <div className="flex flex-col">
-                            <span className="font-bold">{client.nombreCliente}</span>
-                            <span className="text-[10px] text-muted-foreground uppercase font-black">{client.razonSocial}</span>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex flex-col text-xs font-medium">
-                            <span>{client.emailClientes}</span>
-                            <span className="text-muted-foreground">{client.telefonoCliente}</span>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <Badge className={cn("border-none text-[10px] px-2 py-0.5 uppercase font-bold", client.estadoCliente === 'Activo' ? 'bg-accent/15 text-primary' : 'bg-destructive/10 text-destructive')}>
-                            {client.estadoCliente}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex justify-end gap-2">
-                            <Link href={`/clients/${client.id}/edit`}>
-                              <Button variant="ghost" size="icon" className="h-10 w-10 text-primary" title="Editar">
-                                <Pencil className="h-5 w-5" />
-                              </Button>
-                            </Link>
-                            <Button 
-                              variant="ghost" 
-                              size="icon" 
-                              className="h-10 w-10 text-destructive"
-                              title="Eliminar"
-                              onClick={() => setDeleteConfirm({ id: client.id, type: 'clients' })}
-                            >
-                              <Trash2 className="h-5 w-5" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
+                  ))}
+                </TableBody>
+              </Table>
             </CardContent>
           </Card>
         )}
 
+        {/* Personnel View */}
         {activeTab === "personnel" && (
           <Card className="shadow-xl border-none bg-white rounded-2xl">
-            <CardHeader className="flex flex-col md:flex-row items-start md:items-center justify-between border-b pb-6 mb-4 gap-4 px-8">
-              <CardTitle className="text-xl font-bold text-primary">Listado de Personal</CardTitle>
-              <div className="relative w-full md:w-80">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
-                <Input 
-                  placeholder="Buscar nombre o RUT..." 
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 h-12 bg-background border-none rounded-xl w-full text-sm font-medium"
-                />
-              </div>
+            <CardHeader className="border-b flex flex-row items-center justify-between">
+              <CardTitle className="text-lg font-bold">Gestión de Personal</CardTitle>
+              <Input placeholder="Buscar personal..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="w-64 h-10" />
             </CardHeader>
-            <CardContent className="px-8 pb-8">
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="bg-muted/40 border-none">
-                      <TableHead className="font-bold py-4 uppercase text-[10px]">ID</TableHead>
-                      <TableHead className="font-bold py-4 uppercase text-[10px]">Nombre Completo</TableHead>
-                      <TableHead className="font-bold py-4 uppercase text-[10px]">Rol</TableHead>
-                      <TableHead className="font-bold py-4 uppercase text-[10px]">RUT</TableHead>
-                      <TableHead className="font-bold py-4 uppercase text-[10px]">Email / Celular</TableHead>
-                      <TableHead className="text-right font-bold py-4 uppercase text-[10px]">Acciones</TableHead>
+            <CardContent className="p-0">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-muted/40">
+                    <TableHead className="font-bold">ID</TableHead>
+                    <TableHead className="font-bold">Nombre</TableHead>
+                    <TableHead className="font-bold">Rol</TableHead>
+                    <TableHead className="text-right font-bold">Acciones</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredPersonnel.map((p) => (
+                    <TableRow key={p.id}>
+                      <TableCell className="font-bold">{p.id_t}</TableCell>
+                      <TableCell>{p.nombre_t}</TableCell>
+                      <TableCell><Badge variant="outline">{p.rol_t}</Badge></TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-2">
+                          <Link href={`/technicians/${p.id}/edit`}><Button variant="ghost" size="icon"><Pencil size={16} /></Button></Link>
+                          <Button variant="ghost" size="icon" onClick={() => setDeleteConfirm({ id: p.id, type: 'personnel' })} className="text-destructive"><Trash2 size={16} /></Button>
+                        </div>
+                      </TableCell>
                     </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredPersonnel.map((p) => (
-                      <TableRow key={p.id} className="hover:bg-muted/20 transition-colors border-b">
-                        <TableCell className="font-black text-primary text-xs">{p.id_t}</TableCell>
-                        <TableCell className="font-bold">{p.nombre_t}</TableCell>
-                        <TableCell>
-                          <Badge variant="outline" className={cn("gap-1 border-primary/20 text-primary uppercase text-[9px] font-black", p.rol_t === 'Administrador' && 'bg-primary/5')}>
-                            <Shield className="h-3 w-3" /> {p.rol_t}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-xs font-bold">{p.rut_t}</TableCell>
-                        <TableCell>
-                          <div className="flex flex-col text-xs font-medium">
-                            <span className="font-bold">{p.email_t}</span>
-                            <span className="text-muted-foreground">{p.cel_t}</span>
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex justify-end gap-2">
-                            <Link href={`/technicians/${p.id}/edit`}>
-                              <Button variant="ghost" size="icon" className="h-10 w-10 text-primary" title="Editar">
-                                <Pencil className="h-5 w-5" />
-                              </Button>
-                            </Link>
-                            <Button 
-                              variant="ghost" 
-                              size="icon" 
-                              className="h-10 w-10 text-destructive"
-                              title="Eliminar"
-                              onClick={() => setDeleteConfirm({ id: p.id, type: 'personnel' })}
-                            >
-                              <Trash2 className="h-5 w-5" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
+                  ))}
+                </TableBody>
+              </Table>
             </CardContent>
           </Card>
         )}
       </main>
 
-      {/* Confirmación eliminación individual */}
       <AlertDialog open={!!deleteConfirm} onOpenChange={() => setDeleteConfirm(null)}>
-        <AlertDialogContent className="max-w-[400px] rounded-2xl">
+        <AlertDialogContent className="rounded-2xl">
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-primary font-black text-xl uppercase tracking-tighter">¿Confirmar eliminación?</AlertDialogTitle>
-            <AlertDialogDescription className="text-sm font-medium">
-              Esta acción es permanente e irreversible. El registro será borrado definitivamente.
-            </AlertDialogDescription>
+            <AlertDialogTitle className="text-primary font-black uppercase">Confirmar eliminación</AlertDialogTitle>
+            <AlertDialogDescription>¿Está seguro de que desea eliminar este registro permanentemente?</AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter className="gap-2 sm:gap-2 pt-4">
-            <AlertDialogCancel className="font-bold h-12 rounded-xl">Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} className="bg-destructive hover:bg-destructive/90 font-black h-12 rounded-xl">
-              Eliminar
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {/* Confirmación Purga Total (Sólo Admin) */}
-      <AlertDialog open={purgeConfirm} onOpenChange={setPurgeConfirm}>
-        <AlertDialogContent className="max-w-[400px] rounded-2xl border-destructive/20">
-          <AlertDialogHeader>
-            <AlertDialogTitle className="text-destructive font-black text-xl uppercase tracking-tighter">Borrado Masivo</AlertDialogTitle>
-            <AlertDialogDescription className="text-sm font-medium">
-              ¿Estás seguro de que quieres eliminar <strong>TODAS</strong> las órdenes registradas? Esta acción limpiará el historial para usar solo los nuevos folios.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter className="gap-2 sm:gap-2 pt-4">
-            <AlertDialogCancel className="font-bold h-12 rounded-xl">Cancelar</AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={handlePurgeOrders} 
-              disabled={isPurging}
-              className="bg-destructive hover:bg-destructive/90 font-black h-12 rounded-xl"
-            >
-              {isPurging ? "Borrando..." : "Borrar Todo el Historial"}
-            </AlertDialogAction>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="font-bold">Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} className="bg-destructive hover:bg-destructive/90 font-black">Eliminar</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
     </div>
+  );
+}
+
+function OrderTable({ orders, isLoading, type, setDeleteConfirm }: { orders: any[], isLoading: boolean, type: string, setDeleteConfirm: any }) {
+  if (isLoading) return <div className="p-10 text-center font-bold text-muted-foreground uppercase text-xs animate-pulse">Recuperando registros...</div>;
+  if (orders.length === 0) return <div className="p-10 text-center font-bold text-muted-foreground uppercase text-xs">No hay datos para mostrar</div>;
+
+  return (
+    <Table>
+      <TableHeader>
+        <TableRow className="bg-muted/40">
+          <TableHead className="font-bold py-4">Folio</TableHead>
+          <TableHead className="font-bold py-4">Cliente</TableHead>
+          <TableHead className="font-bold py-4">Fecha</TableHead>
+          <TableHead className="font-bold py-4">Estado</TableHead>
+          <TableHead className="text-right font-bold py-4">Acciones</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {orders.map((order) => (
+          <TableRow key={order.id} className="hover:bg-muted/10">
+            <TableCell className="font-black text-primary">#{order.folio}</TableCell>
+            <TableCell className="font-bold">{order.clientName}</TableCell>
+            <TableCell className="text-xs">{order.startDate ? format(new Date(order.startDate), "dd/MM/yyyy") : "N/A"}</TableCell>
+            <TableCell>
+              <Badge className={cn("border-none text-[10px] px-2 py-0.5 uppercase font-bold", order.status === 'Completed' ? 'bg-accent/15 text-primary' : 'bg-primary/10 text-primary')}>
+                {order.status === 'Completed' ? 'Completado' : 'Pendiente'}
+              </Badge>
+            </TableCell>
+            <TableCell className="text-right">
+              <div className="flex justify-end gap-1">
+                <Link href={`/work-orders/${order.id}`}>
+                  <Button variant="ghost" size="icon" className="h-8 w-8"><Eye className="h-4 w-4" /></Button>
+                </Link>
+                {order.status === "Pending" && (
+                  <Link href={`/work-orders/${order.id}/edit`}>
+                    <Button variant="ghost" size="icon" className="h-8 w-8 text-primary"><Pencil className="h-4 w-4" /></Button>
+                  </Link>
+                )}
+                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => generateWorkOrderPDF(order)}><Download className="h-4 w-4" /></Button>
+                <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => setDeleteConfirm({ id: order.id, type })}><Trash2 className="h-4 w-4" /></Button>
+              </div>
+            </TableCell>
+          </TableRow>
+        ))}
+      </TableBody>
+    </Table>
   );
 }

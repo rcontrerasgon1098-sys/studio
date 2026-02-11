@@ -135,7 +135,15 @@
         "definition": {
           "entityName": "WorkOrder",
           "schema": { "$ref": "#/backend/entities/WorkOrder" },
-          "description": "Stores all work orders."
+          "description": "Stores pending work orders."
+        }
+      },
+      {
+        "path": "/historial/{orderId}",
+        "definition": {
+          "entityName": "WorkOrder",
+          "schema": { "$ref": "#/backend/entities/WorkOrder" },
+          "description": "Stores completed work orders."
         }
       },
       {

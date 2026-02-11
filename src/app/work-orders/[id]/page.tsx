@@ -1,30 +1,46 @@
 
 "use client";
 
-import { use, useState } from "react";
+import { use, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Download, Printer, User, Calendar, MapPin, ClipboardCheck, Info, Pencil, CreditCard } from "lucide-react";
+import { ArrowLeft, Download, Printer, User, Calendar, MapPin, ClipboardCheck, Info, Pencil, CreditCard, Loader2 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import { generateWorkOrderPDF } from "@/lib/pdf-generator";
-import { useDoc, useUser, useFirestore, useMemoFirebase } from "@/firebase";
-import { doc } from "firebase/firestore";
+import { useUser, useFirestore } from "@/firebase";
+import { doc, getDoc } from "firebase/firestore";
 
 export default function WorkOrderView({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const db = useFirestore();
+  const [order, setOrder] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const orderRef = useMemoFirebase(() => {
-    if (!db || !id) return null;
-    return doc(db, "ordenes", id);
+  useEffect(() => {
+    async function fetchOrder() {
+      if (!db || !id) return;
+      setIsLoading(true);
+      
+      // Intentar buscar en 'ordenes' primero
+      let orderDoc = await getDoc(doc(db, "ordenes", id));
+      
+      // Si no está, buscar en 'historial'
+      if (!orderDoc.exists()) {
+        orderDoc = await getDoc(doc(db, "historial", id));
+      }
+
+      if (orderDoc.exists()) {
+        setOrder({ ...orderDoc.data(), id: orderDoc.id });
+      }
+      setIsLoading(false);
+    }
+    fetchOrder();
   }, [db, id]);
 
-  const { data: order, isLoading } = useDoc(orderRef);
-
-  if (isLoading) return <div className="p-20 text-center text-primary font-black animate-pulse bg-background min-h-screen">CARGANDO ORDEN ICSA...</div>;
+  if (isLoading) return <div className="p-20 text-center text-primary font-black animate-pulse bg-background min-h-screen flex flex-col items-center justify-center gap-4"><Loader2 className="animate-spin h-10 w-10" /> BUSCANDO ORDEN...</div>;
   if (!order) return <div className="p-20 text-center text-muted-foreground font-bold bg-background min-h-screen">Orden no encontrada.</div>;
 
   return (
@@ -42,7 +58,7 @@ export default function WorkOrderView({ params }: { params: Promise<{ id: string
           <div className="flex gap-2">
             {order.status === "Pending" && (
               <Link href={`/work-orders/${order.id}/edit`}>
-                <Button variant="outline" size="sm" className="h-10 gap-2 border-primary text-primary hover:bg-primary/5">
+                <Button variant="outline" size="sm" className="h-10 gap-2 border-primary text-primary">
                   <Pencil className="h-4 w-4" /> Editar / Firmar
                 </Button>
               </Link>
@@ -59,7 +75,7 @@ export default function WorkOrderView({ params }: { params: Promise<{ id: string
 
       <main className="container mx-auto px-4 mt-6 max-w-2xl space-y-4">
         <div className="flex items-center justify-between px-1">
-          <Badge className={`${order.status === 'Completed' ? 'bg-accent/20 text-primary' : 'bg-primary/20 text-primary'} border-none text-xs px-3 py-1 font-bold`}>
+          <Badge className={cn("border-none text-xs px-3 py-1 font-bold", order.status === 'Completed' ? 'bg-accent/20 text-primary' : 'bg-primary/20 text-primary')}>
             {order.status === 'Completed' ? 'COMPLETADA' : 'PENDIENTE'}
           </Badge>
           <div className="text-[10px] text-muted-foreground flex items-center gap-1.5 font-bold uppercase tracking-widest">
@@ -178,7 +194,7 @@ export default function WorkOrderView({ params }: { params: Promise<{ id: string
           </Card>
           <Card className="shadow-md border-none bg-white">
             <CardHeader className="p-4 pb-0">
-              <CardTitle className="text-xs font-bold text-muted-foreground uppercase">Firma Cliente / Receptor</CardTitle>
+              <CardTitle className="text-xs font-bold text-muted-foreground uppercase">Firma Receptor</CardTitle>
             </CardHeader>
             <CardContent className="p-4 pt-2 space-y-3">
               {(order.clientReceiverName || order.clientReceiverRut) && (
@@ -203,16 +219,16 @@ export default function WorkOrderView({ params }: { params: Promise<{ id: string
         <div className="flex flex-col gap-3 mt-8">
            {order.status === "Pending" && (
              <Link href={`/work-orders/${order.id}/edit`} className="w-full">
-               <Button className="bg-accent text-primary h-14 w-full text-lg font-black gap-3 shadow-xl active:scale-95 transition-all">
+               <Button className="bg-accent text-primary h-14 w-full text-lg font-black gap-3 shadow-xl">
                  <Pencil /> Reabrir para completar
                </Button>
              </Link>
            )}
-           <Button onClick={() => generateWorkOrderPDF(order)} className="bg-primary h-14 w-full text-lg font-black gap-3 shadow-xl active:scale-95 transition-all">
+           <Button onClick={() => generateWorkOrderPDF(order)} className="bg-primary h-14 w-full text-lg font-black gap-3 shadow-xl">
              <Download /> Descargar Reporte PDF
            </Button>
            <Link href="/dashboard" className="w-full">
-             <Button variant="outline" className="h-12 w-full font-bold border-primary/20 text-primary">
+             <Button variant="outline" className="h-12 w-full font-bold">
                Volver al Panel
              </Button>
            </Link>
