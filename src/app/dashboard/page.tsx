@@ -305,7 +305,7 @@ export default function Dashboard() {
                activeTab === "clients" ? "Clientes" : "Personal"}
             </h1>
           </div>
-          {(activeTab === "dashboard" || activeTab === "orders" || activeTab === "stats") && (
+          {activeTab === "dashboard" && (
             <Link href="/work-orders/new">
               <Button className="bg-accent text-primary font-black h-12 px-6 shadow-lg rounded-xl">
                 <Plus size={20} className="mr-2" /> Nueva Orden
