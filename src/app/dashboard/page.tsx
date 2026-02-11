@@ -18,7 +18,7 @@ import {
   Eye, Download, Menu, TrendingUp, Users, UserRound, Shield,
   Pencil, Trash2, PieChart as PieChartIcon, BarChart as BarChartIcon,
   Briefcase, Clock, Calendar as CalendarIcon, FilterX, Loader2, RefreshCw, History,
-  Activity
+  Activity, BarChartBig
 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
@@ -54,7 +54,6 @@ import {
   ResponsiveContainer,
   Legend
 } from "recharts";
-import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 
 export default function Dashboard() {
   const { user, isUserLoading, auth, firestore: db } = useFirebase();
@@ -228,6 +227,13 @@ export default function Dashboard() {
           <LayoutDashboard size={20} /> Inicio
         </Button>
         <Button 
+          variant={activeTab === "stats" ? "secondary" : "ghost"} 
+          className={cn("w-full justify-start gap-3 h-12 font-semibold", activeTab === "stats" ? "bg-white/10 text-white" : "text-white/80 hover:bg-white/10")}
+          onClick={() => { setActiveTab("stats"); clearFilters(); }}
+        >
+          <PieChartIcon size={20} /> Estadísticas
+        </Button>
+        <Button 
           variant={activeTab === "orders" ? "secondary" : "ghost"} 
           className={cn("w-full justify-start gap-3 h-12 font-semibold", activeTab === "orders" ? "bg-white/10 text-white" : "text-white/80 hover:bg-white/10")}
           onClick={() => { setActiveTab("orders"); clearFilters(); }}
@@ -292,13 +298,14 @@ export default function Dashboard() {
         <header className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
           <div>
             <h1 className="text-3xl font-black text-primary tracking-tight uppercase">
-              {activeTab === "dashboard" ? "Resumen de Operaciones" : 
+              {activeTab === "dashboard" ? "Inicio" : 
+               activeTab === "stats" ? "Estadísticas y Análisis" :
                activeTab === "orders" ? "Gestión de Órdenes" : 
                activeTab === "history" ? "Historial de Trabajo" : 
                activeTab === "clients" ? "Clientes" : "Personal"}
             </h1>
           </div>
-          {(activeTab === "dashboard" || activeTab === "orders") && (
+          {(activeTab === "dashboard" || activeTab === "orders" || activeTab === "stats") && (
             <Link href="/work-orders/new">
               <Button className="bg-accent text-primary font-black h-12 px-6 shadow-lg rounded-xl">
                 <Plus size={20} className="mr-2" /> Nueva Orden
@@ -307,7 +314,7 @@ export default function Dashboard() {
           )}
         </header>
 
-        {/* Dashboard / Inicio View con Gráficos */}
+        {/* Dashboard / Inicio View */}
         {activeTab === "dashboard" && (
           <div className="space-y-6">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -348,25 +355,40 @@ export default function Dashboard() {
                 </CardContent>
               </Card>
             </div>
+            
+            <Card className="shadow-xl border-none bg-white rounded-2xl">
+              <CardHeader className="border-b">
+                <CardTitle className="text-lg font-bold">Listado de Pendientes</CardTitle>
+                <CardDescription>Acceso rápido a los trabajos en curso.</CardDescription>
+              </CardHeader>
+              <CardContent className="p-0">
+                <OrderTable orders={orders?.filter(o => o.status === "Pending") || []} isLoading={isOrdersLoading} type="ordenes" setDeleteConfirm={setDeleteConfirm} />
+              </CardContent>
+            </Card>
+          </div>
+        )}
 
-            {/* Sección de Gráficos */}
+        {/* Stats View */}
+        {activeTab === "stats" && (
+          <div className="space-y-6">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <Card className="bg-white border-none shadow-md overflow-hidden">
                 <CardHeader className="border-b bg-muted/5">
                   <CardTitle className="text-sm font-bold flex items-center gap-2">
                     <PieChartIcon className="h-4 w-4 text-primary" /> Distribución de Carga
                   </CardTitle>
+                  <CardDescription>Proporción entre órdenes activas y completadas.</CardDescription>
                 </CardHeader>
                 <CardContent className="p-6">
-                  <div className="h-[250px] w-full">
+                  <div className="h-[350px] w-full">
                     <ResponsiveContainer width="100%" height="100%">
                       <PieChart>
                         <Pie
                           data={statsData}
                           cx="50%"
                           cy="50%"
-                          innerRadius={60}
-                          outerRadius={80}
+                          innerRadius={80}
+                          outerRadius={120}
                           paddingAngle={5}
                           dataKey="value"
                         >
@@ -387,9 +409,10 @@ export default function Dashboard() {
                   <CardTitle className="text-sm font-bold flex items-center gap-2">
                     <BarChartIcon className="h-4 w-4 text-primary" /> Volumen de Finalización (7 días)
                   </CardTitle>
+                  <CardDescription>Órdenes completadas por día en la última semana.</CardDescription>
                 </CardHeader>
                 <CardContent className="p-6">
-                  <div className="h-[250px] w-full">
+                  <div className="h-[350px] w-full">
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart data={activityData}>
                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--muted))" />
@@ -397,33 +420,24 @@ export default function Dashboard() {
                           dataKey="date" 
                           axisLine={false} 
                           tickLine={false} 
-                          tick={{ fontSize: 10, fontWeight: 'bold' }} 
+                          tick={{ fontSize: 12, fontWeight: 'bold' }} 
                         />
                         <YAxis 
                           axisLine={false} 
                           tickLine={false} 
-                          tick={{ fontSize: 10, fontWeight: 'bold' }} 
+                          tick={{ fontSize: 12, fontWeight: 'bold' }} 
                         />
                         <RechartsTooltip 
                           cursor={{ fill: 'hsl(var(--muted)/0.3)' }}
                           contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
                         />
-                        <Bar dataKey="count" fill="hsl(var(--accent))" radius={[4, 4, 0, 0]} barSize={30} />
+                        <Bar dataKey="count" fill="hsl(var(--accent))" radius={[6, 6, 0, 0]} barSize={40} />
                       </BarChart>
                     </ResponsiveContainer>
                   </div>
                 </CardContent>
               </Card>
             </div>
-            
-            <Card className="shadow-xl border-none bg-white rounded-2xl">
-              <CardHeader className="border-b">
-                <CardTitle className="text-lg font-bold">Listado de Pendientes</CardTitle>
-              </CardHeader>
-              <CardContent className="p-0">
-                <OrderTable orders={orders?.filter(o => o.status === "Pending") || []} isLoading={isOrdersLoading} type="ordenes" setDeleteConfirm={setDeleteConfirm} />
-              </CardContent>
-            </Card>
           </div>
         )}
 
