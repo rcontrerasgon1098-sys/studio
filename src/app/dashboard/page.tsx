@@ -317,45 +317,6 @@ export default function Dashboard() {
         {/* Dashboard / Inicio View */}
         {activeTab === "dashboard" && (
           <div className="space-y-6">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              <Card className="bg-white border-none shadow-md">
-                <CardContent className="p-6 flex items-center justify-between">
-                  <div>
-                    <p className="text-xs font-bold text-muted-foreground uppercase">Activas</p>
-                    <p className="text-3xl font-black text-primary">{orders?.length || 0}</p>
-                  </div>
-                  <Activity className="h-8 w-8 text-primary opacity-20" />
-                </CardContent>
-              </Card>
-              <Card className="bg-white border-none shadow-md">
-                <CardContent className="p-6 flex items-center justify-between">
-                  <div>
-                    <p className="text-xs font-bold text-muted-foreground uppercase">Pendientes</p>
-                    <p className="text-3xl font-black text-primary">{orders?.filter(o => o.status === "Pending").length || 0}</p>
-                  </div>
-                  <Clock className="h-8 w-8 text-primary opacity-20" />
-                </CardContent>
-              </Card>
-              <Card className="bg-white border-none shadow-md">
-                <CardContent className="p-6 flex items-center justify-between">
-                  <div>
-                    <p className="text-xs font-bold text-muted-foreground uppercase">Historial</p>
-                    <p className="text-3xl font-black text-accent">{history?.length || 0}</p>
-                  </div>
-                  <History className="h-8 w-8 text-accent opacity-20" />
-                </CardContent>
-              </Card>
-              <Card className="bg-white border-none shadow-md">
-                <CardContent className="p-6 flex items-center justify-between">
-                  <div>
-                    <p className="text-xs font-bold text-muted-foreground uppercase">Personal</p>
-                    <p className="text-3xl font-black text-primary">{personnel?.length || 0}</p>
-                  </div>
-                  <UserRound className="h-8 w-8 text-primary opacity-20" />
-                </CardContent>
-              </Card>
-            </div>
-            
             <Card className="shadow-xl border-none bg-white rounded-2xl">
               <CardHeader className="border-b">
                 <CardTitle className="text-lg font-bold">Listado de Pendientes</CardTitle>
