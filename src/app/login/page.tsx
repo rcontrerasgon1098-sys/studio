@@ -51,11 +51,8 @@ export default function LoginPage() {
       console.error("Login error:", error);
       let message = "Error de conexión. Verifique sus datos.";
       
-      // Manejo detallado de errores de Firebase Auth
-      if (error.code === 'auth/invalid-credential' || error.code === 'auth/wrong-password') {
-        message = "Credenciales incorrectas. Verifique su correo y contraseña.";
-      } else if (error.code === 'auth/user-not-found') {
-        message = "El correo ingresado no está registrado en el sistema ICSA.";
+      if (error.code === 'auth/invalid-credential' || error.code === 'auth/wrong-password' || error.code === 'auth/user-not-found') {
+        message = "Credenciales incorrectas. Verifique su correo y contraseña o contacte al administrador.";
       } else if (error.code === 'auth/too-many-requests') {
         message = "Acceso bloqueado temporalmente por demasiados intentos fallidos.";
       } else if (error.code === 'auth/network-request-failed') {
