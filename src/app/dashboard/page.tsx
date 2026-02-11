@@ -11,13 +11,14 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { format, startOfDay, isSameDay, startOfWeek, addDays } from "date-fns";
+import { format, startOfDay, isSameDay, startOfWeek, addDays, subDays } from "date-fns";
 import { es } from "date-fns/locale";
 import { 
   Plus, FileText, Search, LogOut, LayoutDashboard, 
   Eye, Download, Menu, TrendingUp, Users, UserRound, Shield,
   Pencil, Trash2, PieChart as PieChartIcon, BarChart as BarChartIcon,
-  Briefcase, Clock, Calendar as CalendarIcon, FilterX, Loader2, RefreshCw, History
+  Briefcase, Clock, Calendar as CalendarIcon, FilterX, Loader2, RefreshCw, History,
+  Activity
 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
@@ -40,6 +41,20 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
+import {
+  PieChart,
+  Pie,
+  Cell,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip as RechartsTooltip,
+  ResponsiveContainer,
+  Legend
+} from "recharts";
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 
 export default function Dashboard() {
   const { user, isUserLoading, auth, firestore: db } = useFirebase();
@@ -88,7 +103,41 @@ export default function Dashboard() {
   }, [db]);
   const { data: personnel } = useCollection(personnelQuery);
 
-  const isAdmin = user?.email === "admin@icsa.com";
+  const statsData = useMemo(() => {
+    const pendingCount = orders?.filter(o => o.status === "Pending").length || 0;
+    const completedCount = history?.length || 0;
+    
+    return [
+      { name: "Pendientes", value: pendingCount, color: "hsl(var(--primary))" },
+      { name: "Completadas", value: completedCount, color: "hsl(var(--accent))" }
+    ];
+  }, [orders, history]);
+
+  const activityData = useMemo(() => {
+    if (!history) return [];
+    
+    const last7Days = Array.from({ length: 7 }, (_, i) => {
+      const d = subDays(new Date(), i);
+      return {
+        date: format(d, "dd/MM"),
+        fullDate: d,
+        count: 0
+      };
+    }).reverse();
+
+    history.forEach(order => {
+      if (order.startDate) {
+        const orderDate = new Date(order.startDate);
+        last7Days.forEach(day => {
+          if (isSameDay(orderDate, day.fullDate)) {
+            day.count++;
+          }
+        });
+      }
+    });
+
+    return last7Days;
+  }, [history]);
 
   const filteredOrders = useMemo(() => {
     if (!orders) return [];
@@ -243,7 +292,7 @@ export default function Dashboard() {
         <header className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
           <div>
             <h1 className="text-3xl font-black text-primary tracking-tight uppercase">
-              {activeTab === "dashboard" ? "Inicio - Pendientes" : 
+              {activeTab === "dashboard" ? "Resumen de Operaciones" : 
                activeTab === "orders" ? "Gestión de Órdenes" : 
                activeTab === "history" ? "Historial de Trabajo" : 
                activeTab === "clients" ? "Clientes" : "Personal"}
@@ -258,14 +307,23 @@ export default function Dashboard() {
           )}
         </header>
 
-        {/* Dashboard / Pendientes View */}
+        {/* Dashboard / Inicio View con Gráficos */}
         {activeTab === "dashboard" && (
           <div className="space-y-6">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <Card className="bg-white border-none shadow-md">
                 <CardContent className="p-6 flex items-center justify-between">
                   <div>
-                    <p className="text-xs font-bold text-muted-foreground uppercase">Órdenes Pendientes</p>
+                    <p className="text-xs font-bold text-muted-foreground uppercase">Activas</p>
+                    <p className="text-3xl font-black text-primary">{orders?.length || 0}</p>
+                  </div>
+                  <Activity className="h-8 w-8 text-primary opacity-20" />
+                </CardContent>
+              </Card>
+              <Card className="bg-white border-none shadow-md">
+                <CardContent className="p-6 flex items-center justify-between">
+                  <div>
+                    <p className="text-xs font-bold text-muted-foreground uppercase">Pendientes</p>
                     <p className="text-3xl font-black text-primary">{orders?.filter(o => o.status === "Pending").length || 0}</p>
                   </div>
                   <Clock className="h-8 w-8 text-primary opacity-20" />
@@ -274,10 +332,86 @@ export default function Dashboard() {
               <Card className="bg-white border-none shadow-md">
                 <CardContent className="p-6 flex items-center justify-between">
                   <div>
-                    <p className="text-xs font-bold text-muted-foreground uppercase">Historial (Total)</p>
+                    <p className="text-xs font-bold text-muted-foreground uppercase">Historial</p>
                     <p className="text-3xl font-black text-accent">{history?.length || 0}</p>
                   </div>
                   <History className="h-8 w-8 text-accent opacity-20" />
+                </CardContent>
+              </Card>
+              <Card className="bg-white border-none shadow-md">
+                <CardContent className="p-6 flex items-center justify-between">
+                  <div>
+                    <p className="text-xs font-bold text-muted-foreground uppercase">Personal</p>
+                    <p className="text-3xl font-black text-primary">{personnel?.length || 0}</p>
+                  </div>
+                  <UserRound className="h-8 w-8 text-primary opacity-20" />
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Sección de Gráficos */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <Card className="bg-white border-none shadow-md overflow-hidden">
+                <CardHeader className="border-b bg-muted/5">
+                  <CardTitle className="text-sm font-bold flex items-center gap-2">
+                    <PieChartIcon className="h-4 w-4 text-primary" /> Distribución de Carga
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-6">
+                  <div className="h-[250px] w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={statsData}
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={60}
+                          outerRadius={80}
+                          paddingAngle={5}
+                          dataKey="value"
+                        >
+                          {statsData.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.color} />
+                          ))}
+                        </Pie>
+                        <RechartsTooltip />
+                        <Legend verticalAlign="bottom" height={36}/>
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-white border-none shadow-md overflow-hidden">
+                <CardHeader className="border-b bg-muted/5">
+                  <CardTitle className="text-sm font-bold flex items-center gap-2">
+                    <BarChartIcon className="h-4 w-4 text-primary" /> Volumen de Finalización (7 días)
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-6">
+                  <div className="h-[250px] w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={activityData}>
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--muted))" />
+                        <XAxis 
+                          dataKey="date" 
+                          axisLine={false} 
+                          tickLine={false} 
+                          tick={{ fontSize: 10, fontWeight: 'bold' }} 
+                        />
+                        <YAxis 
+                          axisLine={false} 
+                          tickLine={false} 
+                          tick={{ fontSize: 10, fontWeight: 'bold' }} 
+                        />
+                        <RechartsTooltip 
+                          cursor={{ fill: 'hsl(var(--muted)/0.3)' }}
+                          contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
+                        />
+                        <Bar dataKey="count" fill="hsl(var(--accent))" radius={[4, 4, 0, 0]} barSize={30} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
                 </CardContent>
               </Card>
             </div>
