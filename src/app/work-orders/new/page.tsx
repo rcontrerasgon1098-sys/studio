@@ -109,7 +109,6 @@ export default function NewWorkOrder() {
   const handleSelectClient = (client: any) => {
     const email = client.emailClientes || "";
     const phone = client.telefonoCliente || "";
-    // Combinar email y teléfono automáticamente en el campo de contacto
     const contactInfo = [email, phone].filter(Boolean).join(" / ");
 
     setFormData({
@@ -192,10 +191,9 @@ export default function NewWorkOrder() {
                                 !!formData.clientReceiverRut;
                                 
     const finalStatus = isValidationComplete ? "Completed" : "Pending";
-
     const finalFolio = folio || generateFolio();
-
     const orderId = doc(collection(db, "ordenes")).id;
+    
     const workOrderData = {
       ...formData,
       id: orderId,
@@ -274,21 +272,32 @@ export default function NewWorkOrder() {
                     />
                     <Popover open={openClientSearch} onOpenChange={setOpenClientSearch}>
                       <PopoverTrigger asChild>
-                        <Button variant="outline" size="icon" className="h-14 w-14 shrink-0">
-                          <Search className="h-5 w-5" />
+                        <Button variant="outline" size="icon" className="h-14 w-14 shrink-0 bg-primary/5 border-primary/20 hover:bg-primary/10">
+                          <Search className="h-5 w-5 text-primary" />
                         </Button>
                       </PopoverTrigger>
-                      <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0" align="end">
-                        <Command>
-                          <CommandInput placeholder="Buscar cliente..." />
-                          <CommandList>
-                            <CommandEmpty className="p-4 text-sm">Sin registros.</CommandEmpty>
-                            <CommandGroup>
+                      <PopoverContent className="w-[320px] md:w-[450px] p-0 shadow-2xl border-primary/10" align="end">
+                        <Command className="rounded-xl">
+                          <CommandInput placeholder="Buscar empresa por nombre..." className="h-12" />
+                          <CommandList className="max-h-[400px]">
+                            <CommandEmpty className="p-6 text-sm text-center text-muted-foreground">No se encontraron clientes.</CommandEmpty>
+                            <CommandGroup heading="Empresas Registradas" className="p-2">
                               {clients?.map((client) => (
-                                <CommandItem key={client.id} value={client.nombreCliente} onSelect={() => handleSelectClient(client)}>
-                                  <div className="flex flex-col">
-                                    <span className="font-bold">{client.nombreCliente}</span>
-                                    <span className="text-[10px] opacity-70">{client.rutCliente}</span>
+                                <CommandItem 
+                                  key={client.id} 
+                                  value={client.nombreCliente} 
+                                  onSelect={() => handleSelectClient(client)}
+                                  className="flex items-center gap-3 p-3 cursor-pointer hover:bg-primary/5 rounded-lg transition-colors border-b last:border-0"
+                                >
+                                  <div className="bg-primary/10 p-2 rounded-full">
+                                    <User className="h-4 w-4 text-primary" />
+                                  </div>
+                                  <div className="flex flex-col flex-1">
+                                    <span className="font-black text-primary text-base leading-tight">{client.nombreCliente}</span>
+                                    <div className="flex items-center gap-2 mt-0.5">
+                                      <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">{client.rutCliente}</span>
+                                      <span className="text-[10px] opacity-40 px-1 border rounded">{client.estadoCliente}</span>
+                                    </div>
                                   </div>
                                 </CommandItem>
                               ))}
