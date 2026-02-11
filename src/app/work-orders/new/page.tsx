@@ -167,7 +167,6 @@ export default function NewWorkOrder() {
                                 
     const finalStatus = isValidationComplete ? "Completed" : "Pending";
 
-    // Aseguramos que el folio no sea 0
     const finalFolio = folio || generateFolio();
 
     const orderId = doc(collection(db, "ordenes")).id;
@@ -470,13 +469,30 @@ export default function NewWorkOrder() {
                     />
                   </div>
                 </div>
-                <SignaturePad label="Firma Cliente / Recepción" onSave={(dataUrl) => setFormData({...formData, clientSignatureUrl: dataUrl})} />
+                {formData.clientSignatureUrl ? (
+                  <div className="space-y-2">
+                    <div className="relative h-32 w-full bg-background/50 rounded-xl border border-dashed flex items-center justify-center overflow-hidden">
+                      <Image src={formData.clientSignatureUrl} alt="Firma Cliente" fill className="object-contain" />
+                    </div>
+                    <Button 
+                      type="button" 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={() => setFormData({...formData, clientSignatureUrl: ""})}
+                      className="w-full text-[10px] h-6 text-muted-foreground"
+                    >
+                      Volver a firmar
+                    </Button>
+                  </div>
+                ) : (
+                  <SignaturePad label="Firma Cliente / Recepción" onSave={(dataUrl) => setFormData({...formData, clientSignatureUrl: dataUrl})} />
+                )}
               </CardContent>
             </Card>
           </div>
 
           <div className="fixed bottom-0 left-0 right-0 p-4 bg-white/90 backdrop-blur-md border-t md:relative md:bg-transparent md:border-none md:p-0">
-            <Button type="submit" size="lg" className="bg-primary hover:bg-primary/90 w-full h-16 text-xl font-black gap-3 shadow-xl active:scale-95 transition-all">
+            <Button type="submit" size="lg" className="bg-primary hover:bg-primary/90 w-full h-16 text-xl font-black gap-3 shadow-xl active:scale-95 transition-all" disabled={loading}>
               <CheckCircle2 size={28} /> {!!formData.techSignatureUrl && !!formData.clientSignatureUrl && !!formData.clientReceiverRut ? "Finalizar Orden" : "Guardar como Pendiente"}
             </Button>
           </div>

@@ -35,7 +35,6 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
 
   const { data: order, isLoading: isOrderLoading } = useDoc(orderRef);
 
-  // Consulta para obtener los datos del técnico logueado
   const techProfileQuery = useMemoFirebase(() => {
     if (!db || !user?.email) return null;
     return query(collection(db, "personnel"), where("email_t", "==", user.email));
@@ -110,7 +109,6 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
     }
   }, [user, isUserLoading, router]);
 
-  // Efecto para autocompletar datos del técnico e incluir firma guardada si falta en la OT
   useEffect(() => {
     if (techProfiles && techProfiles.length > 0 && isInitialized) {
       const tech = techProfiles[0];
@@ -160,7 +158,6 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
     
     setLoading(true);
 
-    // El RUT del receptor ahora es obligatorio para que el estado sea Completed
     const isValidationComplete = !!formData.techSignatureUrl && 
                                 !!formData.clientSignatureUrl && 
                                 !!formData.clientReceiverRut;
@@ -440,7 +437,24 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
                     />
                   </div>
                 </div>
-                <SignaturePad label="Actualizar Firma Cliente / Recepción" onSave={(dataUrl) => setFormData({...formData, clientSignatureUrl: dataUrl})} />
+                {formData.clientSignatureUrl ? (
+                  <div className="space-y-2">
+                    <div className="relative h-32 w-full bg-background/50 rounded-xl border border-dashed flex items-center justify-center overflow-hidden">
+                      <Image src={formData.clientSignatureUrl} alt="Firma Cliente" fill className="object-contain" />
+                    </div>
+                    <Button 
+                      type="button" 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={() => setFormData({...formData, clientSignatureUrl: ""})}
+                      className="w-full text-[10px] h-6 text-muted-foreground"
+                    >
+                      Volver a firmar
+                    </Button>
+                  </div>
+                ) : (
+                  <SignaturePad label="Actualizar Firma Cliente / Recepción" onSave={(dataUrl) => setFormData({...formData, clientSignatureUrl: dataUrl})} />
+                )}
               </CardContent>
             </Card>
           </div>
