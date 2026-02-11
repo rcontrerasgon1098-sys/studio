@@ -107,10 +107,14 @@ export default function NewWorkOrder() {
   }, [techProfiles]);
 
   const handleSelectClient = (client: any) => {
+    const email = client.emailClientes || "";
+    const phone = client.telefonoCliente || "";
+    const contactInfo = [email, phone].filter(Boolean).join(" / ");
+
     setFormData({
       ...formData,
       clientName: client.nombreCliente || "",
-      clientContact: client.emailClientes || client.telefonoCliente || "",
+      clientContact: contactInfo,
       clientId: client.id,
       location: client.direccionCliente || ""
     });
@@ -162,7 +166,6 @@ export default function NewWorkOrder() {
       return;
     }
 
-    // Validar RUT del técnico si está presente
     if (formData.techRut && !validateRut(formData.techRut)) {
       toast({ 
         variant: "destructive", 
@@ -173,7 +176,6 @@ export default function NewWorkOrder() {
       return;
     }
 
-    // Validar RUT del receptor si está presente
     if (formData.clientReceiverRut && !validateRut(formData.clientReceiverRut)) {
       toast({ 
         variant: "destructive", 
