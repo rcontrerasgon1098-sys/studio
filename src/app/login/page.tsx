@@ -48,10 +48,19 @@ export default function LoginPage() {
       toast({ title: "Bienvenido", description: "Acceso concedido al portal ICSA." });
       router.push("/dashboard");
     } catch (error: any) {
-      console.error(error);
+      console.error("Login error:", error);
       let message = "Error de conexión. Verifique sus datos.";
-      if (error.code === 'auth/invalid-credential') message = "Credenciales inválidas. Verifique su correo y contraseña.";
-      if (error.code === 'auth/user-not-found') message = "Usuario no registrado.";
+      
+      // Manejo detallado de errores de Firebase Auth
+      if (error.code === 'auth/invalid-credential' || error.code === 'auth/wrong-password') {
+        message = "Credenciales incorrectas. Verifique su correo y contraseña.";
+      } else if (error.code === 'auth/user-not-found') {
+        message = "El correo ingresado no está registrado en el sistema ICSA.";
+      } else if (error.code === 'auth/too-many-requests') {
+        message = "Acceso bloqueado temporalmente por demasiados intentos fallidos.";
+      } else if (error.code === 'auth/network-request-failed') {
+        message = "Error de red. Verifique su conexión a internet.";
+      }
       
       toast({ 
         variant: "destructive", 
@@ -142,6 +151,12 @@ export default function LoginPage() {
               {loading ? "Verificando..." : "Entrar al Portal"}
             </Button>
           </form>
+          <div className="mt-6 p-4 bg-muted/30 rounded-xl text-center">
+            <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest">Aviso Operativo</p>
+            <p className="text-[10px] text-muted-foreground mt-1 leading-relaxed">
+              Si no tiene acceso, contacte al administrador del sistema para registrar su cuenta corporativa en la consola de Firebase.
+            </p>
+          </div>
         </CardContent>
       </Card>
     </div>

@@ -109,6 +109,7 @@ export default function Dashboard() {
 
   const weeklyOrdersData = useMemo(() => {
     if (!orders || !mountedDate) return [];
+    // Siempre ordenado de Lunes a Domingo de la semana actual
     const monday = startOfWeek(mountedDate, { weekStartsOn: 1 });
     const weekDays = Array.from({ length: 7 }, (_, i) => addDays(monday, i));
 
@@ -270,8 +271,8 @@ export default function Dashboard() {
             <SheetContent side="left" className="bg-primary p-0 border-none w-72">
               <div className="sr-only">
                 <SheetHeader>
-                  <SheetTitle>Menú de Navegación</SheetTitle>
-                  <SheetDescription>Portal operativo de ICSA ingeniería comunicaciones S.A.</SheetDescription>
+                  <SheetTitle>Menú de Navegación Lateral</SheetTitle>
+                  <SheetDescription>Acceso a las secciones operativas del portal ICSA.</SheetDescription>
                 </SheetHeader>
               </div>
               <SidebarContent />
@@ -481,6 +482,10 @@ export default function Dashboard() {
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0" align="end">
+                    <div className="sr-only">
+                      <h3>Selector de Fecha</h3>
+                      <p>Seleccione un día para filtrar las órdenes de trabajo.</p>
+                    </div>
                     <Calendar
                       mode="single"
                       selected={dateFilter}
