@@ -118,7 +118,7 @@ export default function Dashboard() {
     const last7Days = Array.from({ length: 7 }, (_, i) => {
       const d = subDays(new Date(), i);
       return {
-        date: format(d, "dd/MM"),
+        date: format(d, "EEEEEE dd/MM", { locale: es }),
         fullDate: d,
         count: 0
       };
