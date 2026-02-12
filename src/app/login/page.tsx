@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from "react";
@@ -16,8 +17,8 @@ import { doc, setDoc, getDocs, collection, query, where } from "firebase/firesto
 import { useAuth, useFirestore } from "@/firebase";
 
 export default function LoginPage() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [email, setEmail] = useState("admin@icsa.com");
+  const [password, setPassword] = useState("admin123456");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
