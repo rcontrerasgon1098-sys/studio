@@ -116,7 +116,7 @@ export default function Dashboard() {
     if (!history) return [];
     
     const last7Days = Array.from({ length: 7 }, (_, i) => {
-      const d = subDays(new Date(), i);
+      const d = subDays(startOfDay(new Date()), i);
       return {
         date: format(d, "EEEEEE dd/MM", { locale: es }),
         fullDate: d,
