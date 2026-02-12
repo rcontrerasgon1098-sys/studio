@@ -13,11 +13,11 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SignaturePad } from "@/components/SignaturePad";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Save, CheckCircle2, Camera, X, Image as ImageIcon, Loader2, User, CreditCard, Sparkles, UserCheck } from "lucide-react";
+import { ArrowLeft, Save, CheckCircle2, Camera, X, Image as ImageIcon, Loader2, User, CreditCard, Sparkles, UserCheck, Users, PlusCircle } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import { useUser, useFirestore, useDoc, useMemoFirebase, useCollection } from "@/firebase";
-import { doc, collection, query, where } from "firebase/firestore";
+import { doc, collection, query, where, orderBy } from "firebase/firestore";
 import { updateDocumentNonBlocking, setDocumentNonBlocking, deleteDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 import { validateRut } from "@/lib/rut-utils";
 import {
@@ -30,6 +30,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 
 export default function EditWorkOrder({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -38,6 +40,7 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
   const { user, isUserLoading } = useUser();
   const db = useFirestore();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [openTeamSearch, setOpenTeamSearch] = useState(false);
   
   const orderRef = useMemoFirebase(() => {
     if (!db || !id) return null;
@@ -51,6 +54,13 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
     return query(collection(db, "personnel"), where("email_t", "==", user.email));
   }, [db, user?.email]);
   const { data: techProfiles } = useCollection(techProfileQuery);
+
+  const personnelQuery = useMemoFirebase(() => {
+    if (!db) return null;
+    return query(collection(db, "personnel"), orderBy("nombre_t", "asc"));
+  }, [db]);
+  const { data: allPersonnel } = useCollection(personnelQuery);
+
 
   const [loading, setLoading] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
@@ -76,7 +86,8 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
     clientReceiverRut: "",
     clientSignatureUrl: "",
     sketchImageUrl: "",
-    status: "Pending"
+    status: "Pending",
+    team: [] as string[],
   });
 
   useEffect(() => {
@@ -110,7 +121,8 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
         clientReceiverRut: order.clientReceiverRut || "",
         clientSignatureUrl: order.clientSignatureUrl || "",
         sketchImageUrl: order.sketchImageUrl || "",
-        status: order.status || "Pending"
+        status: order.status || "Pending",
+        team: order.team || [],
       });
       setIsInitialized(true);
     }
@@ -189,6 +201,17 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
     setShowSaveSignatureDialog(false);
   };
 
+  const handleTeamSelect = (person: any) => {
+    if (!formData.team.find(t => t === person.nombre_t)) {
+      setFormData(prev => ({ ...prev, team: [...prev.team, person.nombre_t] }));
+    }
+    setOpenTeamSearch(false);
+  };
+  
+  const handleTeamRemove = (memberName: string) => {
+    setFormData(prev => ({ ...prev, team: prev.team.filter(t => t !== memberName) }));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user || !db || !id) return;
@@ -246,6 +269,8 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
   };
 
   const hasSavedSignature = techProfiles && techProfiles.length > 0 && !!techProfiles[0].signatureUrl;
+  
+  const availablePersonnel = allPersonnel?.filter(p => p.rol_t !== "Administrador" && !formData.team.includes(p.nombre_t)) || [];
 
   if (isUserLoading || isOrderLoading || !isInitialized) {
     return (
@@ -261,7 +286,7 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
       <header className="bg-white border-b sticky top-0 z-40 shadow-sm">
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2 md:gap-4">
-            <Link href={`/work-orders/${id}`}>
+            <Link href={`/dashboard`}>
               <Button variant="ghost" size="icon" className="h-10 w-10">
                 <ArrowLeft className="h-6 w-6" />
               </Button>
@@ -309,6 +334,51 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
                   />
                 </div>
               </div>
+            </CardContent>
+          </Card>
+          
+          <Card className="shadow-md border-none bg-white">
+            <CardHeader className="p-4 md:p-6 border-b">
+              <CardTitle className="text-lg flex items-center gap-2"><Users className="h-5 w-5 text-primary"/> Equipo de Trabajo</CardTitle>
+              <CardDescription>Asigne al personal que ejecutará esta orden.</CardDescription>
+            </CardHeader>
+            <CardContent className="p-4 md:p-6 space-y-4">
+               <div className="flex flex-wrap gap-2">
+                {formData.team.map((name, index) => (
+                  <Badge key={index} variant="secondary" className="text-base py-1 px-3 rounded-lg bg-primary/10 text-primary gap-2">
+                    {name}
+                    <button type="button" onClick={() => handleTeamRemove(name)} className="rounded-full hover:bg-black/20 p-0.5">
+                      <X className="h-3 w-3" />
+                    </button>
+                  </Badge>
+                ))}
+              </div>
+              <Popover open={openTeamSearch} onOpenChange={setOpenTeamSearch}>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className="w-full h-12 text-base font-bold border-dashed">
+                    <PlusCircle className="h-5 w-5 mr-2" /> Agregar Miembro al Equipo
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[320px] md:w-[450px] p-0 shadow-2xl border-primary/10" align="start">
+                  <Command>
+                    <CommandInput placeholder="Buscar personal..." className="h-12"/>
+                    <CommandList>
+                      <CommandEmpty>No hay personal disponible.</CommandEmpty>
+                      <CommandGroup heading="Personal Disponible">
+                        {availablePersonnel.map(person => (
+                          <CommandItem key={person.id} onSelect={() => handleTeamSelect(person)} className="p-3 cursor-pointer">
+                            <User className="mr-3 h-5 w-5 text-primary" />
+                            <div className="flex flex-col">
+                              <span className="font-bold">{person.nombre_t}</span>
+                              <span className="text-xs text-muted-foreground">{person.rol_t}</span>
+                            </div>
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
             </CardContent>
           </Card>
 

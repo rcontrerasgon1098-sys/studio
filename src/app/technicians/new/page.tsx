@@ -114,7 +114,7 @@ export default function NewTechnician() {
               <CardTitle className="text-primary flex items-center gap-2">
                 <ShieldCheck className="h-5 w-5" /> Datos del Colaborador
               </CardTitle>
-              <CardDescription>Ingrese la información profesional del nuevo técnico o personal administrativo.</CardDescription>
+              <CardDescription>Ingrese la información profesional del nuevo integrante del equipo.</CardDescription>
             </CardHeader>
             <CardContent className="p-6 space-y-6">
               <div className="space-y-4">
@@ -159,6 +159,7 @@ export default function NewTechnician() {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="Administrador">Administrador</SelectItem>
+                        <SelectItem value="Supervisor">Supervisor</SelectItem>
                         <SelectItem value="Técnico">Técnico</SelectItem>
                       </SelectContent>
                     </Select>

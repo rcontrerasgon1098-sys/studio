@@ -12,8 +12,8 @@ import Image from "next/image";
 import { PlaceHolderImages } from "@/lib/placeholder-images";
 import { ArrowLeft, LogIn, Eye, EyeOff } from "lucide-react";
 import Link from "next/link";
-import { signInWithEmailAndPassword } from "firebase/auth";
-import { doc, setDoc } from "firebase/firestore";
+import { signInWithEmailAndPassword, signOut } from "firebase/auth";
+import { doc, setDoc, getDocs, collection, query, where } from "firebase/firestore";
 import { useAuth, useFirestore } from "@/firebase";
 
 export default function LoginPage() {
@@ -36,23 +36,41 @@ export default function LoginPage() {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 
-      const isSystemAdmin = email === "admin@icsa.com";
-      
+      // Check role from 'personnel' collection
+      const personnelQuery = query(collection(db, "personnel"), where("email_t", "==", user.email));
+      const personnelSnapshot = await getDocs(personnelQuery);
+
+      if (personnelSnapshot.empty) {
+        throw new Error("No tienes un perfil de personal asignado.");
+      }
+
+      const personnelData = personnelSnapshot.docs[0].data();
+      const userRole = personnelData.rol_t;
+
+      if (userRole === 'Técnico') {
+        throw new Error("Tu rol de Técnico no tiene permisos para acceder a la aplicación.");
+      }
+
+      // Role is either 'Administrador' or 'Supervisor', allow login
       await setDoc(doc(db, "users", user.uid), {
-        email: email,
-        rol: isSystemAdmin ? "admin" : "tecnico",
+        email: user.email,
+        rol: userRole,
         activo: true,
         lastLogin: new Date().toISOString()
       }, { merge: true });
 
-      toast({ title: "Bienvenido", description: "Acceso concedido al portal ICSA." });
+      toast({ title: "Bienvenido", description: `Acceso concedido como ${userRole}.` });
       router.push("/dashboard");
+
     } catch (error: any) {
       console.error("Login error:", error);
       let message = "Error de conexión. Verifique sus datos.";
       
-      if (error.code === 'auth/invalid-credential' || error.code === 'auth/wrong-password' || error.code === 'auth/user-not-found') {
-        message = "Credenciales incorrectas. Verifique su correo y contraseña o contacte al administrador.";
+      if (error.message.includes("No tienes un perfil") || error.message.includes("no tiene permisos")) {
+        message = error.message;
+        if(auth.currentUser) await signOut(auth);
+      } else if (error.code === 'auth/invalid-credential' || error.code === 'auth/wrong-password' || error.code === 'auth/user-not-found') {
+        message = "Credenciales incorrectas. Verifique su correo y contraseña.";
       } else if (error.code === 'auth/too-many-requests') {
         message = "Acceso bloqueado temporalmente por demasiados intentos fallidos.";
       } else if (error.code === 'auth/network-request-failed') {
@@ -151,7 +169,7 @@ export default function LoginPage() {
           <div className="mt-6 p-4 bg-muted/30 rounded-xl text-center">
             <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest">Aviso Operativo</p>
             <p className="text-[10px] text-muted-foreground mt-1 leading-relaxed">
-              Si no tiene acceso, contacte al administrador del sistema para registrar su cuenta corporativa en la consola de Firebase.
+              Solo el personal con rol de Supervisor o Administrador puede acceder a la aplicación.
             </p>
           </div>
         </CardContent>

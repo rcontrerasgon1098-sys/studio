@@ -174,6 +174,7 @@ export default function EditTechnician({ params }: { params: Promise<{ id: strin
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="Administrador">Administrador</SelectItem>
+                        <SelectItem value="Supervisor">Supervisor</SelectItem>
                         <SelectItem value="Técnico">Técnico</SelectItem>
                       </SelectContent>
                     </Select>

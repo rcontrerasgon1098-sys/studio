@@ -1,3 +1,4 @@
+
 "use client";
 
 import { use, useState, useEffect } from "react";
@@ -5,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Download, Printer, User, Calendar, MapPin, ClipboardCheck, Info, Pencil, CreditCard, Loader2 } from "lucide-react";
+import { ArrowLeft, Download, Printer, User, Calendar, MapPin, ClipboardCheck, Info, Pencil, CreditCard, Loader2, Users } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import { generateWorkOrderPDF } from "@/lib/pdf-generator";
@@ -124,6 +125,28 @@ export default function WorkOrderView({ params }: { params: Promise<{ id: string
             </CardContent>
           </Card>
         </div>
+
+        {order.team && order.team.length > 0 && (
+          <Card className="shadow-md border-none bg-white">
+            <CardHeader className="p-4 border-b">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-secondary rounded-xl">
+                  <Users className="text-primary h-5 w-5" />
+                </div>
+                <CardTitle className="text-base font-bold">Equipo Asignado</CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent className="p-4">
+              <div className="flex flex-wrap gap-2">
+                {order.team.map((member: string, index: number) => (
+                  <Badge key={index} variant="secondary" className="text-sm bg-primary/10 text-primary border-none">
+                    {member}
+                  </Badge>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         <Card className="shadow-md border-none bg-white">
           <CardHeader className="p-4 border-b">
