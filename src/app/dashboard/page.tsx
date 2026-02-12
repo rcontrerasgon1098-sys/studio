@@ -133,7 +133,7 @@ export default function Dashboard() {
       const dayKey = format(d, 'yyyy-MM-dd');
       
       return {
-        date: format(d, "EEEEEE, dd/MM", { locale: es }),
+        date: format(d, "dd/MM", { locale: es }),
         count: activityMap.get(dayKey) || 0,
       };
     });
