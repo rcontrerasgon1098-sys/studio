@@ -191,10 +191,11 @@ export default function EditTechnician({ params }: { params: Promise<{ id: strin
                       type="email"
                       placeholder="tecnico@icsa.com" 
                       value={formData.email_t}
-                      onChange={e => setFormData({...formData, email_t: e.target.value})}
-                      className="h-12"
+                      className="h-12 bg-muted/50"
                       required
+                      disabled
                     />
+                    <p className="text-[10px] text-muted-foreground">El correo no se puede modificar ya que está asociado al inicio de sesión.</p>
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="cel_t" className="font-bold flex items-center gap-2">

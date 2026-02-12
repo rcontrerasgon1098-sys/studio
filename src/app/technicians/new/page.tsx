@@ -9,18 +9,20 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Save, User, Hash, Mail, Phone, ShieldCheck, UserCog } from "lucide-react";
+import { ArrowLeft, Save, User, Hash, Mail, Phone, ShieldCheck, UserCog, KeyRound } from "lucide-react";
 import Link from "next/link";
-import { useUser, useFirestore } from "@/firebase";
-import { collection, doc } from "firebase/firestore";
+import { useUser, useFirestore, useAuth } from "@/firebase";
+import { doc } from "firebase/firestore";
 import { setDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 import { validateRut } from "@/lib/rut-utils";
+import { createUserWithEmailAndPassword } from "firebase/auth";
 
 export default function NewTechnician() {
   const router = useRouter();
   const { toast } = useToast();
   const { user, isUserLoading } = useUser();
   const db = useFirestore();
+  const auth = useAuth();
   
   const [loading, setLoading] = useState(false);
 
@@ -30,7 +32,9 @@ export default function NewTechnician() {
     rut_t: "",
     email_t: "",
     cel_t: "",
-    rol_t: "Técnico"
+    rol_t: "Técnico",
+    password: "",
+    confirmPassword: ""
   });
 
   useEffect(() => {
@@ -41,18 +45,38 @@ export default function NewTechnician() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user || !db) return;
+    if (!user || !db || !auth) return;
     
     setLoading(true);
 
-    if (!formData.nombre_t || !formData.rut_t || !formData.email_t || !formData.rol_t) {
+    if (!formData.nombre_t || !formData.rut_t || !formData.email_t || !formData.rol_t || !formData.password) {
       toast({ 
         variant: "destructive", 
         title: "Campos Requeridos", 
-        description: "Nombre, RUT, Email y Rol son obligatorios." 
+        description: "Nombre, RUT, Email, Rol y Contraseña son obligatorios." 
       });
       setLoading(false);
       return;
+    }
+    
+    if (formData.password !== formData.confirmPassword) {
+      toast({
+          variant: "destructive",
+          title: "Contraseñas no coinciden",
+          description: "Por favor verifique la contraseña.",
+      });
+      setLoading(false);
+      return;
+    }
+
+    if (formData.password.length < 6) {
+        toast({
+            variant: "destructive",
+            title: "Contraseña insegura",
+            description: "La contraseña debe tener al menos 6 caracteres.",
+        });
+        setLoading(false);
+        return;
     }
 
     if (!validateRut(formData.rut_t)) {
@@ -65,25 +89,43 @@ export default function NewTechnician() {
       return;
     }
 
-    // ID generado automáticamente
-    const personnelId = doc(collection(db, "personnel")).id;
-    const personnelData = {
-      ...formData,
-      id: personnelId,
-      id_t: `T-${Math.floor(1000 + Math.random() * 9000)}`, // ID de visualización automático
-      createdAt: new Date().toISOString(),
-      registeredBy: user.email
-    };
-
-    const personnelRef = doc(db, "personnel", personnelId);
-    
     try {
+      // 1. Create user in Firebase Auth
+      const userCredential = await createUserWithEmailAndPassword(auth, formData.email_t, formData.password);
+      const newAuthUser = userCredential.user;
+
+      // 2. Create personnel document in Firestore
+      const personnelId = newAuthUser.uid; // Use auth UID as personnel document ID
+      const personnelData = {
+        nombre_t: formData.nombre_t,
+        rut_t: formData.rut_t,
+        email_t: formData.email_t,
+        cel_t: formData.cel_t,
+        rol_t: formData.rol_t,
+        id: personnelId,
+        id_t: `T-${Math.floor(1000 + Math.random() * 9000)}`,
+        createdAt: new Date().toISOString(),
+        registeredBy: user.email
+      };
+
+      const personnelRef = doc(db, "personnel", personnelId);
+    
       setDocumentNonBlocking(personnelRef, personnelData, { merge: true });
-      toast({ title: "Personal Registrado", description: "El integrante del equipo ha sido guardado." });
+      
+      toast({ title: "Personal Registrado", description: "El integrante ha sido guardado y su perfil de acceso creado." });
       router.push("/dashboard");
-    } catch (error) {
+
+    } catch (error: any) {
       setLoading(false);
-      toast({ variant: "destructive", title: "Error", description: "No se pudo guardar el registro." });
+      let message = "No se pudo registrar el perfil.";
+      if (error.code === 'auth/email-already-in-use') {
+        message = "El correo electrónico ya se encuentra registrado.";
+      } else if (error.code === 'auth/invalid-email') {
+        message = "El correo electrónico no es válido.";
+      } else if (error.code === 'auth/weak-password') {
+        message = "La contraseña es demasiado débil.";
+      }
+      toast({ variant: "destructive", title: "Error de Registro", description: message });
     }
   };
 
@@ -194,6 +236,41 @@ export default function NewTechnician() {
                     />
                   </div>
                 </div>
+              </div>
+              
+              <div className="space-y-4 pt-4 border-t">
+                <Label className="font-bold flex items-center gap-2 text-primary">
+                  <KeyRound className="h-4 w-4" /> Credenciales de Acceso
+                </Label>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="password">Contraseña</Label>
+                      <Input
+                        id="password"
+                        type="password"
+                        placeholder="Mínimo 6 caracteres"
+                        value={formData.password}
+                        onChange={e => setFormData({...formData, password: e.target.value})}
+                        className="h-12"
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="confirmPassword">Confirmar Contraseña</Label>
+                      <Input
+                        id="confirmPassword"
+                        type="password"
+                        placeholder="Repita la contraseña"
+                        value={formData.confirmPassword}
+                        onChange={e => setFormData({...formData, confirmPassword: e.target.value})}
+                        className="h-12"
+                        required
+                      />
+                    </div>
+                </div>
+                <p className="text-[10px] text-muted-foreground italic">
+                    Crea una contraseña para que el nuevo integrante pueda iniciar sesión en el portal. (El rol 'Técnico' no tiene acceso).
+                </p>
               </div>
 
               <div className="p-4 bg-muted/40 rounded-xl border border-dashed flex items-start gap-3">

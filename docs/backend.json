@@ -111,6 +111,7 @@
       "type": "object",
       "description": "Represents company personnel.",
       "properties": {
+        "id": { "type": "string", "description": "User UID, same as document ID." },
         "id_t": { "type": "string", "description": "Auto-assigned ID" },
         "nombre_t": { "type": "string" },
         "rut_t": { "type": "string" },
@@ -119,7 +120,7 @@
         "rol_t": { "type": "string", "enum": ["Administrador", "Supervisor", "Técnico"] },
         "signatureUrl": { "type": "string", "description": "Saved signature of the technician" }
       },
-      "required": ["nombre_t", "rut_t", "email_t", "rol_t"]
+      "required": ["id", "nombre_t", "rut_t", "email_t", "rol_t"]
     }
   },
   "auth": {
