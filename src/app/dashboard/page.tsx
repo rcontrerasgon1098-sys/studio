@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
@@ -40,7 +39,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { useToast } from "@/hooks/use-toast";
 import {
   PieChart,
   Pie,
@@ -115,16 +113,13 @@ export default function Dashboard() {
   const activityData = useMemo(() => {
     if (!history) return [];
     
-    // 1. Create a map to store counts for each day efficiently.
     const activityMap = new Map<string, number>();
     const sevenDaysAgo = startOfDay(subDays(new Date(), 6));
 
-    // 2. Iterate through historical orders once.
     history.forEach(order => {
       if (order.startDate) {
         const orderDate = startOfDay(new Date(order.startDate));
         
-        // 3. Only process orders within the last 7 days.
         if (orderDate >= sevenDaysAgo) {
           const dayKey = format(orderDate, 'yyyy-MM-dd');
           activityMap.set(dayKey, (activityMap.get(dayKey) || 0) + 1);
@@ -132,18 +127,48 @@ export default function Dashboard() {
       }
     });
 
-    // 4. Generate the data for the last 7 days in chronological order.
     const result = Array.from({ length: 7 }, (_, i) => {
-      const d = subDays(startOfDay(new Date()), 6 - i); // i=0 is 6 days ago, i=6 is today.
+      const d = subDays(startOfDay(new Date()), 6 - i);
       const dayKey = format(d, 'yyyy-MM-dd');
       
       return {
-        date: format(d, "EEEEEE dd/MM", { locale: es }),
+        date: format(d, "EEEEEE, dd/MM", { locale: es }),
         count: activityMap.get(dayKey) || 0,
       };
     });
 
     return result;
+  }, [history]);
+  
+  const topClientsData = useMemo(() => {
+    if (!history) return [];
+    const counts = history.reduce((acc, order) => {
+        const client = order.clientName || "Desconocido";
+        acc[client] = (acc[client] || 0) + 1;
+        return acc;
+    }, {} as Record<string, number>);
+
+    return Object.entries(counts)
+        .map(([name, count]) => ({ name, count }))
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 5);
+  }, [history]);
+
+  const techProductivityData = useMemo(() => {
+    if (!history) return [];
+    const counts = history.reduce((acc, order) => {
+        const tech = order.techName || "No Asignado";
+        acc[tech] = (acc[tech] || 0) + 1;
+        return acc;
+    }, {} as Record<string, number>);
+
+    return Object.entries(counts)
+        .map(([name, count]) => ({
+            name: name.split(" ")[0], // Use only the first name for brevity
+            count 
+        }))
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 5);
   }, [history]);
 
   const filteredOrders = useMemo(() => {
@@ -411,12 +436,63 @@ export default function Dashboard() {
                           axisLine={false} 
                           tickLine={false} 
                           tick={{ fontSize: 12, fontWeight: 'bold' }} 
+                          allowDecimals={false}
                         />
                         <RechartsTooltip 
                           cursor={{ fill: 'hsl(var(--muted)/0.3)' }}
                           contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
                         />
                         <Bar dataKey="count" fill="hsl(var(--accent))" radius={[6, 6, 0, 0]} barSize={40} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                </CardContent>
+              </Card>
+              
+              <Card className="bg-white border-none shadow-md overflow-hidden">
+                <CardHeader className="border-b bg-muted/5">
+                  <CardTitle className="text-sm font-bold flex items-center gap-2">
+                    <Briefcase className="h-4 w-4 text-primary" /> Top 5 Clientes
+                  </CardTitle>
+                  <CardDescription>Clientes con más órdenes completadas.</CardDescription>
+                </CardHeader>
+                <CardContent className="p-6">
+                  <div className="h-[350px] w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={topClientsData} layout="vertical" margin={{ left: 50 }}>
+                        <CartesianGrid strokeDasharray="3 3" horizontal={false} />
+                        <XAxis type="number" allowDecimals={false} />
+                        <YAxis dataKey="name" type="category" tick={{ fontSize: 12 }} />
+                        <RechartsTooltip 
+                          cursor={{ fill: 'hsl(var(--muted)/0.3)' }}
+                          contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
+                        />
+                        <Bar dataKey="count" fill="hsl(var(--primary))" radius={[0, 4, 4, 0]} barSize={30} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-white border-none shadow-md overflow-hidden">
+                <CardHeader className="border-b bg-muted/5">
+                  <CardTitle className="text-sm font-bold flex items-center gap-2">
+                    <TrendingUp className="h-4 w-4 text-primary" /> Productividad de Técnicos
+                  </CardTitle>
+                  <CardDescription>Top 5 técnicos por órdenes completadas.</CardDescription>
+                </CardHeader>
+                <CardContent className="p-6">
+                  <div className="h-[350px] w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={techProductivityData} layout="vertical" margin={{ left: 20 }}>
+                        <CartesianGrid strokeDasharray="3 3" horizontal={false} />
+                        <XAxis type="number" allowDecimals={false} />
+                        <YAxis dataKey="name" type="category" tick={{ fontSize: 12 }} />
+                        <RechartsTooltip 
+                          cursor={{ fill: 'hsl(var(--muted)/0.3)' }}
+                          contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
+                        />
+                        <Bar dataKey="count" fill="hsl(var(--accent))" radius={[0, 4, 4, 0]} barSize={30} />
                       </BarChart>
                     </ResponsiveContainer>
                   </div>
