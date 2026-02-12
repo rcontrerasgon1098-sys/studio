@@ -432,6 +432,7 @@ export default function Dashboard() {
                           axisLine={false} 
                           tickLine={false} 
                           tick={{ fontSize: 12, fontWeight: 'bold' }} 
+                          interval={0}
                         />
                         <YAxis 
                           axisLine={false} 
