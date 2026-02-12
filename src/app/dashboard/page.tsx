@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { format, startOfDay, isSameDay, startOfWeek, addDays, subDays } from "date-fns";
+import { format, startOfDay, isSameDay, subDays } from "date-fns";
 import { es } from "date-fns/locale";
 import { 
   Plus, FileText, Search, LogOut, LayoutDashboard, 
@@ -115,27 +115,35 @@ export default function Dashboard() {
   const activityData = useMemo(() => {
     if (!history) return [];
     
-    const last7Days = Array.from({ length: 7 }, (_, i) => {
-      const d = subDays(startOfDay(new Date()), i);
-      return {
-        date: format(d, "EEEEEE dd/MM", { locale: es }),
-        fullDate: d,
-        count: 0
-      };
-    }).reverse();
+    // 1. Create a map to store counts for each day efficiently.
+    const activityMap = new Map<string, number>();
+    const sevenDaysAgo = startOfDay(subDays(new Date(), 6));
 
+    // 2. Iterate through historical orders once.
     history.forEach(order => {
       if (order.startDate) {
-        const orderDate = new Date(order.startDate);
-        last7Days.forEach(day => {
-          if (isSameDay(orderDate, day.fullDate)) {
-            day.count++;
-          }
-        });
+        const orderDate = startOfDay(new Date(order.startDate));
+        
+        // 3. Only process orders within the last 7 days.
+        if (orderDate >= sevenDaysAgo) {
+          const dayKey = format(orderDate, 'yyyy-MM-dd');
+          activityMap.set(dayKey, (activityMap.get(dayKey) || 0) + 1);
+        }
       }
     });
 
-    return last7Days;
+    // 4. Generate the data for the last 7 days in chronological order.
+    const result = Array.from({ length: 7 }, (_, i) => {
+      const d = subDays(startOfDay(new Date()), 6 - i); // i=0 is 6 days ago, i=6 is today.
+      const dayKey = format(d, 'yyyy-MM-dd');
+      
+      return {
+        date: format(d, "EEEEEE dd/MM", { locale: es }),
+        count: activityMap.get(dayKey) || 0,
+      };
+    });
+
+    return result;
   }, [history]);
 
   const filteredOrders = useMemo(() => {
