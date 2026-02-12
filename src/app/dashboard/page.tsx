@@ -696,7 +696,7 @@ function OrderTable({ orders, isLoading, type, setDeleteConfirm }: { orders: any
                     <Button variant="ghost" size="icon" className="h-8 w-8 text-primary"><Pencil className="h-4 w-4" /></Button>
                   </Link>
                 )}
-                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => generateWorkOrderPDF(order)}><Download className="h-4 w-4" /></Button>
+                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => generateWorkOrderPDF(order)} disabled={order.status === 'Pending'}><Download className="h-4 w-4" /></Button>
                 <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => setDeleteConfirm({ id: order.id, type })}><Trash2 className="h-4 w-4" /></Button>
               </div>
             </TableCell>

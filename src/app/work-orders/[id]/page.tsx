@@ -1,4 +1,3 @@
-
 "use client";
 
 import { use, useState, useEffect } from "react";
@@ -64,7 +63,7 @@ export default function WorkOrderView({ params }: { params: Promise<{ id: string
                 </Button>
               </Link>
             )}
-            <Button size="icon" onClick={() => generateWorkOrderPDF(order)} className="bg-primary hover:bg-primary/90 h-10 w-10">
+            <Button size="icon" onClick={() => generateWorkOrderPDF(order)} className="bg-primary hover:bg-primary/90 h-10 w-10" disabled={order.status === 'Pending'}>
               <Download className="h-5 w-5" />
             </Button>
             <Button variant="outline" size="icon" onClick={() => window.print()} className="h-10 w-10 hidden md:flex">
@@ -225,7 +224,7 @@ export default function WorkOrderView({ params }: { params: Promise<{ id: string
                </Button>
              </Link>
            )}
-           <Button onClick={() => generateWorkOrderPDF(order)} className="bg-primary h-14 w-full text-lg font-black gap-3 shadow-xl">
+           <Button onClick={() => generateWorkOrderPDF(order)} className="bg-primary h-14 w-full text-lg font-black gap-3 shadow-xl" disabled={order.status === 'Pending'}>
              <Download /> Descargar Reporte PDF
            </Button>
            <Link href="/dashboard" className="w-full">
