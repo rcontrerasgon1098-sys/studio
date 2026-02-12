@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState } from "react";
@@ -36,23 +35,30 @@ export default function LoginPage() {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 
+      let userRole: string;
+
       // Check role from 'personnel' collection
       const personnelQuery = query(collection(db, "personnel"), where("email_t", "==", user.email));
       const personnelSnapshot = await getDocs(personnelQuery);
 
       if (personnelSnapshot.empty) {
-        toast({ 
-          variant: "destructive", 
-          title: "Acceso Denegado", 
-          description: "No tienes un perfil de personal asignado." 
-        });
-        if(auth.currentUser) await signOut(auth);
-        setLoading(false);
-        return;
+        // If no personnel profile, check if it's the default admin
+        if (user.email === 'admin@icsa.com') {
+          userRole = 'Administrador';
+        } else {
+          toast({ 
+            variant: "destructive", 
+            title: "Acceso Denegado", 
+            description: "No tienes un perfil de personal asignado." 
+          });
+          if(auth.currentUser) await signOut(auth);
+          setLoading(false);
+          return;
+        }
+      } else {
+        const personnelData = personnelSnapshot.docs[0].data();
+        userRole = personnelData.rol_t;
       }
-
-      const personnelData = personnelSnapshot.docs[0].data();
-      const userRole = personnelData.rol_t;
 
       if (userRole === 'Técnico') {
         toast({ 
