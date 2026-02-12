@@ -16,12 +16,16 @@ import { cn } from "@/lib/utils";
 export default function WorkOrderView({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const db = useFirestore();
+  const router = useRouter();
   const [order, setOrder] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     async function fetchOrder() {
-      if (!db || !id) return;
+      if (!db || !id) {
+        setIsLoading(false);
+        return;
+      }
       setIsLoading(true);
       
       // Intentar buscar en 'ordenes' primero
@@ -40,7 +44,13 @@ export default function WorkOrderView({ params }: { params: Promise<{ id: string
     fetchOrder();
   }, [db, id]);
 
-  if (isLoading) return <div className="p-20 text-center text-primary font-black animate-pulse bg-background min-h-screen flex flex-col items-center justify-center gap-4"><Loader2 className="animate-spin h-10 w-10" /> BUSCANDO ORDEN...</div>;
+  useEffect(() => {
+    if (order && order.status === 'Pending') {
+      router.replace(`/work-orders/${id}/edit`);
+    }
+  }, [order, router, id]);
+
+  if (isLoading || (order && order.status === 'Pending')) return <div className="p-20 text-center text-primary font-black animate-pulse bg-background min-h-screen flex flex-col items-center justify-center gap-4"><Loader2 className="animate-spin h-10 w-10" /> CARGANDO...</div>;
   if (!order) return <div className="p-20 text-center text-muted-foreground font-bold bg-background min-h-screen">Orden no encontrada.</div>;
 
   return (
