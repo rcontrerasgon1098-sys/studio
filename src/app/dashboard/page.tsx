@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
@@ -336,16 +337,39 @@ export default function Dashboard() {
                activeTab === "stats" ? "Estadísticas y Análisis" :
                activeTab === "orders" ? "Gestión de Órdenes" : 
                activeTab === "history" ? "Historial de Trabajo" : 
-               activeTab === "clients" ? "Clientes" : "Personal"}
+               activeTab === "clients" ? "Administración de Clientes" : "Administración de Personal"}
             </h1>
+             <p className="text-muted-foreground mt-1">
+                {activeTab === "dashboard" ? "Resumen de actividad y acceso a órdenes." :
+                 activeTab === "stats" ? "Visualización de datos y rendimiento." :
+                 activeTab === "orders" ? "Seguimiento de trabajos en curso." :
+                 activeTab === "history" ? "Archivo de órdenes de trabajo completadas." :
+                 activeTab === "clients" ? "Gestión de la cartera de clientes." : "Gestión de la plantilla de ICSA."}
+            </p>
           </div>
-          {activeTab === "dashboard" && (
-            <Link href="/work-orders/new">
-              <Button className="bg-accent text-primary font-black h-12 px-6 shadow-lg rounded-xl">
-                <Plus size={20} className="mr-2" /> Nueva Orden
-              </Button>
-            </Link>
-          )}
+          <div className="flex-shrink-0">
+            {activeTab === "dashboard" && (
+              <Link href="/work-orders/new">
+                <Button className="bg-accent text-primary font-black h-12 px-6 shadow-lg rounded-xl">
+                  <Plus size={20} className="mr-2" /> Nueva Orden
+                </Button>
+              </Link>
+            )}
+            {activeTab === "clients" && (
+                <Link href="/clients/new">
+                <Button className="bg-accent text-primary font-black h-12 px-6 shadow-lg rounded-xl">
+                    <Plus size={20} className="mr-2" /> Nuevo Cliente
+                </Button>
+                </Link>
+            )}
+            {activeTab === "personnel" && (
+                <Link href="/technicians/new">
+                <Button className="bg-accent text-primary font-black h-12 px-6 shadow-lg rounded-xl">
+                    <Plus size={20} className="mr-2" /> Nuevo Personal
+                </Button>
+                </Link>
+            )}
+          </div>
         </header>
 
         {/* Dashboard / Inicio View */}
@@ -708,3 +732,5 @@ function OrderTable({ orders, isLoading, type, setDeleteConfirm }: { orders: any
     </Table>
   );
 }
+
+    
