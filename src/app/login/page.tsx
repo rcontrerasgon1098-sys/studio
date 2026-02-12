@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState } from "react";
@@ -41,14 +40,28 @@ export default function LoginPage() {
       const personnelSnapshot = await getDocs(personnelQuery);
 
       if (personnelSnapshot.empty) {
-        throw new Error("No tienes un perfil de personal asignado.");
+        toast({ 
+          variant: "destructive", 
+          title: "Acceso Denegado", 
+          description: "No tienes un perfil de personal asignado." 
+        });
+        if(auth.currentUser) await signOut(auth);
+        setLoading(false);
+        return;
       }
 
       const personnelData = personnelSnapshot.docs[0].data();
       const userRole = personnelData.rol_t;
 
       if (userRole === 'Técnico') {
-        throw new Error("Tu rol de Técnico no tiene permisos para acceder a la aplicación.");
+        toast({ 
+          variant: "destructive", 
+          title: "Acceso Denegado", 
+          description: "Tu rol de Técnico no tiene permisos para acceder a la aplicación." 
+        });
+        if(auth.currentUser) await signOut(auth);
+        setLoading(false);
+        return;
       }
 
       // Role is either 'Administrador' or 'Supervisor', allow login
@@ -63,18 +76,16 @@ export default function LoginPage() {
       router.push("/dashboard");
 
     } catch (error: any) {
-      console.error("Login error:", error);
       let message = "Error de conexión. Verifique sus datos.";
       
-      if (error.message.includes("No tienes un perfil") || error.message.includes("no tiene permisos")) {
-        message = error.message;
-        if(auth.currentUser) await signOut(auth);
-      } else if (error.code === 'auth/invalid-credential' || error.code === 'auth/wrong-password' || error.code === 'auth/user-not-found') {
+      if (error.code === 'auth/invalid-credential' || error.code === 'auth/wrong-password' || error.code === 'auth/user-not-found') {
         message = "Credenciales incorrectas. Verifique su correo y contraseña.";
       } else if (error.code === 'auth/too-many-requests') {
         message = "Acceso bloqueado temporalmente por demasiados intentos fallidos.";
       } else if (error.code === 'auth/network-request-failed') {
         message = "Error de red. Verifique su conexión a internet.";
+      } else {
+        console.error("Login error:", error);
       }
       
       toast({ 
