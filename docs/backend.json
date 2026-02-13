@@ -77,7 +77,23 @@
             "type": "string"
           },
           "description": "List of team members assigned to the work order."
-        }
+        },
+        "clientId": { "type": "string" },
+        "signalType": { "type": "string" },
+        "isCert": { "type": "boolean" },
+        "isPlan": { "type": "boolean" },
+        "connectionSwitch": { "type": "boolean" },
+        "hubConnection": { "type": "boolean" },
+        "location": { "type": "string" },
+        "cdsCanalization": { "type": "string" },
+        "description": { "type": "string" },
+        "techName": { "type": "string" },
+        "techRut": { "type": "string" },
+        "techSignatureUrl": { "type": "string", "format": "uri" },
+        "clientReceiverName": { "type": "string" },
+        "clientReceiverRut": { "type": "string" },
+        "clientSignatureUrl": { "type": "string", "format": "uri" },
+        "sketchImageUrl": { "type": "string", "format": "uri" }
       },
       "required": [
         "id",

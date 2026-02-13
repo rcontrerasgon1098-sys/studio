@@ -124,7 +124,7 @@ export default function NewWorkOrder() {
         });
       }
     }
-  }, [techProfiles]);
+  }, [techProfiles, toast, formData.techSignatureUrl]);
 
   const handleSelectClient = (client: any) => {
     const email = client.emailClientes || "";
