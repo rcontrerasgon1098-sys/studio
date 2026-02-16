@@ -16,7 +16,7 @@ import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, Save, CheckCircle2, Camera, X, Image as ImageIcon, Loader2, User, CreditCard, Sparkles, UserCheck, Users, PlusCircle } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
-import { useUser, useFirestore, useDoc, useMemoFirebase, useCollection } from "@/firebase";
+import { useUser, useFirestore, useDoc, useMemoFirebase, useCollection, useUserProfile } from "@/firebase";
 import { doc, collection, query, where, orderBy } from "firebase/firestore";
 import { updateDocumentNonBlocking, setDocumentNonBlocking, deleteDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 import { validateRut } from "@/lib/rut-utils";
@@ -39,6 +39,7 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
   const { toast } = useToast();
   const { user, isUserLoading } = useUser();
   const db = useFirestore();
+  const { userProfile, isProfileLoading } = useUserProfile();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [openTeamSearch, setOpenTeamSearch] = useState(false);
   
@@ -55,10 +56,13 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
   }, [db, user?.email]);
   const { data: techProfiles } = useCollection(techProfileQuery);
 
+  const isSupervisor = userProfile?.role === 'supervisor';
+  const isAdmin = userProfile?.role === 'admin';
+
   const personnelQuery = useMemoFirebase(() => {
-    if (!db) return null;
+    if (!db || (!isAdmin && !isSupervisor)) return null;
     return query(collection(db, "personnel"), orderBy("nombre_t", "asc"));
-  }, [db]);
+  }, [db, isAdmin, isSupervisor]);
   const { data: allPersonnel } = useCollection(personnelQuery);
 
 
@@ -274,7 +278,7 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
   
   const availablePersonnel = allPersonnel?.filter(p => p.rol_t !== "Administrador" && !formData.team.includes(p.nombre_t)) || [];
 
-  if (isUserLoading || isOrderLoading || !isInitialized) {
+  if (isUserLoading || isOrderLoading || !isInitialized || isProfileLoading) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-background text-primary gap-4">
         <Loader2 className="h-10 w-10 animate-spin" />
@@ -629,3 +633,5 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
     </div>
   );
 }
+
+    

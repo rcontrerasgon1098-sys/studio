@@ -98,7 +98,7 @@ export default function Dashboard() {
       return query(baseCollection, orderBy("startDate", "desc"));
     }
     return null;
-  }, [db, user, isProfileLoading, userProfile]);
+  }, [db, user, isProfileLoading, userProfile, isSupervisor, isAdmin]);
   const { data: orders, isLoading: isOrdersLoading } = useCollection(ordersQuery);
 
   const historyQuery = useMemoFirebase(() => {
@@ -111,19 +111,19 @@ export default function Dashboard() {
         return query(baseCollection, orderBy("startDate", "desc"));
     }
     return null;
-  }, [db, user, isProfileLoading, userProfile]);
+  }, [db, user, isProfileLoading, userProfile, isSupervisor, isAdmin]);
   const { data: history, isLoading: isHistoryLoading } = useCollection(historyQuery);
 
   const clientsQuery = useMemoFirebase(() => {
-    if (!db) return null;
+    if (!db || !isAdmin) return null; // Client list is admin-only tab
     return query(collection(db, "clients"), orderBy("nombreCliente", "asc"));
-  }, [db]);
+  }, [db, isAdmin]);
   const { data: clients } = useCollection(clientsQuery);
 
   const personnelQuery = useMemoFirebase(() => {
-    if (!db) return null;
+    if (!db || !isAdmin) return null; // Personnel list is admin-only tab
     return query(collection(db, "personnel"), orderBy("nombre_t", "asc"));
-  }, [db]);
+  }, [db, isAdmin]);
   const { data: personnel } = useCollection(personnelQuery);
 
   const statsData = useMemo(() => {
@@ -636,7 +636,7 @@ export default function Dashboard() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredClients.map((client) => (
+                  {filteredClients?.map((client) => (
                     <TableRow key={client.id}>
                       <TableCell className="font-medium">{client.rutCliente}</TableCell>
                       <TableCell>{client.nombreCliente}</TableCell>
@@ -675,7 +675,7 @@ export default function Dashboard() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredPersonnel.map((p) => (
+                  {filteredPersonnel?.map((p) => (
                     <TableRow key={p.id}>
                       <TableCell className="font-bold">{p.id_t}</TableCell>
                       <TableCell>{p.nombre_t}</TableCell>
@@ -758,3 +758,5 @@ function OrderTable({ orders, isLoading, type, setDeleteConfirm, isAdmin }: { or
     </Table>
   );
 }
+
+    
