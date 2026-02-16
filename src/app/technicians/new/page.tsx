@@ -32,7 +32,7 @@ export default function NewTechnician() {
     rut_t: "",
     email_t: "",
     cel_t: "",
-    rol_t: "Técnico",
+    rol_t: "Técnico", // Holds Spanish value for UI
     password: "",
     confirmPassword: ""
   });
@@ -94,14 +94,22 @@ export default function NewTechnician() {
       const userCredential = await createUserWithEmailAndPassword(auth, formData.email_t, formData.password);
       const newAuthUser = userCredential.user;
 
-      // 2. Create personnel document in Firestore
-      const personnelId = newAuthUser.uid; // Use auth UID as personnel document ID
+      // Map UI role value (Spanish) to DB role value (English)
+      const roleValueMapping: { [key: string]: 'admin' | 'supervisor' | 'tecnico' } = {
+        'Administrador': 'admin',
+        'Supervisor': 'supervisor',
+        'Técnico': 'tecnico'
+      };
+      const mappedRole = roleValueMapping[formData.rol_t];
+
+      // 2. Create personnel document in Firestore, with UID as document ID
+      const personnelId = newAuthUser.uid;
       const personnelData = {
         nombre_t: formData.nombre_t,
         rut_t: formData.rut_t,
         email_t: formData.email_t,
         cel_t: formData.cel_t,
-        rol_t: formData.rol_t,
+        role: mappedRole, // Use the mapped, English role
         id: personnelId,
         id_t: `T-${Math.floor(1000 + Math.random() * 9000)}`,
         createdAt: new Date().toISOString(),

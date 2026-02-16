@@ -127,18 +127,18 @@
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Personnel",
       "type": "object",
-      "description": "Represents company personnel.",
+      "description": "Represents company personnel. The document ID must be the user's UID.",
       "properties": {
         "id": { "type": "string", "description": "User UID, same as document ID." },
-        "id_t": { "type": "string", "description": "Auto-assigned ID" },
+        "id_t": { "type": "string", "description": "Auto-assigned ID for display." },
         "nombre_t": { "type": "string" },
         "rut_t": { "type": "string" },
         "email_t": { "type": "string", "format": "email" },
         "cel_t": { "type": "string" },
-        "rol_t": { "type": "string", "enum": ["Administrador", "Supervisor", "Técnico"] },
+        "role": { "type": "string", "description": "Role for permissions", "enum": ["admin", "supervisor", "tecnico"] },
         "signatureUrl": { "type": "string", "description": "Saved signature of the technician" }
       },
-      "required": ["id", "nombre_t", "rut_t", "email_t", "rol_t"]
+      "required": ["id", "nombre_t", "rut_t", "email_t", "role"]
     }
   },
   "auth": {
@@ -153,7 +153,7 @@
         "definition": {
           "entityName": "User",
           "schema": { "$ref": "#/backend/entities/User" },
-          "description": "Stores user profiles."
+          "description": "Stores user profiles, often as a cache for UI purposes."
         }
       },
       {
@@ -185,7 +185,7 @@
         "definition": {
           "entityName": "Personnel",
           "schema": { "$ref": "#/backend/entities/Personnel" },
-          "description": "Stores company technicians."
+          "description": "Stores company personnel profiles, used as the source of truth for roles."
         }
       }
     ]

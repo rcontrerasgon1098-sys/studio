@@ -1,3 +1,4 @@
+
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -7,28 +8,46 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    // getUserData lee el perfil desde 'personnel' usando el UID del usuario.
+    // Esto es más seguro y centraliza los roles.
     function getUserData() {
-      // Se asume que el documento del usuario existe si está logueado
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+      // Esta función asume que el documento en 'personnel' tiene el mismo ID que el UID del usuario.
+      return get(/databases/$(database)/documents/personnel/$(request.auth.uid)).data;
     }
 
     function isAdmin() {
+      // El campo debe ser 'role' y el valor 'admin' en el documento de 'personnel'
       return isLoggedIn() && getUserData().role == "admin";
     }
 
     function isSupervisor() {
       return isLoggedIn() && getUserData().role == "supervisor";
     }
-
+    
     // ===============================
-    // USERS
+    // PERSONNEL (PERFILES - Fuente de Verdad para roles)
+    // ===============================
+    match /personnel/{personId} {
+      // get: Permite leer un documento. Esencial para que getUserData() funcione.
+      // Un usuario puede leer su propio perfil.
+      // Un admin puede leer cualquier perfil.
+      allow get: if (isLoggedIn() && request.auth.uid == personId) || isAdmin();
+      
+      // list: Permite consultar la colección.
+      // Admins y Supervisores necesitan esto para listar personal.
+      allow list: if isAdmin() || isSupervisor();
+      
+      // write: Solo los admins pueden crear, actualizar o borrar perfiles.
+      allow write: if isAdmin();
+    }
+    
+    // ===============================
+    // USERS (Colección de caché, no usada para reglas críticas)
     // ===============================
     match /users/{userId} {
-      // Admin lee todo, otros solo su propio perfil.
-      // Esta regla es fundamental para evitar recursividad en otras reglas.
-      allow read: if isAdmin() || request.auth.uid == userId;
-      // Solo Admin escribe.
-      allow write: if isAdmin();
+      // Se permite al sistema escribir al hacer login y al usuario leer su propio doc.
+      // Admin puede leer/escribir todo para mantenimiento.
+      allow read, write: if isAdmin() || (isLoggedIn() && request.auth.uid == userId);
     }
 
     // ===============================
@@ -36,36 +55,26 @@ service cloud.firestore {
     // ===============================
     match /clients/{clientId} {
       allow read: if isAdmin() || isSupervisor();
-      allow write: if isAdmin();
-    }
-
-    // ===============================
-    // PERSONNEL
-    // ===============================
-    match /personnel/{personId} {
-      // Admin y supervisores pueden leer la lista de personal.
-      allow read: if isAdmin() || isSupervisor();
-      // Solo Admin escribe.
-      allow write: if isAdmin();
+      // Admin y Supervisores pueden crear/editar clientes.
+      allow write: if isAdmin() || isSupervisor();
     }
 
     // ===============================
     // ORDENES (ACTIVAS)
     // ===============================
     match /ordenes/{ordenId} {
-      // LIST: Permite a los supervisores consultar la colección (la query del frontend debe filtrar por createdBy).
+      // list: Permite a Admin y Supervisor consultar la colección (para filtrar en la app).
       allow list: if isAdmin() || isSupervisor();
-
-      // GET: Admin lee cualquier orden. Supervisor solo lee las que creó.
+      // get: Admin puede leer cualquier orden, Supervisor solo las suyas.
       allow get: if isAdmin() || (isSupervisor() && resource.data.createdBy == request.auth.uid);
-
-      // CREATE: Admin crea. Supervisor crea si es el autor.
-      allow create: if isAdmin() || (isSupervisor() && request.resource.data.createdBy == request.auth.uid);
-
-      // UPDATE: Admin actualiza. Supervisor actualiza las suyas si el estado es 'Pending'.
-      allow update: if isAdmin() || (isSupervisor() && resource.data.createdBy == request.auth.uid && resource.data.status == "Pending");
-
-      // DELETE: Solo Admin puede borrar.
+      
+      // create: Supervisor solo puede crear órdenes asociadas a su UID.
+      allow create: if isSupervisor() && request.resource.data.createdBy == request.auth.uid;
+      
+      // update: Supervisor solo puede actualizar sus propias órdenes si están 'Pending'.
+      allow update: if isSupervisor() && resource.data.createdBy == request.auth.uid && resource.data.status == "Pending";
+      
+      // delete: Solo Admin puede borrar.
       allow delete: if isAdmin();
     }
 
@@ -73,13 +82,11 @@ service cloud.firestore {
     // HISTORIAL (OT CERRADAS)
     // ===============================
     match /historial/{historialId} {
-      // LIST: Similar a ordenes, se permite listar para filtrar en la app.
+      // list & get: Admin puede ver todo. Supervisor solo sus propias órdenes completadas.
       allow list: if isAdmin() || isSupervisor();
-
-      // GET: Admin lee cualquier orden. Supervisor solo lee las suyas.
       allow get: if isAdmin() || (isSupervisor() && resource.data.createdBy == request.auth.uid);
       
-      // Los registros del historial no se deben modificar ni borrar por supervisores.
+      // write: Solo Admin puede modificar el historial.
       allow write: if isAdmin();
     }
 
@@ -87,9 +94,9 @@ service cloud.firestore {
     // ROLES
     // ===============================
     match /roles/{roleId} {
-      // Todos los usuarios logueados pueden leer los roles disponibles.
+      // Necesario para poblar los dropdowns en la UI
       allow read: if isLoggedIn();
-      // Solo Admin puede modificar los roles.
+      // Solo Admin puede editar la definición de roles.
       allow write: if isAdmin();
     }
   }

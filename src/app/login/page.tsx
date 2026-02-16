@@ -13,7 +13,7 @@ import { PlaceHolderImages } from "@/lib/placeholder-images";
 import { ArrowLeft, LogIn, Eye, EyeOff } from "lucide-react";
 import Link from "next/link";
 import { signInWithEmailAndPassword, signOut } from "firebase/auth";
-import { doc, setDoc, getDocs, collection, query, where } from "firebase/firestore";
+import { doc, setDoc, getDoc, collection, query, where, getDocs } from "firebase/firestore";
 import { useAuth, useFirestore } from "@/firebase";
 
 export default function LoginPage() {
@@ -33,68 +33,77 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
+      // 1. Authenticate user with email and password
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 
-      let personnelRole: string;
-      let mappedRole: 'admin' | 'supervisor' | 'tecnico';
+      // 2. Fetch the user's profile from the 'personnel' collection using their UID
+      const personnelDocRef = doc(db, "personnel", user.uid);
+      const personnelDoc = await getDoc(personnelDocRef);
 
-      // Check role from 'personnel' collection
-      const personnelQuery = query(collection(db, "personnel"), where("email_t", "==", user.email));
-      const personnelSnapshot = await getDocs(personnelQuery);
-
-      if (personnelSnapshot.empty) {
-        // If no personnel profile, check if it's the default admin
+      if (!personnelDoc.exists()) {
+         // Special case for initial admin user, which might not have a personnel doc yet.
         if (user.email === 'admin@icsa.com') {
-          personnelRole = 'Administrador';
-        } else {
-          toast({ 
-            variant: "destructive", 
-            title: "Acceso Denegado", 
-            description: "No tienes un perfil de personal asignado." 
-          });
-          if(auth.currentUser) await signOut(auth);
-          setLoading(false);
-          return;
-        }
-      } else {
-        const personnelData = personnelSnapshot.docs[0].data();
-        personnelRole = personnelData.rol_t;
-      }
-      
-      switch (personnelRole) {
-        case 'Administrador':
-          mappedRole = 'admin';
-          break;
-        case 'Supervisor':
-          mappedRole = 'supervisor';
-          break;
-        case 'Técnico':
-        default:
-          mappedRole = 'tecnico';
-          break;
-      }
+            const adminRole = 'admin';
+             // Create a personnel document for the admin if it doesn't exist
+            await setDoc(personnelDocRef, {
+                id: user.uid,
+                email_t: user.email,
+                nombre_t: "Admin ICSA",
+                role: adminRole,
+                rut_t: "1-9",
+                id_t: "A-001"
+            }, { merge: true });
 
-      if (mappedRole === 'tecnico') {
+            // Also update the 'users' cache collection
+            await setDoc(doc(db, "users", user.uid), {
+                email: user.email,
+                role: adminRole,
+                activo: true,
+                lastLogin: new Date().toISOString()
+            }, { merge: true });
+
+            toast({ title: "Bienvenido, Admin", description: "Acceso de administrador concedido." });
+            router.push("/dashboard");
+            return;
+        }
+
+        // If not the admin and no profile exists, deny access.
         toast({ 
           variant: "destructive", 
           title: "Acceso Denegado", 
-          description: "Tu rol de Técnico no tiene permisos para acceder a la aplicación." 
+          description: "No tienes un perfil de personal asignado en el sistema." 
+        });
+        if(auth.currentUser) await signOut(auth);
+        setLoading(false);
+        return;
+      }
+      
+      // 3. Profile exists, get the role
+      const personnelData = personnelDoc.data();
+      const userRole = personnelData.role; // e.g., 'admin', 'supervisor', 'tecnico'
+
+      // 4. Check if the role is 'tecnico', which is not allowed to log in
+      if (userRole === 'tecnico') {
+        toast({ 
+          variant: "destructive", 
+          title: "Acceso Denegado", 
+          description: "Tu rol de Técnico no tiene permisos para acceder a este portal." 
         });
         if(auth.currentUser) await signOut(auth);
         setLoading(false);
         return;
       }
 
-      // Role is either 'admin' or 'supervisor', allow login
+      // 5. Role is valid ('admin' or 'supervisor'), cache role in 'users' collection for UI purposes
       await setDoc(doc(db, "users", user.uid), {
         email: user.email,
-        role: mappedRole,
+        role: userRole,
         activo: true,
         lastLogin: new Date().toISOString()
       }, { merge: true });
 
-      toast({ title: "Bienvenido", description: `Acceso concedido como ${personnelRole}.` });
+      toast({ title: "Bienvenido", description: `Acceso concedido como ${personnelData.nombre_t || user.email}.` });
       router.push("/dashboard");
 
     } catch (error: any) {

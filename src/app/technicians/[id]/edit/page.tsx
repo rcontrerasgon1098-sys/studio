@@ -35,17 +35,22 @@ export default function EditTechnician({ params }: { params: Promise<{ id: strin
     rut_t: "",
     email_t: "",
     cel_t: "",
-    rol_t: "Técnico",
+    rol_t: "Técnico", // This will hold the Spanish value for the UI
   });
 
   useEffect(() => {
     if (personnel) {
+      const roleDisplayMapping: { [key: string]: string } = {
+        'admin': 'Administrador',
+        'supervisor': 'Supervisor',
+        'tecnico': 'Técnico'
+      };
       setFormData({
         nombre_t: personnel.nombre_t || "",
         rut_t: personnel.rut_t || "",
         email_t: personnel.email_t || "",
         cel_t: personnel.cel_t || "",
-        rol_t: personnel.rol_t || "Técnico",
+        rol_t: roleDisplayMapping[personnel.role] || "Técnico",
       });
     }
   }, [personnel]);
@@ -82,10 +87,20 @@ export default function EditTechnician({ params }: { params: Promise<{ id: strin
       return;
     }
 
+    const roleValueMapping: { [key: string]: 'admin' | 'supervisor' | 'tecnico' } = {
+      'Administrador': 'admin',
+      'Supervisor': 'supervisor',
+      'Técnico': 'tecnico'
+    };
+    const mappedRole = roleValueMapping[formData.rol_t];
+
     try {
       const docRef = doc(db, "personnel", id);
       updateDocumentNonBlocking(docRef, {
-        ...formData,
+        nombre_t: formData.nombre_t,
+        rut_t: formData.rut_t,
+        cel_t: formData.cel_t,
+        role: mappedRole,
         updatedAt: new Date().toISOString(),
         updatedBy: user.email
       });
