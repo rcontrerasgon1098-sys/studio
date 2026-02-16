@@ -37,28 +37,29 @@ export default function LoginPage() {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 
-      // 2. Fetch the user's profile from the 'personnel' collection using their UID
+      // 2. Special handling for the admin user to ensure their role is always correct.
+      if (user.email === 'admin@icsa.com') {
+          const personnelDocRef = doc(db, "personnel", user.uid);
+          // This ensures the admin document exists and has the correct role.
+          await setDoc(personnelDocRef, {
+              id: user.uid,
+              email_t: user.email,
+              nombre_t: "Admin ICSA",
+              role: "admin", // Guarantees the 'admin' role
+              rut_t: "1-9",
+              id_t: "A-001"
+          }, { merge: true }); // Use merge: true to create or update without overwriting other fields.
+
+          toast({ title: "Bienvenido, Admin", description: "Acceso de administrador concedido." });
+          router.push("/dashboard");
+          return; // Exit here for the admin user.
+      }
+
+      // 3. For all other users, fetch their profile from 'personnel'
       const personnelDocRef = doc(db, "personnel", user.uid);
       const personnelDoc = await getDoc(personnelDocRef);
 
       if (!personnelDoc.exists()) {
-         // Special case for initial admin user, which might not have a personnel doc yet.
-        if (user.email === 'admin@icsa.com') {
-             // Create a personnel document for the admin if it doesn't exist
-            await setDoc(personnelDocRef, {
-                id: user.uid,
-                email_t: user.email,
-                nombre_t: "Admin ICSA",
-                role: "admin",
-                rut_t: "1-9",
-                id_t: "A-001"
-            }, { merge: true });
-
-            toast({ title: "Bienvenido, Admin", description: "Acceso de administrador concedido." });
-            router.push("/dashboard");
-            return;
-        }
-
         // If not the admin and no profile exists, deny access.
         toast({ 
           variant: "destructive", 
@@ -70,11 +71,11 @@ export default function LoginPage() {
         return;
       }
       
-      // 3. Profile exists, get the role
+      // 4. Profile exists, get the role
       const personnelData = personnelDoc.data();
       const userRole = personnelData.role; // e.g., 'admin', 'supervisor', 'tecnico'
 
-      // 4. Check if the role is 'tecnico', which is not allowed to log in
+      // 5. Check if the role is 'tecnico', which is not allowed to log in
       if (userRole === 'tecnico') {
         toast({ 
           variant: "destructive", 
@@ -86,6 +87,7 @@ export default function LoginPage() {
         return;
       }
 
+      // Login successful for supervisor
       toast({ title: "Bienvenido", description: `Acceso concedido como ${personnelData.nombre_t || user.email}.` });
       router.push("/dashboard");
 
