@@ -25,6 +25,7 @@ service cloud.firestore {
     // ===============================
     match /users/{userId} {
       // Admin lee todo, otros solo su propio perfil.
+      // Esta regla es fundamental para evitar recursividad en otras reglas.
       allow read: if isAdmin() || request.auth.uid == userId;
       // Solo Admin escribe.
       allow write: if isAdmin();
@@ -35,7 +36,7 @@ service cloud.firestore {
     // ===============================
     match /clients/{clientId} {
       allow read: if isAdmin() || isSupervisor();
-      allow write: if isAdmin() || isSupervisor();
+      allow write: if isAdmin();
     }
 
     // ===============================
@@ -52,7 +53,7 @@ service cloud.firestore {
     // ORDENES (ACTIVAS)
     // ===============================
     match /ordenes/{ordenId} {
-      // LIST: Supervisores pueden listar ordenes para luego filtrar en la app. Admin puede listar todo.
+      // LIST: Permite a los supervisores consultar la colección (la query del frontend debe filtrar por createdBy).
       allow list: if isAdmin() || isSupervisor();
 
       // GET: Admin lee cualquier orden. Supervisor solo lee las que creó.
