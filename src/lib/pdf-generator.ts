@@ -54,7 +54,7 @@ export const generateWorkOrderPDF = async (data: any) => {
   doc.setTextColor(100, 100, 100);
   const formattedDate = data.startDate ? new Date(data.startDate).toLocaleString('es-ES') : new Date().toLocaleDateString();
   doc.text(`Fecha/Hora: ${formattedDate}`, 15, 62);
-  doc.text(`Técnico: ${data.technicianEmail || "N/A"}`, 15, 67);
+  doc.text(`Supervisor: ${data.creatorEmail || "N/A"}`, 15, 67);
   doc.text(`Estado: ${data.status === 'Completed' ? 'COMPLETADA' : 'PENDIENTE'}`, 15, 72);
 
   // Client Info Section

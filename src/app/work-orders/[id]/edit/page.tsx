@@ -88,6 +88,7 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
     sketchImageUrl: "",
     status: "Pending",
     team: [] as string[],
+    createdBy: "",
   });
 
   useEffect(() => {
@@ -123,6 +124,7 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
         sketchImageUrl: order.sketchImageUrl || "",
         status: order.status || "Pending",
         team: order.team || [],
+        createdBy: order.createdBy || "",
       });
       setIsInitialized(true);
     }

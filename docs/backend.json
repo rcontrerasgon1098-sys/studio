@@ -18,7 +18,8 @@
         },
         "role": {
           "type": "string",
-          "description": "Role of the user (e.g., technician, administrator)."
+          "description": "Role of the user (e.g., technician, administrator).",
+           "enum": ["admin", "supervisor", "tecnico"]
         },
         "activo": {
           "type": "boolean",
@@ -54,13 +55,14 @@
           "type": "string",
           "description": "Contact info of the client."
         },
-        "technicianId": {
+        "createdBy": {
           "type": "string",
-          "description": "Reference to User (technician)."
+          "description": "UID of the supervisor who created the work order."
         },
-        "technicianEmail": {
+        "creatorEmail": {
           "type": "string",
-          "description": "Email of the technician."
+          "description": "Email of the creator.",
+          "format": "email"
         },
         "startDate": {
           "type": "string",
@@ -99,7 +101,7 @@
         "id",
         "folio",
         "clientName",
-        "technicianId",
+        "createdBy",
         "status"
       ]
     },

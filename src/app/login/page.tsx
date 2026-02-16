@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from "react";
@@ -35,7 +36,8 @@ export default function LoginPage() {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 
-      let userRole: string;
+      let personnelRole: string;
+      let mappedRole: 'admin' | 'supervisor' | 'tecnico';
 
       // Check role from 'personnel' collection
       const personnelQuery = query(collection(db, "personnel"), where("email_t", "==", user.email));
@@ -44,7 +46,7 @@ export default function LoginPage() {
       if (personnelSnapshot.empty) {
         // If no personnel profile, check if it's the default admin
         if (user.email === 'admin@icsa.com') {
-          userRole = 'Administrador';
+          personnelRole = 'Administrador';
         } else {
           toast({ 
             variant: "destructive", 
@@ -57,10 +59,23 @@ export default function LoginPage() {
         }
       } else {
         const personnelData = personnelSnapshot.docs[0].data();
-        userRole = personnelData.rol_t;
+        personnelRole = personnelData.rol_t;
+      }
+      
+      switch (personnelRole) {
+        case 'Administrador':
+          mappedRole = 'admin';
+          break;
+        case 'Supervisor':
+          mappedRole = 'supervisor';
+          break;
+        case 'Técnico':
+        default:
+          mappedRole = 'tecnico';
+          break;
       }
 
-      if (userRole === 'Técnico') {
+      if (mappedRole === 'tecnico') {
         toast({ 
           variant: "destructive", 
           title: "Acceso Denegado", 
@@ -71,15 +86,15 @@ export default function LoginPage() {
         return;
       }
 
-      // Role is either 'Administrador' or 'Supervisor', allow login
+      // Role is either 'admin' or 'supervisor', allow login
       await setDoc(doc(db, "users", user.uid), {
         email: user.email,
-        rol: userRole,
+        role: mappedRole,
         activo: true,
         lastLogin: new Date().toISOString()
       }, { merge: true });
 
-      toast({ title: "Bienvenido", description: `Acceso concedido como ${userRole}.` });
+      toast({ title: "Bienvenido", description: `Acceso concedido como ${personnelRole}.` });
       router.push("/dashboard");
 
     } catch (error: any) {

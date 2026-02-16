@@ -26,8 +26,8 @@ import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
 import { generateWorkOrderPDF } from "@/lib/pdf-generator";
 import { PlaceHolderImages } from "@/lib/placeholder-images";
-import { useFirebase, useCollection, useMemoFirebase } from "@/firebase";
-import { collection, query, orderBy, doc } from "firebase/firestore";
+import { useFirebase, useCollection, useMemoFirebase, useUserProfile } from "@/firebase";
+import { collection, query, where, orderBy, doc } from "firebase/firestore";
 import { signOut } from "firebase/auth";
 import { deleteDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 import { cn } from "@/lib/utils";
@@ -57,6 +57,7 @@ import {
 
 export default function Dashboard() {
   const { user, isUserLoading, auth, firestore: db } = useFirebase();
+  const { userProfile, isProfileLoading } = useUserProfile();
   const router = useRouter();
   const { toast } = useToast();
   const logoImage = PlaceHolderImages.find(img => img.id === "icsa-logo");
@@ -67,6 +68,9 @@ export default function Dashboard() {
   const [dateFilter, setDateFilter] = useState<Date | undefined>(undefined);
   const [deleteConfirm, setDeleteConfirm] = useState<{ id: string, type: 'clients' | 'personnel' | 'ordenes' | 'historial' } | null>(null);
   const [mounted, setMounted] = useState(false);
+
+  const isSupervisor = userProfile?.role === 'supervisor';
+  const isAdmin = userProfile?.role === 'admin';
 
   useEffect(() => {
     setMounted(true);
@@ -79,15 +83,29 @@ export default function Dashboard() {
   }, [user, isUserLoading, router]);
 
   const ordersQuery = useMemoFirebase(() => {
-    if (!db) return null;
-    return query(collection(db, "ordenes"), orderBy("startDate", "desc"));
-  }, [db]);
+    if (!db || !user || isProfileLoading) return null;
+    const baseCollection = collection(db, "ordenes");
+    if (isSupervisor) {
+      return query(baseCollection, where("createdBy", "==", user.uid), orderBy("startDate", "desc"));
+    }
+    if (isAdmin) {
+      return query(baseCollection, orderBy("startDate", "desc"));
+    }
+    return null;
+  }, [db, user, isProfileLoading, userProfile]);
   const { data: orders, isLoading: isOrdersLoading } = useCollection(ordersQuery);
 
   const historyQuery = useMemoFirebase(() => {
-    if (!db) return null;
-    return query(collection(db, "historial"), orderBy("startDate", "desc"));
-  }, [db]);
+    if (!db || !user || isProfileLoading) return null;
+    const baseCollection = collection(db, "historial");
+    if (isSupervisor) {
+        return query(baseCollection, where("createdBy", "==", user.uid), orderBy("startDate", "desc"));
+    }
+    if (isAdmin) {
+        return query(baseCollection, orderBy("startDate", "desc"));
+    }
+    return null;
+  }, [db, user, isProfileLoading, userProfile]);
   const { data: history, isLoading: isHistoryLoading } = useCollection(historyQuery);
 
   const clientsQuery = useMemoFirebase(() => {
@@ -261,13 +279,13 @@ export default function Dashboard() {
         >
           <LayoutDashboard size={20} /> Inicio
         </Button>
-        <Button 
+        {isAdmin && <Button 
           variant={activeTab === "stats" ? "secondary" : "ghost"} 
           className={cn("w-full justify-start gap-3 h-12 font-semibold", activeTab === "stats" ? "bg-white/10 text-white" : "text-white/80 hover:bg-white/10")}
           onClick={() => { setActiveTab("stats"); clearFilters(); }}
         >
           <PieChartIcon size={20} /> Estadísticas
-        </Button>
+        </Button>}
         <Button 
           variant={activeTab === "orders" ? "secondary" : "ghost"} 
           className={cn("w-full justify-start gap-3 h-12 font-semibold", activeTab === "orders" ? "bg-white/10 text-white" : "text-white/80 hover:bg-white/10")}
@@ -282,20 +300,22 @@ export default function Dashboard() {
         >
           <History size={20} /> Historial
         </Button>
-        <Button 
-          variant={activeTab === "clients" ? "secondary" : "ghost"} 
-          className={cn("w-full justify-start gap-3 h-12 font-semibold", activeTab === "clients" ? "bg-white/10 text-white" : "text-white/80 hover:bg-white/10")}
-          onClick={() => { setActiveTab("clients"); clearFilters(); }}
-        >
-          <Users size={20} /> Clientes
-        </Button>
-        <Button 
-          variant={activeTab === "personnel" ? "secondary" : "ghost"} 
-          className={cn("w-full justify-start gap-3 h-12 font-semibold", activeTab === "personnel" ? "bg-white/10 text-white" : "text-white/80 hover:bg-white/10")}
-          onClick={() => { setActiveTab("personnel"); clearFilters(); }}
-        >
-          <UserRound size={20} /> Personal
-        </Button>
+        {isAdmin && <>
+          <Button 
+            variant={activeTab === "clients" ? "secondary" : "ghost"} 
+            className={cn("w-full justify-start gap-3 h-12 font-semibold", activeTab === "clients" ? "bg-white/10 text-white" : "text-white/80 hover:bg-white/10")}
+            onClick={() => { setActiveTab("clients"); clearFilters(); }}
+          >
+            <Users size={20} /> Clientes
+          </Button>
+          <Button 
+            variant={activeTab === "personnel" ? "secondary" : "ghost"} 
+            className={cn("w-full justify-start gap-3 h-12 font-semibold", activeTab === "personnel" ? "bg-white/10 text-white" : "text-white/80 hover:bg-white/10")}
+            onClick={() => { setActiveTab("personnel"); clearFilters(); }}
+          >
+            <UserRound size={20} /> Personal
+          </Button>
+        </>}
       </nav>
       <div className="px-4 mt-auto">
         <Button onClick={handleLogout} variant="ghost" className="w-full justify-start gap-3 hover:bg-white/20 text-white/70 hover:text-white h-12">
@@ -305,7 +325,7 @@ export default function Dashboard() {
     </div>
   );
 
-  if (isUserLoading || !mounted) return <div className="min-h-screen flex items-center justify-center text-primary font-black animate-pulse bg-background">CARGANDO...</div>;
+  if (isUserLoading || !mounted || isProfileLoading) return <div className="min-h-screen flex items-center justify-center text-primary font-black animate-pulse bg-background">CARGANDO...</div>;
 
   return (
     <div className="min-h-screen bg-background flex flex-col md:flex-row">
@@ -355,14 +375,14 @@ export default function Dashboard() {
                 </Button>
               </Link>
             )}
-            {activeTab === "clients" && (
+            {activeTab === "clients" && isAdmin && (
                 <Link href="/clients/new">
                 <Button className="bg-accent text-primary font-black h-12 px-6 shadow-lg rounded-xl">
                     <Plus size={20} className="mr-2" /> Nuevo Cliente
                 </Button>
                 </Link>
             )}
-            {activeTab === "personnel" && (
+            {activeTab === "personnel" && isAdmin && (
                 <Link href="/technicians/new">
                 <Button className="bg-accent text-primary font-black h-12 px-6 shadow-lg rounded-xl">
                     <Plus size={20} className="mr-2" /> Nuevo Personal
@@ -397,14 +417,14 @@ export default function Dashboard() {
                 <CardDescription>Acceso rápido a los trabajos en curso.</CardDescription>
               </CardHeader>
               <CardContent className="p-0">
-                <OrderTable orders={orders?.filter(o => o.status === "Pending") || []} isLoading={isOrdersLoading} type="ordenes" setDeleteConfirm={setDeleteConfirm} />
+                <OrderTable orders={orders?.filter(o => o.status === "Pending") || []} isLoading={isOrdersLoading} type="ordenes" setDeleteConfirm={setDeleteConfirm} isAdmin={isAdmin} />
               </CardContent>
             </Card>
           </div>
         )}
 
         {/* Stats View */}
-        {activeTab === "stats" && (
+        {activeTab === "stats" && isAdmin && (
           <div className="space-y-6">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <Card className="bg-white border-none shadow-md overflow-hidden">
@@ -555,7 +575,7 @@ export default function Dashboard() {
                </div>
              </CardHeader>
              <CardContent className="p-0">
-               <OrderTable orders={filteredOrders} isLoading={isOrdersLoading} type="ordenes" setDeleteConfirm={setDeleteConfirm} />
+               <OrderTable orders={filteredOrders} isLoading={isOrdersLoading} type="ordenes" setDeleteConfirm={setDeleteConfirm} isAdmin={isAdmin} />
              </CardContent>
           </Card>
         )}
@@ -587,13 +607,13 @@ export default function Dashboard() {
                </div>
              </CardHeader>
              <CardContent className="p-0">
-               <OrderTable orders={filteredHistory} isLoading={isHistoryLoading} type="historial" setDeleteConfirm={setDeleteConfirm} />
+               <OrderTable orders={filteredHistory} isLoading={isHistoryLoading} type="historial" setDeleteConfirm={setDeleteConfirm} isAdmin={isAdmin}/>
              </CardContent>
           </Card>
         )}
 
         {/* Clients View */}
-        {activeTab === "clients" && (
+        {activeTab === "clients" && isAdmin && (
           <Card className="shadow-xl border-none bg-white rounded-2xl">
             <CardHeader className="border-b flex flex-row items-center justify-between">
               <CardTitle className="text-lg font-bold">Listado de Clientes</CardTitle>
@@ -632,7 +652,7 @@ export default function Dashboard() {
         )}
 
         {/* Personnel View */}
-        {activeTab === "personnel" && (
+        {activeTab === "personnel" && isAdmin && (
           <Card className="shadow-xl border-none bg-white rounded-2xl">
             <CardHeader className="border-b flex flex-row items-center justify-between">
               <CardTitle className="text-lg font-bold">Gestión de Personal</CardTitle>
@@ -685,7 +705,7 @@ export default function Dashboard() {
   );
 }
 
-function OrderTable({ orders, isLoading, type, setDeleteConfirm }: { orders: any[], isLoading: boolean, type: string, setDeleteConfirm: any }) {
+function OrderTable({ orders, isLoading, type, setDeleteConfirm, isAdmin }: { orders: any[], isLoading: boolean, type: string, setDeleteConfirm: any, isAdmin: boolean }) {
   if (isLoading) return <div className="p-10 text-center font-bold text-muted-foreground uppercase text-xs animate-pulse">Recuperando registros...</div>;
   if (orders.length === 0) return <div className="p-10 text-center font-bold text-muted-foreground uppercase text-xs">No hay datos para mostrar</div>;
 
@@ -723,7 +743,7 @@ function OrderTable({ orders, isLoading, type, setDeleteConfirm }: { orders: any
                   </Link>
                 )}
                 <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => generateWorkOrderPDF(order)} disabled={order.status === 'Pending'}><Download className="h-4 w-4" /></Button>
-                <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => setDeleteConfirm({ id: order.id, type })}><Trash2 className="h-4 w-4" /></Button>
+                {isAdmin && <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => setDeleteConfirm({ id: order.id, type })}><Trash2 className="h-4 w-4" /></Button>}
               </div>
             </TableCell>
           </TableRow>

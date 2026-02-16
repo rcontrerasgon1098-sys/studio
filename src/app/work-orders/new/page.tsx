@@ -254,8 +254,8 @@ export default function NewWorkOrder() {
       id: orderId,
       folio: finalFolio,
       status: finalStatus,
-      technicianId: user.uid,
-      technicianEmail: user.email,
+      createdBy: user.uid,
+      creatorEmail: user.email,
       startDate: new Date().toISOString(),
       endDate: new Date().toISOString(),
     };
