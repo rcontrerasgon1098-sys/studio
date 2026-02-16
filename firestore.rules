@@ -2,36 +2,31 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
+    // --- Funciones de Ayuda ---
     function isLoggedIn() {
       return request.auth != null;
     }
 
-    function userData() {
+    function getUserData() {
+      // Se asume que el documento del usuario existe si está logueado
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
     }
 
     function isAdmin() {
-      return isLoggedIn() && userData().role == "admin";
+      return isLoggedIn() && getUserData().role == "admin";
     }
 
     function isSupervisor() {
-      return isLoggedIn() && userData().role == "supervisor";
-    }
-
-    function isTecnico() {
-      return isLoggedIn() && userData().role == "tecnico";
+      return isLoggedIn() && getUserData().role == "supervisor";
     }
 
     // ===============================
     // USERS
     // ===============================
     match /users/{userId} {
-
-      // admin puede ver todos los usuarios
-      // supervisor solo puede leer su perfil
-      allow read: if isAdmin() || (isSupervisor() && request.auth.uid == userId);
-
-      // solo admin crea, actualiza y borra usuarios
+      // Admin lee todo, otros solo su propio perfil.
+      allow read: if isAdmin() || request.auth.uid == userId;
+      // Solo Admin escribe.
       allow write: if isAdmin();
     }
 
@@ -40,67 +35,60 @@ service cloud.firestore {
     // ===============================
     match /clients/{clientId} {
       allow read: if isAdmin() || isSupervisor();
-      allow write: if isAdmin();
+      allow write: if isAdmin() || isSupervisor();
     }
 
     // ===============================
-    // PERSONNEL (tecnicos / trabajadores)
+    // PERSONNEL
     // ===============================
     match /personnel/{personId} {
-      // admin puede ver y editar todo
-      // supervisor solo puede leer (para seleccionar técnicos)
+      // Admin y supervisores pueden leer la lista de personal.
       allow read: if isAdmin() || isSupervisor();
+      // Solo Admin escribe.
       allow write: if isAdmin();
     }
 
     // ===============================
-    // ORDENES ACTIVAS
+    // ORDENES (ACTIVAS)
     // ===============================
     match /ordenes/{ordenId} {
+      // LIST: Supervisores pueden listar ordenes para luego filtrar en la app. Admin puede listar todo.
+      allow list: if isAdmin() || isSupervisor();
 
-      // ADMIN VE TODO
-      allow read, write: if isAdmin();
+      // GET: Admin lee cualquier orden. Supervisor solo lee las que creó.
+      allow get: if isAdmin() || (isSupervisor() && resource.data.createdBy == request.auth.uid);
 
-      // SUPERVISOR SOLO VE SUS ORDENES
-      // Usamos 'list' para la consulta y 'get' para documentos individuales
-      allow list: if isSupervisor();
-      allow get: if isSupervisor() && resource.data.createdBy == request.auth.uid;
+      // CREATE: Admin crea. Supervisor crea si es el autor.
+      allow create: if isAdmin() || (isSupervisor() && request.resource.data.createdBy == request.auth.uid);
 
-      // SUPERVISOR SOLO PUEDE CREAR ORDENES SUYAS
-      allow create: if isSupervisor()
-        && request.resource.data.createdBy == request.auth.uid
-        && request.resource.data.status in ["Pending", "Completed"];
+      // UPDATE: Admin actualiza. Supervisor actualiza las suyas si el estado es 'Pending'.
+      allow update: if isAdmin() || (isSupervisor() && resource.data.createdBy == request.auth.uid && resource.data.status == "Pending");
 
-      // SUPERVISOR SOLO PUEDE EDITAR SI ES SUYA Y SI NO ESTA CERRADA
-      allow update: if isSupervisor()
-        && resource.data.createdBy == request.auth.uid
-        && resource.data.status in ["Pending", "Completed"];
-      
-      // SUPERVISOR no puede borrar, solo ADMIN
+      // DELETE: Solo Admin puede borrar.
       allow delete: if isAdmin();
     }
 
     // ===============================
-    // HISTORIAL (OT cerradas)
+    // HISTORIAL (OT CERRADAS)
     // ===============================
     match /historial/{historialId} {
+      // LIST: Similar a ordenes, se permite listar para filtrar en la app.
+      allow list: if isAdmin() || isSupervisor();
 
-      // admin ve todo
-      allow read, write: if isAdmin();
-
-      // supervisor solo ve historial de sus propias OT
-      allow list: if isSupervisor();
-      allow get: if isSupervisor() && resource.data.createdBy == request.auth.uid;
-
-      // supervisor no puede escribir/borrar historial
-      allow write: if false;
+      // GET: Admin lee cualquier orden. Supervisor solo lee las suyas.
+      allow get: if isAdmin() || (isSupervisor() && resource.data.createdBy == request.auth.uid);
+      
+      // Los registros del historial no se deben modificar ni borrar por supervisores.
+      allow write: if isAdmin();
     }
 
     // ===============================
-    // ROLES (admin escribe, todos leen)
+    // ROLES
     // ===============================
     match /roles/{roleId} {
+      // Todos los usuarios logueados pueden leer los roles disponibles.
       allow read: if isLoggedIn();
+      // Solo Admin puede modificar los roles.
       allow write: if isAdmin();
     }
   }
