@@ -54,9 +54,7 @@ service cloud.firestore {
     // CLIENTS
     // ===============================
     match /clients/{clientId} {
-      allow read: if isAdmin() || isSupervisor();
-      // Admin y Supervisores pueden crear/editar clientes.
-      allow write: if isAdmin() || isSupervisor();
+      allow read, write: if isAdmin() || isSupervisor();
     }
 
     // ===============================
@@ -87,16 +85,6 @@ service cloud.firestore {
       allow get: if isAdmin() || (isSupervisor() && resource.data.createdBy == request.auth.uid);
       
       // write: Solo Admin puede modificar el historial.
-      allow write: if isAdmin();
-    }
-
-    // ===============================
-    // ROLES
-    // ===============================
-    match /roles/{roleId} {
-      // Necesario para poblar los dropdowns en la UI
-      allow read: if isLoggedIn();
-      // Solo Admin puede editar la definición de roles.
       allow write: if isAdmin();
     }
   }
