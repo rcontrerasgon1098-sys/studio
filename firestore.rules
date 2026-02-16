@@ -42,15 +42,6 @@ service cloud.firestore {
     }
     
     // ===============================
-    // USERS (Colección de caché, no usada para reglas críticas)
-    // ===============================
-    match /users/{userId} {
-      // Se permite al sistema escribir al hacer login y al usuario leer su propio doc.
-      // Admin puede leer/escribir todo para mantenimiento.
-      allow read, write: if isAdmin() || (isLoggedIn() && request.auth.uid == userId);
-    }
-
-    // ===============================
     // CLIENTS
     // ===============================
     match /clients/{clientId} {

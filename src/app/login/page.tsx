@@ -13,7 +13,7 @@ import { PlaceHolderImages } from "@/lib/placeholder-images";
 import { ArrowLeft, LogIn, Eye, EyeOff } from "lucide-react";
 import Link from "next/link";
 import { signInWithEmailAndPassword, signOut } from "firebase/auth";
-import { doc, setDoc, getDoc, collection, query, where, getDocs } from "firebase/firestore";
+import { doc, setDoc, getDoc } from "firebase/firestore";
 import { useAuth, useFirestore } from "@/firebase";
 
 export default function LoginPage() {
@@ -44,23 +44,14 @@ export default function LoginPage() {
       if (!personnelDoc.exists()) {
          // Special case for initial admin user, which might not have a personnel doc yet.
         if (user.email === 'admin@icsa.com') {
-            const adminRole = 'admin';
              // Create a personnel document for the admin if it doesn't exist
             await setDoc(personnelDocRef, {
                 id: user.uid,
                 email_t: user.email,
                 nombre_t: "Admin ICSA",
-                role: adminRole,
+                role: "admin",
                 rut_t: "1-9",
                 id_t: "A-001"
-            }, { merge: true });
-
-            // Also update the 'users' cache collection
-            await setDoc(doc(db, "users", user.uid), {
-                email: user.email,
-                role: adminRole,
-                activo: true,
-                lastLogin: new Date().toISOString()
             }, { merge: true });
 
             toast({ title: "Bienvenido, Admin", description: "Acceso de administrador concedido." });
@@ -94,14 +85,6 @@ export default function LoginPage() {
         setLoading(false);
         return;
       }
-
-      // 5. Role is valid ('admin' or 'supervisor'), cache role in 'users' collection for UI purposes
-      await setDoc(doc(db, "users", user.uid), {
-        email: user.email,
-        role: userRole,
-        activo: true,
-        lastLogin: new Date().toISOString()
-      }, { merge: true });
 
       toast({ title: "Bienvenido", description: `Acceso concedido como ${personnelData.nombre_t || user.email}.` });
       router.push("/dashboard");
@@ -211,7 +194,7 @@ export default function LoginPage() {
           <div className="mt-6 p-4 bg-muted/30 rounded-xl text-center">
             <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest">Aviso Operativo</p>
             <p className="text-[10px] text-muted-foreground mt-1 leading-relaxed">
-              Solo el personal con rol de Supervisor o Administrador puede acceder a la aplicación.
+              Solo el personal con rol de Supervisor o Administrador puede acceder a este portal.
             </p>
           </div>
         </CardContent>
