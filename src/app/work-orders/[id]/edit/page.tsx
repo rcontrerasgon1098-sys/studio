@@ -56,8 +56,8 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
   }, [db, user?.email]);
   const { data: techProfiles } = useCollection(techProfileQuery);
 
-  const isSupervisor = userProfile?.role === 'supervisor';
-  const isAdmin = userProfile?.role === 'admin';
+  const isSupervisor = userProfile?.rol_t === 'Supervisor';
+  const isAdmin = userProfile?.rol_t === 'Administrador';
 
   const personnelQuery = useMemoFirebase(() => {
     if (!db || (!isAdmin && !isSupervisor)) return null;
@@ -244,6 +244,7 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
 
     const updateData = {
       ...formData,
+      createdBy: formData.createdBy || user.uid,
       status: finalStatus,
       updatedAt: new Date().toISOString(),
       updatedBy: user.email
@@ -633,5 +634,7 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
     </div>
   );
 }
+
+    
 
     
