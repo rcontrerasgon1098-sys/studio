@@ -103,7 +103,6 @@ export default function NewTechnician() {
         cel_t: formData.cel_t,
         rol_t: formData.rol_t,
         id: personnelId,
-        id_t: `T-${Math.floor(1000 + Math.random() * 9000)}`,
         createdAt: new Date().toISOString(),
         registeredBy: user.email
       };
@@ -278,9 +277,9 @@ export default function NewTechnician() {
                   <Hash className="h-4 w-4 text-primary" />
                 </div>
                 <div className="space-y-1">
-                  <p className="text-xs font-bold text-primary">ID_t Automático</p>
-                  <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-medium">
-                    El sistema generará un identificador único al finalizar el registro.
+                  <p className="text-xs font-bold text-primary">ID de Usuario (UID)</p>
+                  <p className="text-[10px] text-muted-foreground font-medium">
+                    El UID de autenticación se usará como ID del documento en la base de datos.
                   </p>
                 </div>
               </div>

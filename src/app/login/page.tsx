@@ -46,8 +46,7 @@ export default function LoginPage() {
               email_t: user.email,
               nombre_t: "Admin ICSA",
               rol_t: "Administrador", // Guarantees the 'Administrador' role
-              rut_t: "1-9",
-              id_t: "A-001"
+              rut_t: "1-9"
           }, { merge: true }); // Use merge: true to create or update without overwriting other fields.
 
           toast({ title: "Bienvenido, Admin", description: "Acceso de administrador concedido." });

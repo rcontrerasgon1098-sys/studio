@@ -216,9 +216,9 @@ export default function EditTechnician({ params }: { params: Promise<{ id: strin
                   <Hash className="h-4 w-4 text-primary" />
                 </div>
                 <div className="space-y-1">
-                  <p className="text-xs font-bold text-primary">ID de Seguimiento</p>
-                  <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-medium">
-                    ID: {personnel.id_t}
+                  <p className="text-xs font-bold text-primary">ID de Documento (UID)</p>
+                  <p className="text-[10px] text-muted-foreground font-mono break-all">
+                    {personnel.id}
                   </p>
                 </div>
               </div>

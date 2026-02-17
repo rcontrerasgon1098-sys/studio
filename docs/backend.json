@@ -98,7 +98,6 @@
       "description": "Represents company personnel. The document ID must be the user's UID.",
       "properties": {
         "id": { "type": "string", "description": "User UID, same as document ID." },
-        "id_t": { "type": "string", "description": "Auto-assigned ID for display." },
         "nombre_t": { "type": "string" },
         "rut_t": { "type": "string" },
         "email_t": { "type": "string", "format": "email" },

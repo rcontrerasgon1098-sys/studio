@@ -662,7 +662,7 @@ export default function Dashboard() {
               <Table>
                 <TableHeader>
                   <TableRow className="bg-muted/40">
-                    <TableHead className="font-bold">ID</TableHead>
+                    <TableHead className="font-bold w-[280px]">ID</TableHead>
                     <TableHead className="font-bold">Nombre</TableHead>
                     <TableHead className="font-bold">Rol</TableHead>
                     <TableHead className="text-right font-bold">Acciones</TableHead>
@@ -671,7 +671,7 @@ export default function Dashboard() {
                 <TableBody>
                   {filteredPersonnel?.map((p) => (
                     <TableRow key={p.id}>
-                      <TableCell className="font-bold">{p.id_t}</TableCell>
+                      <TableCell className="font-mono text-xs truncate max-w-[280px]">{p.id}</TableCell>
                       <TableCell>{p.nombre_t}</TableCell>
                       <TableCell><Badge variant="outline">{p.rol_t}</Badge></TableCell>
                       <TableCell className="text-right">
