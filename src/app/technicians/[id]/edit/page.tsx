@@ -35,7 +35,7 @@ export default function EditTechnician({ params }: { params: Promise<{ id: strin
     rut_t: "",
     email_t: "",
     cel_t: "",
-    rol_t: "Técnico", // This will hold the Spanish value for the UI
+    role: "Técnico", // This will hold the Spanish value for the UI
   });
 
   useEffect(() => {
@@ -50,7 +50,7 @@ export default function EditTechnician({ params }: { params: Promise<{ id: strin
         rut_t: personnel.rut_t || "",
         email_t: personnel.email_t || "",
         cel_t: personnel.cel_t || "",
-        rol_t: roleDisplayMapping[personnel.role] || "Técnico",
+        role: roleDisplayMapping[personnel.role] || "Técnico",
       });
     }
   }, [personnel]);
@@ -67,7 +67,7 @@ export default function EditTechnician({ params }: { params: Promise<{ id: strin
     
     setLoading(true);
 
-    if (!formData.nombre_t || !formData.rut_t || !formData.email_t || !formData.rol_t) {
+    if (!formData.nombre_t || !formData.rut_t || !formData.email_t || !formData.role) {
       toast({ 
         variant: "destructive", 
         title: "Campos Requeridos", 
@@ -92,7 +92,7 @@ export default function EditTechnician({ params }: { params: Promise<{ id: strin
       'Supervisor': 'supervisor',
       'Técnico': 'tecnico'
     };
-    const mappedRole = roleValueMapping[formData.rol_t];
+    const mappedRole = roleValueMapping[formData.role];
 
     try {
       const docRef = doc(db, "personnel", id);
@@ -173,12 +173,12 @@ export default function EditTechnician({ params }: { params: Promise<{ id: strin
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="rol_t" className="font-bold flex items-center gap-2">
+                    <Label htmlFor="role" className="font-bold flex items-center gap-2">
                       <UserCog className="h-4 w-4 text-primary" /> Rol en la Empresa
                     </Label>
                     <Select 
-                      value={formData.rol_t} 
-                      onValueChange={v => setFormData({...formData, rol_t: v})}
+                      value={formData.role} 
+                      onValueChange={v => setFormData({...formData, role: v})}
                     >
                       <SelectTrigger className="h-12">
                         <SelectValue placeholder="Seleccionar rol" />

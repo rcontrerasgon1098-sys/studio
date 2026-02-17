@@ -32,7 +32,7 @@ export default function NewTechnician() {
     rut_t: "",
     email_t: "",
     cel_t: "",
-    rol_t: "Técnico", // Holds Spanish value for UI
+    role: "Técnico", // Holds Spanish display value for UI
     password: "",
     confirmPassword: ""
   });
@@ -49,7 +49,7 @@ export default function NewTechnician() {
     
     setLoading(true);
 
-    if (!formData.nombre_t || !formData.rut_t || !formData.email_t || !formData.rol_t || !formData.password) {
+    if (!formData.nombre_t || !formData.rut_t || !formData.email_t || !formData.role || !formData.password) {
       toast({ 
         variant: "destructive", 
         title: "Campos Requeridos", 
@@ -100,7 +100,7 @@ export default function NewTechnician() {
         'Supervisor': 'supervisor',
         'Técnico': 'tecnico'
       };
-      const mappedRole = roleValueMapping[formData.rol_t];
+      const mappedRole = roleValueMapping[formData.role];
 
       // 2. Create personnel document in Firestore, with UID as document ID
       const personnelId = newAuthUser.uid;
@@ -197,12 +197,12 @@ export default function NewTechnician() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="rol_t" className="font-bold flex items-center gap-2">
+                    <Label htmlFor="role" className="font-bold flex items-center gap-2">
                       <UserCog className="h-4 w-4 text-primary" /> Rol en la Empresa
                     </Label>
                     <Select 
-                      value={formData.rol_t} 
-                      onValueChange={v => setFormData({...formData, rol_t: v})}
+                      value={formData.role} 
+                      onValueChange={v => setFormData({...formData, role: v})}
                     >
                       <SelectTrigger className="h-12">
                         <SelectValue placeholder="Seleccionar rol" />
