@@ -69,14 +69,8 @@ export default function Dashboard() {
   const [deleteConfirm, setDeleteConfirm] = useState<{ id: string, type: 'clients' | 'personnel' | 'ordenes' | 'historial' } | null>(null);
   const [mounted, setMounted] = useState(false);
 
-  const isSupervisor = userProfile?.role === 'supervisor';
-  const isAdmin = userProfile?.role === 'admin';
-
-  const roleDisplayMapping: { [key: string]: string } = {
-    'admin': 'Administrador',
-    'supervisor': 'Supervisor',
-    'tecnico': 'Técnico'
-  };
+  const isSupervisor = userProfile?.rol_t === 'Supervisor';
+  const isAdmin = userProfile?.rol_t === 'Administrador';
 
   useEffect(() => {
     setMounted(true);
@@ -679,7 +673,7 @@ export default function Dashboard() {
                     <TableRow key={p.id}>
                       <TableCell className="font-bold">{p.id_t}</TableCell>
                       <TableCell>{p.nombre_t}</TableCell>
-                      <TableCell><Badge variant="outline">{roleDisplayMapping[p.role] || p.role}</Badge></TableCell>
+                      <TableCell><Badge variant="outline">{p.rol_t}</Badge></TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
                           <Link href={`/technicians/${p.id}/edit`}><Button variant="ghost" size="icon"><Pencil size={16} /></Button></Link>
@@ -758,11 +752,3 @@ function OrderTable({ orders, isLoading, type, setDeleteConfirm, isAdmin }: { or
     </Table>
   );
 }
-
-    
-
-    
-
-    
-
-    

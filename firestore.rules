@@ -16,12 +16,12 @@ service cloud.firestore {
     }
 
     function isAdmin() {
-      // El campo debe ser 'role' y el valor 'admin' en el documento de 'personnel'
-      return isLoggedIn() && getUserData().role == "admin";
+      // El campo debe ser 'rol_t' y el valor 'Administrador'
+      return isLoggedIn() && getUserData().rol_t == "Administrador";
     }
 
     function isSupervisor() {
-      return isLoggedIn() && getUserData().role == "supervisor";
+      return isLoggedIn() && getUserData().rol_t == "Supervisor";
     }
     
     // ===============================

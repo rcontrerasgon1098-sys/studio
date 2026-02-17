@@ -32,7 +32,7 @@ export default function NewTechnician() {
     rut_t: "",
     email_t: "",
     cel_t: "",
-    role: "Técnico", // Holds Spanish display value for UI
+    rol_t: "Técnico",
     password: "",
     confirmPassword: ""
   });
@@ -49,7 +49,7 @@ export default function NewTechnician() {
     
     setLoading(true);
 
-    if (!formData.nombre_t || !formData.rut_t || !formData.email_t || !formData.role || !formData.password) {
+    if (!formData.nombre_t || !formData.rut_t || !formData.email_t || !formData.rol_t || !formData.password) {
       toast({ 
         variant: "destructive", 
         title: "Campos Requeridos", 
@@ -93,15 +93,7 @@ export default function NewTechnician() {
       // 1. Create user in Firebase Auth
       const userCredential = await createUserWithEmailAndPassword(auth, formData.email_t, formData.password);
       const newAuthUser = userCredential.user;
-
-      // Map UI role value (Spanish) to DB role value (English)
-      const roleValueMapping: { [key: string]: 'admin' | 'supervisor' | 'tecnico' } = {
-        'Administrador': 'admin',
-        'Supervisor': 'supervisor',
-        'Técnico': 'tecnico'
-      };
-      const mappedRole = roleValueMapping[formData.role];
-
+      
       // 2. Create personnel document in Firestore, with UID as document ID
       const personnelId = newAuthUser.uid;
       const personnelData = {
@@ -109,7 +101,7 @@ export default function NewTechnician() {
         rut_t: formData.rut_t,
         email_t: formData.email_t,
         cel_t: formData.cel_t,
-        role: mappedRole, // Use the mapped, English role
+        rol_t: formData.rol_t,
         id: personnelId,
         id_t: `T-${Math.floor(1000 + Math.random() * 9000)}`,
         createdAt: new Date().toISOString(),
@@ -197,12 +189,12 @@ export default function NewTechnician() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="role" className="font-bold flex items-center gap-2">
+                    <Label htmlFor="rol_t" className="font-bold flex items-center gap-2">
                       <UserCog className="h-4 w-4 text-primary" /> Rol en la Empresa
                     </Label>
                     <Select 
-                      value={formData.role} 
-                      onValueChange={v => setFormData({...formData, role: v})}
+                      value={formData.rol_t} 
+                      onValueChange={v => setFormData({...formData, rol_t: v})}
                     >
                       <SelectTrigger className="h-12">
                         <SelectValue placeholder="Seleccionar rol" />
