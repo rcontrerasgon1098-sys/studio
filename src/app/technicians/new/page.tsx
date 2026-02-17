@@ -32,7 +32,7 @@ export default function NewTechnician() {
     rut_t: "",
     email_t: "",
     cel_t: "",
-    rol_t: "Técnico",
+    rol_t: "tecnico",
     password: "",
     confirmPassword: ""
   });
@@ -199,9 +199,9 @@ export default function NewTechnician() {
                         <SelectValue placeholder="Seleccionar rol" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="Administrador">Administrador</SelectItem>
-                        <SelectItem value="Supervisor">Supervisor</SelectItem>
-                        <SelectItem value="Técnico">Técnico</SelectItem>
+                        <SelectItem value="admin">Administrador</SelectItem>
+                        <SelectItem value="supervisor">Supervisor</SelectItem>
+                        <SelectItem value="tecnico">Técnico</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -268,7 +268,7 @@ export default function NewTechnician() {
                     </div>
                 </div>
                 <p className="text-[10px] text-muted-foreground italic">
-                    Crea una contraseña para que el nuevo integrante pueda iniciar sesión en el portal. (El rol 'Técnico' no tiene acceso).
+                    Crea una contraseña para que el nuevo integrante pueda iniciar sesión en el portal. (El rol 'tecnico' no tiene acceso).
                 </p>
               </div>
 

@@ -1,53 +1,49 @@
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Función para obtener el rol del usuario desde personnel
-    function getUserRole() {
-      return get(/databases/$(database)/documents/personnel/$(request.auth.uid)).data.rol_t;
+
+    function isLoggedIn() {
+      return request.auth != null;
     }
-    
-    // Función para verificar si es administrador
+
+    function getPersonnelDoc() {
+      return get(/databases/$(database)/documents/personnel/$(request.auth.uid));
+    }
+
     function isAdmin() {
-      return getUserRole() == 'Administrador';
+      return isLoggedIn() && getPersonnelDoc().data.rol_t == "admin";
     }
-    
-    // Función para verificar si es supervisor
+
     function isSupervisor() {
-      return getUserRole() == 'Supervisor';
+      return isLoggedIn() && getPersonnelDoc().data.rol_t == "supervisor";
     }
-    
-    // Reglas para historial
-    match /historial/{document} {
-      // Lectura: Admin ve todo, Supervisor solo lo suyo
-      allow read: if isAdmin() || (isSupervisor() && resource.data.createdBy == request.auth.uid);
-      
-      // Escritura: solo administradores y supervisores pueden escribir
-      allow write: if request.auth != null && 
-        (isAdmin() || isSupervisor());
+
+    match /historial/{docId} {
+      allow read: if isAdmin()
+        || (isSupervisor() && resource.data.createdBy == request.auth.uid);
+
+      allow write: if isAdmin() || isSupervisor();
     }
-    
-    // Reglas para personnel
+
+    match /ordenes/{docId} {
+      allow read: if isAdmin()
+        || (isSupervisor() && resource.data.createdBy == request.auth.uid);
+
+      allow create: if isAdmin() || isSupervisor();
+
+      allow update: if isAdmin()
+        || (isSupervisor() && resource.data.createdBy == request.auth.uid);
+
+      allow delete: if isAdmin();
+    }
+
+    match /clients/{docId} {
+      allow read, write: if isAdmin() || isSupervisor();
+    }
+
     match /personnel/{userId} {
-      allow read: if request.auth != null;
-      allow write: if request.auth.uid == userId || isAdmin();
-    }
-    
-    // Reglas para clients
-    match /clients/{document} {
-      allow read: if request.auth != null;
-      allow write: if isAdmin() || isSupervisor();
-    }
-    
-    // Reglas para ordenes
-    match /ordenes/{document} {
-      // Lectura: Admin ve todo, Supervisor solo lo suyo
-      allow read: if isAdmin() || (isSupervisor() && resource.data.createdBy == request.auth.uid);
-      allow write: if isAdmin() || isSupervisor();
-    }
-    
-    // Reglas para roles
-    match /roles/{document} {
-      allow read: if request.auth != null;
+      allow read: if isAdmin() || isSupervisor();
       allow write: if isAdmin();
     }
   }

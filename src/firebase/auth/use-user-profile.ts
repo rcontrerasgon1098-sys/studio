@@ -15,7 +15,7 @@ export function useUserProfile() {
     }, [db, user?.uid]);
 
     // The data returned will be the full personnel document, which includes the 'rol_t' field.
-    const { data: userProfile, isLoading: isProfileLoading } = useDoc<{rol_t: 'Administrador' | 'Supervisor' | 'Técnico'}>(userProfileRef);
+    const { data: userProfile, isLoading: isProfileLoading } = useDoc<{rol_t: 'admin' | 'supervisor' | 'tecnico'}>(userProfileRef);
 
     return { userProfile, isProfileLoading };
 }

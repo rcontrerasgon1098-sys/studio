@@ -35,7 +35,7 @@ export default function EditTechnician({ params }: { params: Promise<{ id: strin
     rut_t: "",
     email_t: "",
     cel_t: "",
-    rol_t: "Técnico",
+    rol_t: "tecnico",
   });
 
   useEffect(() => {
@@ -45,7 +45,7 @@ export default function EditTechnician({ params }: { params: Promise<{ id: strin
         rut_t: personnel.rut_t || "",
         email_t: personnel.email_t || "",
         cel_t: personnel.cel_t || "",
-        rol_t: personnel.rol_t || "Técnico",
+        rol_t: personnel.rol_t || "tecnico",
       });
     }
   }, [personnel]);
@@ -172,9 +172,9 @@ export default function EditTechnician({ params }: { params: Promise<{ id: strin
                         <SelectValue placeholder="Seleccionar rol" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="Administrador">Administrador</SelectItem>
-                        <SelectItem value="Supervisor">Supervisor</SelectItem>
-                        <SelectItem value="Técnico">Técnico</SelectItem>
+                        <SelectItem value="admin">Administrador</SelectItem>
+                        <SelectItem value="supervisor">Supervisor</SelectItem>
+                        <SelectItem value="tecnico">Técnico</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>

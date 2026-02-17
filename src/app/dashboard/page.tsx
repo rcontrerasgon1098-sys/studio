@@ -82,10 +82,10 @@ export default function Dashboard() {
   const ordersQuery = useMemoFirebase(() => {
     if (!db || !user || !userProfile) return null;
     const baseCollection = collection(db, "ordenes");
-    if (userProfile.rol_t === 'Supervisor') {
+    if (userProfile.rol_t === 'supervisor') {
       return query(baseCollection, where("createdBy", "==", user.uid), orderBy("startDate", "desc"));
     }
-    if (userProfile.rol_t === 'Administrador') {
+    if (userProfile.rol_t === 'admin') {
       return query(baseCollection, orderBy("startDate", "desc"));
     }
     return null;
@@ -95,10 +95,10 @@ export default function Dashboard() {
   const historyQuery = useMemoFirebase(() => {
     if (!db || !user || !userProfile) return null;
     const baseCollection = collection(db, "historial");
-     if (userProfile.rol_t === 'Supervisor') {
+     if (userProfile.rol_t === 'supervisor') {
         return query(baseCollection, where("createdBy", "==", user.uid), orderBy("startDate", "desc"));
     }
-    if (userProfile.rol_t === 'Administrador') {
+    if (userProfile.rol_t === 'admin') {
         return query(baseCollection, orderBy("startDate", "desc"));
     }
     return null;
@@ -106,13 +106,13 @@ export default function Dashboard() {
   const { data: history, isLoading: isHistoryLoading } = useCollection(historyQuery);
 
   const clientsQuery = useMemoFirebase(() => {
-    if (!db || !userProfile || userProfile.rol_t !== 'Administrador') return null;
+    if (!db || !userProfile || userProfile.rol_t !== 'admin') return null;
     return query(collection(db, "clients"), orderBy("nombreCliente", "asc"));
   }, [db, userProfile]);
   const { data: clients } = useCollection(clientsQuery);
 
   const personnelQuery = useMemoFirebase(() => {
-    if (!db || !userProfile || userProfile.rol_t !== 'Administrador') return null;
+    if (!db || !userProfile || userProfile.rol_t !== 'admin') return null;
     return query(collection(db, "personnel"), orderBy("nombre_t", "asc"));
   }, [db, userProfile]);
   const { data: personnel } = useCollection(personnelQuery);
@@ -276,7 +276,7 @@ export default function Dashboard() {
         >
           <LayoutDashboard size={20} /> Inicio
         </Button>
-        {userProfile?.rol_t === 'Administrador' && <Button 
+        {userProfile?.rol_t === 'admin' && <Button 
           variant={activeTab === "stats" ? "secondary" : "ghost"} 
           className={cn("w-full justify-start gap-3 h-12 font-semibold", activeTab === "stats" ? "bg-white/10 text-white" : "text-white/80 hover:bg-white/10")}
           onClick={() => { setActiveTab("stats"); clearFilters(); }}
@@ -297,7 +297,7 @@ export default function Dashboard() {
         >
           <History size={20} /> Historial
         </Button>
-        {userProfile?.rol_t === 'Administrador' && <>
+        {userProfile?.rol_t === 'admin' && <>
           <Button 
             variant={activeTab === "clients" ? "secondary" : "ghost"} 
             className={cn("w-full justify-start gap-3 h-12 font-semibold", activeTab === "clients" ? "bg-white/10 text-white" : "text-white/80 hover:bg-white/10")}
@@ -372,14 +372,14 @@ export default function Dashboard() {
                 </Button>
               </Link>
             )}
-            {activeTab === "clients" && userProfile?.rol_t === 'Administrador' && (
+            {activeTab === "clients" && userProfile?.rol_t === 'admin' && (
                 <Link href="/clients/new">
                 <Button className="bg-accent text-primary font-black h-12 px-6 shadow-lg rounded-xl">
                     <Plus size={20} className="mr-2" /> Nuevo Cliente
                 </Button>
                 </Link>
             )}
-            {activeTab === "personnel" && userProfile?.rol_t === 'Administrador' && (
+            {activeTab === "personnel" && userProfile?.rol_t === 'admin' && (
                 <Link href="/technicians/new">
                 <Button className="bg-accent text-primary font-black h-12 px-6 shadow-lg rounded-xl">
                     <Plus size={20} className="mr-2" /> Nuevo Personal
@@ -414,14 +414,14 @@ export default function Dashboard() {
                 <CardDescription>Acceso rápido a los trabajos en curso.</CardDescription>
               </CardHeader>
               <CardContent className="p-0">
-                <OrderTable orders={orders?.filter(o => o.status === "Pending") || []} isLoading={isOrdersLoading} type="ordenes" setDeleteConfirm={setDeleteConfirm} isAdmin={userProfile?.rol_t === 'Administrador'} />
+                <OrderTable orders={orders?.filter(o => o.status === "Pending") || []} isLoading={isOrdersLoading} type="ordenes" setDeleteConfirm={setDeleteConfirm} isAdmin={userProfile?.rol_t === 'admin'} />
               </CardContent>
             </Card>
           </div>
         )}
 
         {/* Stats View */}
-        {activeTab === "stats" && userProfile?.rol_t === 'Administrador' && (
+        {activeTab === "stats" && userProfile?.rol_t === 'admin' && (
           <div className="space-y-6">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <Card className="bg-white border-none shadow-md overflow-hidden">
@@ -572,7 +572,7 @@ export default function Dashboard() {
                </div>
              </CardHeader>
              <CardContent className="p-0">
-               <OrderTable orders={filteredOrders} isLoading={isOrdersLoading} type="ordenes" setDeleteConfirm={setDeleteConfirm} isAdmin={userProfile?.rol_t === 'Administrador'} />
+               <OrderTable orders={filteredOrders} isLoading={isOrdersLoading} type="ordenes" setDeleteConfirm={setDeleteConfirm} isAdmin={userProfile?.rol_t === 'admin'} />
              </CardContent>
           </Card>
         )}
@@ -604,13 +604,13 @@ export default function Dashboard() {
                </div>
              </CardHeader>
              <CardContent className="p-0">
-               <OrderTable orders={filteredHistory} isLoading={isHistoryLoading} type="historial" setDeleteConfirm={setDeleteConfirm} isAdmin={userProfile?.rol_t === 'Administrador'}/>
+               <OrderTable orders={filteredHistory} isLoading={isHistoryLoading} type="historial" setDeleteConfirm={setDeleteConfirm} isAdmin={userProfile?.rol_t === 'admin'}/>
              </CardContent>
           </Card>
         )}
 
         {/* Clients View */}
-        {activeTab === "clients" && userProfile?.rol_t === 'Administrador' && (
+        {activeTab === "clients" && userProfile?.rol_t === 'admin' && (
           <Card className="shadow-xl border-none bg-white rounded-2xl">
             <CardHeader className="border-b flex flex-row items-center justify-between">
               <CardTitle className="text-lg font-bold">Listado de Clientes</CardTitle>
@@ -649,7 +649,7 @@ export default function Dashboard() {
         )}
 
         {/* Personnel View */}
-        {activeTab === "personnel" && userProfile?.rol_t === 'Administrador' && (
+        {activeTab === "personnel" && userProfile?.rol_t === 'admin' && (
           <Card className="shadow-xl border-none bg-white rounded-2xl">
             <CardHeader className="border-b flex flex-row items-center justify-between">
               <CardTitle className="text-lg font-bold">Gestión de Personal</CardTitle>
@@ -668,7 +668,7 @@ export default function Dashboard() {
                   {filteredPersonnel?.map((p) => (
                     <TableRow key={p.id}>
                       <TableCell>{p.nombre_t}</TableCell>
-                      <TableCell><Badge variant="outline">{p.rol_t}</Badge></TableCell>
+                      <TableCell><Badge variant="outline" className="capitalize">{p.rol_t}</Badge></TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
                           <Link href={`/technicians/${p.id}/edit`}><Button variant="ghost" size="icon"><Pencil size={16} /></Button></Link>

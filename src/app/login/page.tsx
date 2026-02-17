@@ -45,7 +45,7 @@ export default function LoginPage() {
               id: user.uid,
               email_t: user.email,
               nombre_t: "Admin ICSA",
-              rol_t: "Administrador", // Guarantees the 'Administrador' role
+              rol_t: "admin", // Guarantees the 'admin' role
               rut_t: "1-9"
           }, { merge: true }); // Use merge: true to create or update without overwriting other fields.
 
@@ -72,10 +72,10 @@ export default function LoginPage() {
       
       // 4. Profile exists, get the role
       const personnelData = personnelDoc.data();
-      const userRole = personnelData.rol_t; // e.g., 'Administrador', 'Supervisor', 'Técnico'
+      const userRole = personnelData.rol_t; // e.g., 'admin', 'supervisor', 'tecnico'
 
-      // 5. Check if the role is 'Técnico', which is not allowed to log in
-      if (userRole === 'Técnico') {
+      // 5. Check if the role is 'tecnico', which is not allowed to log in
+      if (userRole === 'tecnico') {
         toast({ 
           variant: "destructive", 
           title: "Acceso Denegado", 
@@ -86,7 +86,7 @@ export default function LoginPage() {
         return;
       }
 
-      // Login successful for supervisor
+      // Login successful for supervisor or admin
       toast({ title: "Bienvenido", description: `Acceso concedido como ${personnelData.nombre_t || user.email}.` });
       router.push("/dashboard");
 

@@ -102,7 +102,7 @@
         "rut_t": { "type": "string" },
         "email_t": { "type": "string", "format": "email" },
         "cel_t": { "type": "string" },
-        "rol_t": { "type": "string", "description": "Role for permissions", "enum": ["Administrador", "Supervisor", "Técnico"] },
+        "rol_t": { "type": "string", "description": "Role for permissions (admin, supervisor, tecnico)", "enum": ["admin", "supervisor", "tecnico"] },
         "signatureUrl": { "type": "string", "description": "Saved signature of the technician" }
       },
       "required": ["id", "nombre_t", "rut_t", "email_t", "rol_t"]
