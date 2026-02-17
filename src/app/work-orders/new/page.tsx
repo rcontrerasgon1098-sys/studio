@@ -60,13 +60,14 @@ export default function NewWorkOrder() {
   }, [db, user?.email]);
   const { data: techProfiles } = useCollection(techProfileQuery);
   
-  const isSupervisor = userProfile?.role === 'supervisor';
-  const isAdmin = userProfile?.role === 'admin';
-
   const personnelQuery = useMemoFirebase(() => {
-    if (!db || (!isAdmin && !isSupervisor)) return null;
-    return query(collection(db, "personnel"), orderBy("nombre_t", "asc"));
-  }, [db, isAdmin, isSupervisor]);
+    if (!db || !userProfile) return null;
+    const userRole = userProfile.rol_t;
+    if (userRole === 'Administrador' || userRole === 'Supervisor') {
+        return query(collection(db, "personnel"), orderBy("nombre_t", "asc"));
+    }
+    return null;
+  }, [db, userProfile]);
   const { data: allPersonnel } = useCollection(personnelQuery);
 
   const [formData, setFormData] = useState({

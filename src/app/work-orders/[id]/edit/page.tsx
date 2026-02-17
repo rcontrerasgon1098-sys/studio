@@ -56,13 +56,14 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
   }, [db, user?.email]);
   const { data: techProfiles } = useCollection(techProfileQuery);
 
-  const isSupervisor = userProfile?.rol_t === 'Supervisor';
-  const isAdmin = userProfile?.rol_t === 'Administrador';
-
   const personnelQuery = useMemoFirebase(() => {
-    if (!db || (!isAdmin && !isSupervisor)) return null;
-    return query(collection(db, "personnel"), orderBy("nombre_t", "asc"));
-  }, [db, isAdmin, isSupervisor]);
+    if (!db || !userProfile) return null;
+    const userRole = userProfile.rol_t;
+    if (userRole === 'Administrador' || userRole === 'Supervisor') {
+        return query(collection(db, "personnel"), orderBy("nombre_t", "asc"));
+    }
+    return null;
+  }, [db, userProfile]);
   const { data: allPersonnel } = useCollection(personnelQuery);
 
 
