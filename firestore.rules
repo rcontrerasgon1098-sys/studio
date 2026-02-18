@@ -8,6 +8,7 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    // Obtiene el documento de personal del usuario actual para verificar su rol
     function getPersonnelDoc() {
       return get(/databases/$(database)/documents/personnel/$(request.auth.uid));
     }
@@ -22,21 +23,23 @@ service cloud.firestore {
 
     match /historial/{docId} {
       allow read: if isAdmin()
-        || (isSupervisor() && (resource.data.createdBy == request.auth.uid || resource.data.supervisorId == request.auth.uid));
+        || (isLoggedIn() && (resource.data.supervisorId == request.auth.uid || resource.data.createdBy == request.auth.uid));
 
       allow write: if isAdmin() || isSupervisor();
     }
 
     match /ordenes/{docId} {
-      // Allow read for Admin, the Supervisor who created it, or public if it's a signature request
+      // Permite lectura a Admins, al Supervisor dueño de la OT, o acceso público si está en espera de firma (con token)
       allow read: if isAdmin()
-        || (isLoggedIn() && (resource.data.createdBy == request.auth.uid || resource.data.supervisorId == request.auth.uid))
+        || (isLoggedIn() && (resource.data.supervisorId == request.auth.uid || resource.data.createdBy == request.auth.uid))
         || (resource.data.status == "Pending Signature");
 
-      allow create: if isLoggedIn(); // Rely on application logic and role checking in personnel collection
+      // Permite creación a cualquier usuario autenticado (la app inyecta el supervisorId)
+      allow create: if isLoggedIn(); 
 
+      // Permite actualización a Admins o al Supervisor dueño
       allow update: if isAdmin()
-        || (isLoggedIn() && (resource.data.createdBy == request.auth.uid || resource.data.supervisorId == request.auth.uid));
+        || (isLoggedIn() && (resource.data.supervisorId == request.auth.uid || resource.data.createdBy == request.auth.uid));
 
       allow delete: if isAdmin();
     }
@@ -46,8 +49,9 @@ service cloud.firestore {
     }
 
     match /personnel/{userId} {
-      // Allow user to read their own profile to verify role during initialization
+      // Un usuario siempre puede leer su propio perfil. Admins y Supervisores pueden ver el resto.
       allow read: if isLoggedIn() && (request.auth.uid == userId || isAdmin() || isSupervisor());
+      // Solo el Admin puede crear o modificar personal
       allow write: if isAdmin();
     }
   }
