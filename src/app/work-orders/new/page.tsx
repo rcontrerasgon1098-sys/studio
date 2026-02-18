@@ -219,7 +219,6 @@ export default function NewWorkOrder() {
 
     setIsSendingSignature(true);
     try {
-      // 1. First, save the order as Pending so it exists in Firestore
       const orderId = doc(collection(db, "ordenes")).id;
       const currentFolio = folio || generateFolio();
       
@@ -236,7 +235,6 @@ export default function NewWorkOrder() {
 
       setDocumentNonBlocking(doc(db, "ordenes", orderId), workOrderData, { merge: true });
 
-      // 2. Trigger signature request flow
       const result = await sendSignatureRequest({
         orderId: orderId,
         recipientEmail: formData.clientReceiverEmail,
@@ -294,7 +292,6 @@ export default function NewWorkOrder() {
     try {
       setDocumentNonBlocking(orderRef, workOrderData, { merge: true });
       
-      // Send email if completed and email provided
       if (finalStatus === "Completed" && formData.clientReceiverEmail) {
         sendWorkOrderEmail({
           recipientEmail: formData.clientReceiverEmail,
@@ -345,16 +342,12 @@ export default function NewWorkOrder() {
             <Button onClick={handleSendRemoteSignature} disabled={isSendingSignature || loading} variant="outline" className="h-10 px-4 font-bold uppercase text-xs border-primary text-primary hover:bg-primary/5">
               <Send className="h-4 w-4 mr-2" /> {isSendingSignature ? "Enviando..." : "Firma Remota"}
             </Button>
-            <Button onClick={handleSubmit} disabled={loading || isSendingSignature} className="bg-primary h-10 px-4 font-bold uppercase text-xs">
-              <Save className="h-4 w-4 mr-2" /> Guardar
-            </Button>
           </div>
         </div>
       </header>
 
       <main className="container mx-auto px-4 mt-6 max-w-3xl space-y-6">
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* SECCIÓN 1: CLIENTE */}
           <Card className="shadow-md border-none bg-white overflow-hidden">
             <CardHeader className="bg-primary/5 p-4 border-b">
               <CardTitle className="text-primary text-xl flex items-center gap-2 uppercase font-black tracking-tighter">
@@ -449,7 +442,6 @@ export default function NewWorkOrder() {
             </CardContent>
           </Card>
 
-          {/* SECCIÓN 2: EQUIPO */}
           <Card className="shadow-md border-none bg-white">
             <CardHeader className="p-4 md:p-6 border-b bg-muted/5">
               <CardTitle className="text-lg flex items-center gap-2 uppercase font-bold tracking-tight">
@@ -498,13 +490,11 @@ export default function NewWorkOrder() {
             </CardContent>
           </Card>
 
-          {/* SECCIÓN 3: UBICACIÓN Y DETALLES TÉCNICOS FUSIONADOS */}
           <Card className="shadow-md border-none bg-white overflow-hidden">
             <CardHeader className="p-4 md:p-6 border-b bg-primary/5">
               <CardTitle className="text-lg uppercase font-black text-primary tracking-tighter">Detalles Técnicos y Red</CardTitle>
             </CardHeader>
             <CardContent className="p-4 md:p-6 space-y-8">
-              {/* Ubicación Técnica integrada */}
               <div className="space-y-4 pt-2">
                 <Label className="font-black uppercase text-xs tracking-[0.2em] text-primary flex items-center gap-2">
                   <Building2 className="h-4 w-4" /> Ubicación Técnica

@@ -262,7 +262,6 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
         setDocumentNonBlocking(historyRef, updateData, { merge: true });
         deleteDocumentNonBlocking(originalRef);
 
-        // Send email notification
         if (formData.clientReceiverEmail) {
           sendWorkOrderEmail({
             recipientEmail: formData.clientReceiverEmail,
@@ -317,9 +316,6 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
           <div className="flex gap-2">
             <Button onClick={handleSendRemoteSignature} disabled={isSendingSignature || loading} variant="outline" className="h-10 px-4 font-bold uppercase text-xs border-primary text-primary hover:bg-primary/5">
               <Send className="h-4 w-4 mr-2" /> {isSendingSignature ? "Enviando..." : "Firma Remota"}
-            </Button>
-            <Button onClick={handleSubmit} disabled={loading || isSendingSignature} className="bg-primary h-10 px-4 font-bold uppercase text-xs">
-              <Save className="h-4 w-4 mr-2" /> Guardar
             </Button>
           </div>
         </div>
@@ -412,7 +408,6 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
               <CardTitle className="text-lg uppercase font-black text-primary tracking-tighter">Detalles Técnicos y Red</CardTitle>
             </CardHeader>
             <CardContent className="p-4 md:p-6 space-y-8">
-              {/* Ubicación Técnica integrada al inicio */}
               <div className="space-y-4 pt-2">
                 <Label className="font-black uppercase text-xs tracking-[0.2em] text-primary flex items-center gap-2">
                   <Building2 className="h-4 w-4" /> Ubicación Técnica
