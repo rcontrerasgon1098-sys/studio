@@ -84,12 +84,12 @@ export default function Dashboard() {
     if (!db || !user || !userProfile) return null;
     const baseCollection = collection(db, "ordenes");
     
-    // Explicitly filter by supervisorId or createdBy for supervisors
+    // Explicitly filter by supervisorId for supervisors. 
+    // Simplified query (no orderBy) to avoid mandatory composite index errors initially.
     if (userProfile.rol_t === 'supervisor') {
       return query(
         baseCollection, 
-        where("supervisorId", "==", user.uid), 
-        orderBy("startDate", "desc")
+        where("supervisorId", "==", user.uid)
       );
     }
     
@@ -109,8 +109,7 @@ export default function Dashboard() {
     if (userProfile.rol_t === 'supervisor') {
       return query(
         baseCollection, 
-        where("supervisorId", "==", user.uid), 
-        orderBy("startDate", "desc")
+        where("supervisorId", "==", user.uid)
       );
     }
     

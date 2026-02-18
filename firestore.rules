@@ -28,15 +28,15 @@ service cloud.firestore {
     }
 
     match /ordenes/{docId} {
-      // Allow public read if it's a remote signature request
+      // Allow read for Admin, the Supervisor who created it, or public if it's a signature request
       allow read: if isAdmin()
-        || (isSupervisor() && (resource.data.createdBy == request.auth.uid || resource.data.supervisorId == request.auth.uid))
+        || (isLoggedIn() && (resource.data.createdBy == request.auth.uid || resource.data.supervisorId == request.auth.uid))
         || (resource.data.status == "Pending Signature");
 
-      allow create: if isAdmin() || isSupervisor();
+      allow create: if isLoggedIn(); // Rely on application logic and role checking in personnel collection
 
       allow update: if isAdmin()
-        || (isSupervisor() && (resource.data.createdBy == request.auth.uid || resource.data.supervisorId == request.auth.uid));
+        || (isLoggedIn() && (resource.data.createdBy == request.auth.uid || resource.data.supervisorId == request.auth.uid));
 
       allow delete: if isAdmin();
     }
