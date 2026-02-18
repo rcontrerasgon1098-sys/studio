@@ -28,7 +28,7 @@ export const generateWorkOrderPDF = async (data: any) => {
   doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
   doc.rect(0, 0, 210, 40, "F");
   
-  // Add ICSA Logo (Rectangular format)
+  // Add ICSA Logo
   try {
     const logoBase64 = await toDataURL(LOGO_URL);
     doc.addImage(logoBase64, "PNG", 10, 5, 80, 30);
@@ -48,122 +48,91 @@ export const generateWorkOrderPDF = async (data: any) => {
   // Content Start
   doc.setTextColor(0, 0, 0);
   doc.setFontSize(16);
-  doc.text("Orden de Trabajo Digital", 15, 55);
+  doc.text("Orden de Trabajo Técnica", 15, 55);
   
-  doc.setFontSize(10);
+  doc.setFontSize(9);
   doc.setTextColor(100, 100, 100);
   const formattedDate = data.startDate ? new Date(data.startDate).toLocaleString('es-ES') : new Date().toLocaleDateString();
   doc.text(`Fecha/Hora: ${formattedDate}`, 15, 62);
-  doc.text(`Supervisor: ${data.creatorEmail || "N/A"}`, 15, 67);
-  doc.text(`Estado: ${data.status === 'Completed' ? 'COMPLETADA' : 'PENDIENTE'}`, 15, 72);
+  doc.text(`Estado: ${data.status === 'Completed' ? 'FINALIZADA' : 'PENDIENTE'}`, 15, 67);
 
   // Client Info Section
   doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-  doc.setFontSize(12);
-  doc.text("DATOS DEL CLIENTE", 15, 85);
+  doc.setFontSize(11);
+  doc.setFont("helvetica", "bold");
+  doc.text("DATOS DEL CLIENTE", 15, 80);
   doc.setDrawColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-  doc.line(15, 87, 195, 87);
+  doc.line(15, 82, 195, 82);
 
   doc.setTextColor(0, 0, 0);
+  doc.setFont("helvetica", "normal");
   doc.setFontSize(10);
-  doc.text(`Nombre: ${data.clientName || "N/A"}`, 15, 95);
-  doc.text(`Contacto: ${data.clientContact || "N/A"}`, 15, 102);
+  doc.text(`Nombre: ${data.clientName || "N/A"}`, 15, 90);
+  doc.text(`Dirección: ${data.address || data.location || "N/A"}`, 15, 96);
+  doc.text(`Edificio: ${data.building || "N/A"}  |  Piso: ${data.floor || "N/A"}`, 15, 102);
 
   // Technical Specs Section
   doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-  doc.text("ESPECIFICACIONES TÉCNICAS", 15, 115);
+  doc.setFont("helvetica", "bold");
+  doc.text("DETALLES TÉCNICOS Y RED", 15, 115);
   doc.line(15, 117, 195, 117);
 
   doc.setTextColor(0, 0, 0);
-  doc.text(`Ubicación: ${data.location || "N/A"}`, 15, 125);
-  doc.text(`CDS/Canalización: ${data.cdsCanalization || "N/A"}`, 15, 132);
-  doc.text(`Tipo de Señal: ${data.signalType || "Simple"}`, 15, 139);
+  doc.setFont("helvetica", "normal");
+  doc.text(`Señal: ${data.signalType || "Simple"} (${data.signalCount || 1} unidades)`, 15, 125);
   
-  const cert = data.isCert ? "SÍ" : "NO";
-  const plan = data.isPlan ? "SÍ" : "NO";
-  const sw = data.connectionSwitch ? "SÍ" : "NO";
-  const hub = data.hubConnection ? "SÍ" : "NO";
-  doc.text(`Certificación: ${cert}  |  Planos: ${plan}  |  Switch: ${sw}  |  Hub: ${hub}`, 15, 146);
+  const cert = data.isCert ? `SÍ (${data.certifiedPointsCount || 0} puntos)` : "NO";
+  const labeled = data.isLabeled ? `SÍ (${data.labelDetails || "N/A"})` : "NO";
+  const canalized = data.isCanalized ? "SÍ" : "NO";
+  const plans = data.isPlan ? "SÍ" : "NO";
+
+  doc.text(`Certificación de Red: ${cert}`, 15, 132);
+  doc.text(`Rotulación: ${labeled}`, 15, 138);
+  doc.text(`Canalización: ${canalized}  |  Planos Actualizados: ${plans}`, 15, 144);
 
   // Description Section
   doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-  doc.text("DESCRIPCIÓN DE TRABAJOS", 15, 160);
-  doc.line(15, 162, 195, 162);
+  doc.setFont("helvetica", "bold");
+  doc.text("RESUMEN DE ACTIVIDADES", 15, 155);
+  doc.line(15, 157, 195, 157);
 
   doc.setTextColor(0, 0, 0);
-  const splitDesc = doc.splitTextToSize(data.description || "Sin descripción detallada.", 180);
-  doc.text(splitDesc, 15, 170);
+  doc.setFont("helvetica", "normal");
+  const splitDesc = doc.splitTextToSize(data.description || "Sin descripción adicional.", 180);
+  doc.text(splitDesc, 15, 165);
 
-  // Multimedia (Sketch)
-  if (data.sketchImageUrl) {
-    doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-    doc.text("BOSQUEJO / FOTO", 15, 205);
-    doc.line(15, 207, 195, 207);
-    try {
-        // Render at a high resolution aspect ratio
-        doc.addImage(data.sketchImageUrl, "JPEG", 15, 210, 80, 45, undefined, 'FAST');
-    } catch(e) {
-        console.error("No se pudo cargar la imagen del bosquejo", e);
-    }
-  }
-
-  // Signatures at the bottom - Optimized for quality
-  const sigY = 265;
+  // Signatures
+  const sigY = 240;
   doc.setFontSize(8);
   doc.setTextColor(100, 100, 100);
 
-  // Tech Signature Info
-  if (data.techName || data.techRut || data.techSignatureUrl) {
-    doc.text("VALIDACIÓN TÉCNICO ICSA", 15, sigY - 12);
-    doc.setTextColor(0,0,0);
-    doc.setFont("helvetica", "bold");
-    doc.text(`${data.techName || "N/A"}`, 15, sigY - 7);
-    doc.setFont("helvetica", "normal");
-    doc.text(`RUT: ${data.techRut || "N/A"}`, 15, sigY - 2);
-    
-    if (data.techSignatureUrl) {
-      try { 
-        // Use a box for better framing
-        doc.setDrawColor(240, 240, 240);
-        doc.rect(15, sigY, 60, 25);
-        doc.addImage(data.techSignatureUrl, "PNG", 17, sigY + 2, 56, 21, undefined, 'FAST'); 
-      } catch(e) {
-        console.error("Error rendering tech signature", e);
-      }
-    } else {
-      doc.setTextColor(150, 150, 150);
-      doc.text("(Pendiente de firma)", 15, sigY + 10);
-    }
+  // Tech Signature
+  doc.text("TÉCNICO RESPONSABLE ICSA", 15, sigY - 5);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(0,0,0);
+  doc.text(`${data.techName || "N/A"}`, 15, sigY);
+  doc.setFont("helvetica", "normal");
+  doc.text(`RUT: ${data.techRut || "N/A"}`, 15, sigY + 5);
+  if (data.techSignatureUrl) {
+    try { doc.addImage(data.techSignatureUrl, "PNG", 15, sigY + 7, 50, 20); } catch(e) {}
   }
 
-  // Client Signature Info
+  // Client Signature
   doc.setTextColor(100, 100, 100);
-  if (data.clientReceiverName || data.clientReceiverRut || data.clientSignatureUrl) {
-    doc.text("VALIDACIÓN RECEPCIÓN TERRENO", 130, sigY - 12);
-    doc.setTextColor(0,0,0);
-    doc.setFont("helvetica", "bold");
-    doc.text(`${data.clientReceiverName || "N/A"}`, 130, sigY - 7);
-    doc.setFont("helvetica", "normal");
-    doc.text(`RUT: ${data.clientReceiverRut || "N/A"}`, 130, sigY - 2);
-    
-    if (data.clientSignatureUrl) {
-      try { 
-        doc.setDrawColor(240, 240, 240);
-        doc.rect(130, sigY, 60, 25);
-        doc.addImage(data.clientSignatureUrl, "PNG", 132, sigY + 2, 56, 21, undefined, 'FAST'); 
-      } catch(e) {
-        console.error("Error rendering client signature", e);
-      }
-    } else {
-      doc.setTextColor(150, 150, 150);
-      doc.text("(Pendiente de firma)", 130, sigY + 10);
-    }
+  doc.text("RECEPCIÓN DE TRABAJOS (CLIENTE)", 130, sigY - 5);
+  doc.setFont("helvetica", "bold");
+  doc.setTextColor(0,0,0);
+  doc.text(`${data.clientReceiverName || "N/A"}`, 130, sigY);
+  doc.setFont("helvetica", "normal");
+  doc.text(`RUT: ${data.clientReceiverRut || "N/A"}`, 130, sigY + 5);
+  if (data.clientSignatureUrl) {
+    try { doc.addImage(data.clientSignatureUrl, "PNG", 130, sigY + 7, 50, 20); } catch(e) {}
   }
 
-  // Footer text
+  // Footer
   doc.setFontSize(7);
   doc.setTextColor(180, 180, 180);
-  doc.text("Documento generado digitalmente por el portal operativo ICSA.", 105, 290, { align: "center" });
+  doc.text("Documento electrónico generado por el Portal Operativo ICSA.", 105, 290, { align: "center" });
 
   doc.save(`OT-${data.folio}-${data.clientName?.replace(/\s+/g, '_')}.pdf`);
 };

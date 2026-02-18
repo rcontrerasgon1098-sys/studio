@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Download, Printer, User, Calendar, MapPin, ClipboardCheck, Info, Pencil, CreditCard, Loader2, Users } from "lucide-react";
+import { ArrowLeft, Download, Printer, User, Calendar, MapPin, ClipboardCheck, Info, Pencil, CreditCard, Loader2, Users, Building2, Hash, CheckCircle2 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import { generateWorkOrderPDF } from "@/lib/pdf-generator";
@@ -28,15 +28,10 @@ export default function WorkOrderView({ params }: { params: Promise<{ id: string
         return;
       }
       setIsLoading(true);
-      
-      // Intentar buscar en 'ordenes' primero
       let orderDoc = await getDoc(doc(db, "ordenes", id));
-      
-      // Si no está, buscar en 'historial'
       if (!orderDoc.exists()) {
         orderDoc = await getDoc(doc(db, "historial", id));
       }
-
       if (orderDoc.exists()) {
         setOrder({ ...orderDoc.data(), id: orderDoc.id });
       }
@@ -64,17 +59,10 @@ export default function WorkOrderView({ params }: { params: Promise<{ id: string
                 <ArrowLeft className="h-6 w-6" />
               </Button>
             </Link>
-            <h1 className="font-black text-lg text-primary truncate">OT #{order.folio}</h1>
+            <h1 className="font-black text-lg text-primary truncate uppercase tracking-tighter">OT #{order.folio}</h1>
           </div>
           <div className="flex gap-2">
-            {order.status === "Pending" && (
-              <Link href={`/work-orders/${order.id}/edit`}>
-                <Button variant="outline" size="sm" className="h-10 gap-2 border-primary text-primary">
-                  <Pencil className="h-4 w-4" /> Editar / Firmar
-                </Button>
-              </Link>
-            )}
-            <Button size="icon" onClick={() => generateWorkOrderPDF(order)} className="bg-primary hover:bg-primary/90 h-10 w-10" disabled={order.status === 'Pending'}>
+            <Button size="icon" onClick={() => generateWorkOrderPDF(order)} className="bg-primary hover:bg-primary/90 h-10 w-10">
               <Download className="h-5 w-5" />
             </Button>
             <Button variant="outline" size="icon" onClick={() => window.print()} className="h-10 w-10 hidden md:flex">
@@ -84,62 +72,58 @@ export default function WorkOrderView({ params }: { params: Promise<{ id: string
         </div>
       </header>
 
-      <main className="container mx-auto px-4 mt-6 max-w-2xl space-y-4">
+      <main className="container mx-auto px-4 mt-6 max-w-2xl space-y-6">
         <div className="flex items-center justify-between px-1">
-          <Badge className={cn("border-none text-xs px-3 py-1 font-bold", order.status === 'Completed' ? 'bg-accent/20 text-primary' : 'bg-primary/20 text-primary')}>
-            {order.status === 'Completed' ? 'COMPLETADA' : 'PENDIENTE'}
+          <Badge className={cn("border-none text-[10px] px-4 py-1.5 font-black tracking-[0.1em] uppercase", order.status === 'Completed' ? 'bg-accent/20 text-primary' : 'bg-primary/20 text-primary')}>
+            {order.status === 'Completed' ? 'FINALIZADA' : 'PENDIENTE'}
           </Badge>
-          <div className="text-[10px] text-muted-foreground flex items-center gap-1.5 font-bold uppercase tracking-widest">
+          <div className="text-[10px] text-muted-foreground flex items-center gap-1.5 font-black uppercase tracking-widest">
             <Calendar className="h-3 w-3" /> {order.startDate ? new Date(order.startDate).toLocaleDateString() : "N/A"}
           </div>
         </div>
 
         <div className="grid grid-cols-1 gap-4">
-          <Card className="shadow-md border-none bg-white">
-            <CardHeader className="flex flex-row items-center gap-3 p-4">
-              <div className="p-2 bg-secondary rounded-xl">
-                <User className="text-primary h-5 w-5" />
-              </div>
-              <div>
-                <CardTitle className="text-base font-bold">Cliente</CardTitle>
-                <CardDescription className="text-xs">{order.clientName}</CardDescription>
-              </div>
+          <Card className="shadow-md border-none bg-white overflow-hidden">
+            <CardHeader className="bg-secondary/10 p-4 border-b">
+              <CardTitle className="text-xs font-black uppercase tracking-widest text-primary flex items-center gap-2">
+                <User className="h-4 w-4" /> Datos del Cliente
+              </CardTitle>
             </CardHeader>
-            <CardContent className="p-4 pt-0">
-               <p className="text-xs text-muted-foreground">{order.clientContact || "Sin contacto"}</p>
+            <CardContent className="p-4 space-y-2">
+              <p className="font-black text-primary text-lg">{order.clientName}</p>
+              <p className="text-xs text-muted-foreground font-medium">{order.clientContact || "Sin contacto registrado"}</p>
+              <div className="flex items-center gap-2 mt-2 pt-2 border-t border-dashed">
+                <MapPin className="h-3 w-3 text-muted-foreground" />
+                <p className="text-xs font-bold text-muted-foreground">{order.address || order.location || "N/A"}</p>
+              </div>
             </CardContent>
           </Card>
 
-          <Card className="shadow-md border-none bg-white">
-            <CardHeader className="flex flex-row items-center gap-3 p-4">
-              <div className="p-2 bg-secondary rounded-xl">
-                <MapPin className="text-primary h-5 w-5" />
-              </div>
-              <div>
-                <CardTitle className="text-base font-bold">Ubicación</CardTitle>
-                <CardDescription className="text-xs">{order.location || "No especificada"}</CardDescription>
-              </div>
-            </CardHeader>
-            <CardContent className="p-4 pt-0">
-               <p className="text-xs text-muted-foreground font-medium">CDS: {order.cdsCanalization || "N/A"}</p>
-            </CardContent>
-          </Card>
+          <div className="grid grid-cols-2 gap-4">
+            <Card className="shadow-sm border-none bg-white p-4 flex flex-col items-center justify-center text-center">
+              <Building2 className="h-5 w-5 text-primary mb-1 opacity-60" />
+              <p className="text-[10px] uppercase font-black text-muted-foreground">Edificio</p>
+              <p className="font-bold text-sm text-primary">{order.building || "N/A"}</p>
+            </Card>
+            <Card className="shadow-sm border-none bg-white p-4 flex flex-col items-center justify-center text-center">
+              <Hash className="h-5 w-5 text-primary mb-1 opacity-60" />
+              <p className="text-[10px] uppercase font-black text-muted-foreground">Piso</p>
+              <p className="font-bold text-sm text-primary">{order.floor || "N/A"}</p>
+            </Card>
+          </div>
         </div>
 
         {order.team && order.team.length > 0 && (
           <Card className="shadow-md border-none bg-white">
-            <CardHeader className="p-4 border-b">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-secondary rounded-xl">
-                  <Users className="text-primary h-5 w-5" />
-                </div>
-                <CardTitle className="text-base font-bold">Equipo Asignado</CardTitle>
-              </div>
+            <CardHeader className="p-4 border-b bg-muted/5">
+              <CardTitle className="text-xs font-black uppercase tracking-widest text-primary flex items-center gap-2">
+                <Users className="h-4 w-4" /> Personal Asignado
+              </CardTitle>
             </CardHeader>
             <CardContent className="p-4">
               <div className="flex flex-wrap gap-2">
                 {order.team.map((member: string, index: number) => (
-                  <Badge key={index} variant="secondary" className="text-sm bg-primary/10 text-primary border-none">
+                  <Badge key={index} variant="secondary" className="text-xs bg-primary/10 text-primary border-none font-bold py-1 px-3 rounded-lg">
                     {member}
                   </Badge>
                 ))}
@@ -149,41 +133,42 @@ export default function WorkOrderView({ params }: { params: Promise<{ id: string
         )}
 
         <Card className="shadow-md border-none bg-white">
-          <CardHeader className="p-4 border-b">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-secondary rounded-xl">
-                <ClipboardCheck className="text-primary h-5 w-5" />
-              </div>
-              <CardTitle className="text-base font-bold">Especificaciones</CardTitle>
-            </div>
+          <CardHeader className="p-4 border-b bg-primary/5">
+            <CardTitle className="text-xs font-black uppercase tracking-widest text-primary flex items-center gap-2">
+              <ClipboardCheck className="h-4 w-4" /> Especificaciones Técnicas
+            </CardTitle>
           </CardHeader>
-          <CardContent className="p-4 space-y-4">
-            <div className="grid grid-cols-2 gap-2">
-              <div className="p-3 border rounded-xl bg-background flex flex-col items-center justify-center text-center">
-                <p className="text-[10px] text-muted-foreground uppercase font-black mb-1">Señal</p>
-                <p className="font-black text-primary text-sm">{order.signalType}</p>
+          <CardContent className="p-4 space-y-6">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <div className="col-span-2 p-4 bg-muted/20 rounded-2xl flex flex-col items-center justify-center border border-dashed">
+                <p className="text-[10px] text-muted-foreground uppercase font-black mb-1">Señal ({order.signalCount || 1} u.)</p>
+                <p className="font-black text-primary text-base">{order.signalType || "Simple"}</p>
               </div>
+              
               {[
-                { label: "Certificación", value: order.isCert },
+                { label: "Certificación", value: order.isCert, extra: order.certifiedPointsCount ? `${order.certifiedPointsCount} Puntos` : null },
+                { label: "Rotulación", value: order.isLabeled, extra: order.labelDetails },
+                { label: "Canalización", value: order.isCanalized },
                 { label: "Planos", value: order.isPlan },
-                { label: "Switch", value: order.connectionSwitch },
-                { label: "Hub", value: order.hubConnection },
               ].map((item, i) => (
-                <div key={i} className={`p-3 border rounded-xl flex flex-col items-center justify-center text-center ${item.value ? 'bg-accent/10 border-accent/20' : 'bg-background'}`}>
+                <div key={i} className={cn("p-4 border rounded-2xl flex flex-col items-center justify-center text-center transition-all", item.value ? 'bg-accent/5 border-accent/20' : 'bg-background opacity-40')}>
                   <p className="text-[10px] text-muted-foreground uppercase font-black mb-1">{item.label}</p>
-                  <p className={`font-black text-sm ${item.value ? 'text-accent' : 'text-muted-foreground/30'}`}>
+                  <p className={cn("font-black text-xs uppercase", item.value ? 'text-primary' : 'text-muted-foreground')}>
                     {item.value ? "SÍ" : "NO"}
                   </p>
+                  {item.value && item.extra && (
+                    <p className="text-[9px] font-bold text-accent mt-1 leading-none">{item.extra}</p>
+                  )}
                 </div>
               ))}
             </div>
             
             <div className="space-y-2 mt-4">
-              <p className="text-xs font-black flex items-center gap-2 text-primary uppercase tracking-widest">
-                <Info className="h-3 w-3" /> Descripción
+              <p className="text-[10px] font-black uppercase text-primary tracking-widest flex items-center gap-1">
+                <Info className="h-3 w-3" /> Resumen de Actividades
               </p>
-              <div className="p-4 bg-muted/30 rounded-xl text-sm leading-relaxed border border-dashed font-medium">
-                {order.description || "Sin descripción detallada."}
+              <div className="p-5 bg-muted/20 rounded-2xl text-sm leading-relaxed border border-dashed font-medium text-muted-foreground">
+                {order.description || "No se ingresó una descripción detallada de los trabajos."}
               </div>
             </div>
           </CardContent>
@@ -192,76 +177,62 @@ export default function WorkOrderView({ params }: { params: Promise<{ id: string
         {order.sketchImageUrl && (
           <Card className="shadow-md border-none bg-white overflow-hidden">
             <CardHeader className="p-4 pb-0">
-              <CardTitle className="text-xs font-bold text-muted-foreground uppercase">Bosquejo / Foto</CardTitle>
+              <CardTitle className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Evidencia Multimedia</CardTitle>
             </CardHeader>
             <CardContent className="p-4 pt-2">
-              <div className="relative aspect-video rounded-xl overflow-hidden bg-muted">
+              <div className="relative aspect-video rounded-3xl overflow-hidden bg-muted border-2 shadow-inner">
                 <Image src={order.sketchImageUrl} alt="Sketch" fill className="object-contain" />
               </div>
             </CardContent>
           </Card>
         )}
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Card className="shadow-md border-none bg-white">
-            <CardHeader className="p-4 pb-0">
-              <CardTitle className="text-xs font-bold text-muted-foreground uppercase">Firma Técnico</CardTitle>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pb-10">
+          <Card className="shadow-md border-none bg-white overflow-hidden">
+            <CardHeader className="p-4 bg-muted/10 border-b">
+              <CardTitle className="text-[10px] font-black text-primary uppercase tracking-widest">Firma Técnico</CardTitle>
             </CardHeader>
-            <CardContent className="p-4 pt-2 space-y-3">
-              {(order.techName || order.techRut) && (
-                <div className="text-[11px] space-y-1 p-2 bg-muted/20 rounded-lg">
-                  <p className="font-bold uppercase flex items-center gap-1"><User className="h-3 w-3" /> {order.techName || "N/A"}</p>
-                  <p className="text-muted-foreground flex items-center gap-1"><CreditCard className="h-3 w-3" /> {order.techRut || "N/A"}</p>
-                </div>
-              )}
-              {order.techSignatureUrl ? (
-                <div className="relative h-32 w-full bg-background/50 rounded-xl border border-dashed flex items-center justify-center">
-                   <Image src={order.techSignatureUrl} alt="Tech Sig" fill className="object-contain" />
-                </div>
-              ) : (
-                <div className="border border-dashed rounded-xl h-32 flex items-center justify-center bg-background/50 text-muted-foreground italic text-xs">
-                  Sin firma
-                </div>
-              )}
+            <CardContent className="p-4 pt-4 space-y-3">
+              <div className="text-[10px] space-y-1 p-3 bg-muted/20 rounded-xl font-bold">
+                <p className="uppercase flex items-center gap-2 text-primary"><User className="h-3 w-3" /> {order.techName || "N/A"}</p>
+                <p className="text-muted-foreground flex items-center gap-2"><CreditCard className="h-3 w-3" /> {order.techRut || "N/A"}</p>
+              </div>
+              <div className="relative h-32 w-full bg-muted/5 rounded-xl border border-dashed flex items-center justify-center overflow-hidden">
+                {order.techSignatureUrl ? (
+                   <Image src={order.techSignatureUrl} alt="Firma Técnico" fill className="object-contain" />
+                ) : (
+                  <span className="text-[10px] uppercase font-black opacity-20">Sin Firma</span>
+                )}
+              </div>
             </CardContent>
           </Card>
-          <Card className="shadow-md border-none bg-white">
-            <CardHeader className="p-4 pb-0">
-              <CardTitle className="text-xs font-bold text-muted-foreground uppercase">Firma Receptor</CardTitle>
+
+          <Card className="shadow-md border-none bg-white overflow-hidden">
+            <CardHeader className="p-4 bg-muted/10 border-b">
+              <CardTitle className="text-[10px] font-black text-primary uppercase tracking-widest">Firma Receptor</CardTitle>
             </CardHeader>
-            <CardContent className="p-4 pt-2 space-y-3">
-              {(order.clientReceiverName || order.clientReceiverRut) && (
-                <div className="text-[11px] space-y-1 p-2 bg-muted/20 rounded-lg">
-                  <p className="font-bold uppercase flex items-center gap-1"><User className="h-3 w-3" /> {order.clientReceiverName || "N/A"}</p>
-                  <p className="text-muted-foreground flex items-center gap-1"><CreditCard className="h-3 w-3" /> {order.clientReceiverRut || "N/A"}</p>
-                </div>
-              )}
-              {order.clientSignatureUrl ? (
-                 <div className="relative h-32 w-full bg-background/50 rounded-xl border border-dashed flex items-center justify-center">
-                    <Image src={order.clientSignatureUrl} alt="Client Sig" fill className="object-contain" />
-                 </div>
-              ) : (
-                <div className="border border-dashed rounded-xl h-32 flex items-center justify-center bg-background/50 text-muted-foreground italic text-xs">
-                  Sin firma
-                </div>
-              )}
+            <CardContent className="p-4 pt-4 space-y-3">
+              <div className="text-[10px] space-y-1 p-3 bg-muted/20 rounded-xl font-bold">
+                <p className="uppercase flex items-center gap-2 text-primary"><User className="h-3 w-3" /> {order.clientReceiverName || "N/A"}</p>
+                <p className="text-muted-foreground flex items-center gap-2"><CreditCard className="h-3 w-3" /> {order.clientReceiverRut || "N/A"}</p>
+              </div>
+              <div className="relative h-32 w-full bg-muted/5 rounded-xl border border-dashed flex items-center justify-center overflow-hidden">
+                {order.clientSignatureUrl ? (
+                   <Image src={order.clientSignatureUrl} alt="Firma Cliente" fill className="object-contain" />
+                ) : (
+                  <span className="text-[10px] uppercase font-black opacity-20">Sin Firma</span>
+                )}
+              </div>
             </CardContent>
           </Card>
         </div>
 
-        <div className="flex flex-col gap-3 mt-8">
-           {order.status === "Pending" && (
-             <Link href={`/work-orders/${order.id}/edit`} className="w-full">
-               <Button className="bg-accent text-primary h-14 w-full text-lg font-black gap-3 shadow-xl">
-                 <Pencil /> Reabrir para completar
-               </Button>
-             </Link>
-           )}
-           <Button onClick={() => generateWorkOrderPDF(order)} className="bg-primary h-14 w-full text-lg font-black gap-3 shadow-xl" disabled={order.status === 'Pending'}>
+        <div className="flex flex-col gap-3 mt-4">
+           <Button onClick={() => generateWorkOrderPDF(order)} className="bg-primary h-14 w-full text-lg font-black gap-3 shadow-[0_10px_30px_rgba(56,163,165,0.3)] rounded-2xl uppercase tracking-tighter">
              <Download /> Descargar Reporte PDF
            </Button>
            <Link href="/dashboard" className="w-full">
-             <Button variant="outline" className="h-12 w-full font-bold">
+             <Button variant="outline" className="h-12 w-full font-bold uppercase text-xs tracking-widest rounded-xl">
                Volver al Panel
              </Button>
            </Link>
