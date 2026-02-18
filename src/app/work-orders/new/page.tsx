@@ -11,7 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SignaturePad } from "@/components/SignaturePad";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Save, Camera, CheckCircle2, Search, X, Image as ImageIcon, User, Phone, Mail, MapPin, Building2, Hash, Users, PlusCircle, Loader2, CheckSquare } from "lucide-react";
+import { ArrowLeft, Save, Camera, CheckCircle2, Search, X, Image as ImageIcon, User, Phone, Mail, MapPin, Building2, Hash, Users, PlusCircle, Loader2, CheckSquare, Send } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import { useUser, useFirestore, useCollection, useMemoFirebase, useUserProfile } from "@/firebase";
@@ -33,6 +33,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { sendWorkOrderEmail } from "@/ai/flows/send-work-order-email-flow";
+import { sendSignatureRequest } from "@/ai/flows/send-signature-request-flow";
 
 export default function NewWorkOrder() {
   const router = useRouter();
@@ -43,6 +44,7 @@ export default function NewWorkOrder() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   const [loading, setLoading] = useState(false);
+  const [isSendingSignature, setIsSendingSignature] = useState(false);
   const [folio, setFolio] = useState(0);
   const [openClientSearch, setOpenClientSearch] = useState(false);
   const [openTeamSearch, setOpenTeamSearch] = useState(false);
@@ -204,6 +206,58 @@ export default function NewWorkOrder() {
     setFormData(prev => ({ ...prev, team: prev.team.filter(t => t !== memberName) }));
   };
 
+  const handleSendRemoteSignature = async () => {
+    if (!user || !db) return;
+    if (!formData.clientReceiverEmail) {
+      toast({ 
+        variant: "destructive", 
+        title: "Falta Email", 
+        description: "Por favor ingrese el email del receptor en la sección de Recepción Terreno." 
+      });
+      return;
+    }
+
+    setIsSendingSignature(true);
+    try {
+      // 1. First, save the order as Pending so it exists in Firestore
+      const orderId = doc(collection(db, "ordenes")).id;
+      const currentFolio = folio || generateFolio();
+      
+      const workOrderData = {
+        ...formData,
+        id: orderId,
+        folio: currentFolio,
+        status: "Pending",
+        createdBy: user.uid,
+        creatorEmail: user.email,
+        startDate: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+
+      setDocumentNonBlocking(doc(db, "ordenes", orderId), workOrderData, { merge: true });
+
+      // 2. Trigger signature request flow
+      const result = await sendSignatureRequest({
+        orderId: orderId,
+        recipientEmail: formData.clientReceiverEmail,
+        clientName: formData.clientReceiverName || formData.clientName,
+        folio: currentFolio,
+        baseUrl: window.location.origin,
+      });
+
+      if (result.success) {
+        toast({ title: "Solicitud Enviada", description: "Se ha enviado el enlace de firma remota al cliente." });
+        router.push("/dashboard");
+      } else {
+        toast({ variant: "destructive", title: "Error", description: result.error });
+        setIsSendingSignature(false);
+      }
+    } catch (error) {
+      toast({ variant: "destructive", title: "Error", description: "No se pudo procesar la solicitud." });
+      setIsSendingSignature(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user || !db) return;
@@ -287,9 +341,14 @@ export default function NewWorkOrder() {
             </Link>
             <h1 className="font-bold text-lg text-primary uppercase tracking-tighter">Nueva OT #{folio || '...'}</h1>
           </div>
-          <Button onClick={handleSubmit} disabled={loading} className="bg-primary h-10 px-4 font-bold uppercase text-xs">
-            <Save className="h-4 w-4 mr-2" /> Guardar
-          </Button>
+          <div className="flex gap-2">
+            <Button onClick={handleSendRemoteSignature} disabled={isSendingSignature || loading} variant="outline" className="h-10 px-4 font-bold uppercase text-xs border-primary text-primary hover:bg-primary/5">
+              <Send className="h-4 w-4 mr-2" /> {isSendingSignature ? "Enviando..." : "Firma Remota"}
+            </Button>
+            <Button onClick={handleSubmit} disabled={loading || isSendingSignature} className="bg-primary h-10 px-4 font-bold uppercase text-xs">
+              <Save className="h-4 w-4 mr-2" /> Guardar
+            </Button>
+          </div>
         </div>
       </header>
 
