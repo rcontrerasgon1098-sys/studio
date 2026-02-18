@@ -84,11 +84,11 @@ const sendSignatureRequestFlow = ai.defineFlow(
         </div>
       `;
 
-      await sendEmailSMTP(
-        input.recipientEmail,
-        `ICSA - Solicitud de Firma Digital OT #${input.folio}`,
-        htmlContent
-      );
+      await sendEmailSMTP({
+        to: input.recipientEmail,
+        subject: `ICSA - Solicitud de Firma Digital OT #${input.folio}`,
+        html: htmlContent
+      });
 
       return { success: true };
     } catch (error: any) {

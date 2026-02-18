@@ -57,11 +57,11 @@ const sendWorkOrderEmailFlow = ai.defineFlow(
       </div>
     `;
 
-    await sendEmailSMTP(
-      input.recipientEmail,
-      `ICSA - Orden de Trabajo #${input.folio} Finalizada`,
-      htmlContent
-    );
+    await sendEmailSMTP({
+      to: input.recipientEmail,
+      subject: `ICSA - Orden de Trabajo #${input.folio} Finalizada`,
+      html: htmlContent
+    });
 
     return { success: true };
   }

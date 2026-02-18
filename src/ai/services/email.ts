@@ -1,35 +1,49 @@
 
 import nodemailer from "nodemailer";
 
+interface EmailOptions {
+  to: string;
+  subject: string;
+  html: string;
+  attachments?: Array<{
+    filename: string;
+    content: Buffer | string;
+    contentType?: string;
+  }>;
+}
+
 /**
- * Sends an email using SMTP transport.
+ * Sends an email using SMTP transport with Nodemailer.
  * 
- * @param to The recipient's email address.
- * @param subject The email subject.
- * @param html The HTML content of the email.
+ * @param options Object containing recipient, subject, html content and optional attachments.
  */
-export async function sendEmailSMTP(to: string, subject: string, html: string) {
-  // These environment variables should be configured in Brevo/SMTP provider
+export async function sendEmailSMTP(options: EmailOptions) {
   const transporter = nodemailer.createTransport({
     host: process.env.MAIL_HOST || "smtp-relay.brevo.com",
     port: Number(process.env.MAIL_PORT) || 587,
-    secure: false,
+    secure: false, // true for 465, false for other ports
     auth: {
       user: process.env.MAIL_USERNAME,
       pass: process.env.MAIL_PASSWORD,
     },
+    tls: {
+      rejectUnauthorized: false // Helps with some SMTP relay configurations
+    }
   });
 
   try {
-    await transporter.sendMail({
+    const info = await transporter.sendMail({
       from: `"${process.env.MAIL_FROM_NAME || "ICSA Operaciones"}" <${process.env.MAIL_FROM_ADDRESS || "no-reply@icsa.com"}>`,
-      to,
-      subject,
-      html,
+      to: options.to,
+      subject: options.subject,
+      html: options.html,
+      attachments: options.attachments,
     });
-    console.log(`Email sent successfully to ${to}`);
+    
+    console.log(`Email sent successfully. MessageId: ${info.messageId}`);
+    return { success: true, messageId: info.messageId };
   } catch (error) {
-    console.error("Error sending email:", error);
+    console.error("Error sending email via SMTP:", error);
     throw error;
   }
 }
