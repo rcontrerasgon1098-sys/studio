@@ -1,3 +1,4 @@
+
 rules_version = '2';
 
 service cloud.firestore {
@@ -27,8 +28,10 @@ service cloud.firestore {
     }
 
     match /ordenes/{docId} {
+      // Allow public read if it's a remote signature request
       allow read: if isAdmin()
-        || (isSupervisor() && resource.data.createdBy == request.auth.uid);
+        || (isSupervisor() && resource.data.createdBy == request.auth.uid)
+        || (resource.data.status == "Pending Signature");
 
       allow create: if isAdmin() || isSupervisor();
 
@@ -43,7 +46,8 @@ service cloud.firestore {
     }
 
     match /personnel/{userId} {
-      allow read: if isAdmin() || isSupervisor();
+      // Allow user to read their own profile to verify role during initialization
+      allow read: if isLoggedIn() && (request.auth.uid == userId || isAdmin() || isSupervisor());
       allow write: if isAdmin();
     }
   }

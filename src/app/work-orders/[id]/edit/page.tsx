@@ -12,7 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SignaturePad } from "@/components/SignaturePad";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Save, CheckCircle2, Camera, X, Image as ImageIcon, Loader2, User, Phone, Mail, MapPin, Building2, Hash, Users, PlusCircle, CheckSquare } from "lucide-react";
+import { ArrowLeft, Save, CheckCircle2, Camera, X, Image as ImageIcon, Loader2, User, Phone, Mail, MapPin, Building2, Hash, Users, PlusCircle, CheckSquare, Send } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import { useUser, useFirestore, useDoc, useMemoFirebase, useCollection, useUserProfile } from "@/firebase";
@@ -33,6 +33,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Switch } from "@/components/ui/switch";
 import { sendWorkOrderEmail } from "@/ai/flows/send-work-order-email-flow";
+import { sendSignatureRequest } from "@/ai/flows/send-signature-request-flow";
 
 export default function EditWorkOrder({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -63,6 +64,7 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
   const { data: allPersonnel } = useCollection(personnelQuery);
 
   const [loading, setLoading] = useState(false);
+  const [isSendingSignature, setIsSendingSignature] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
   const [showSaveSignatureDialog, setShowSaveSignatureDialog] = useState(false);
   const [tempSignature, setTempSignature] = useState("");
@@ -200,6 +202,39 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
     setFormData(prev => ({ ...prev, team: prev.team.filter(t => t !== memberName) }));
   };
 
+  const handleSendRemoteSignature = async () => {
+    if (!formData.clientReceiverEmail) {
+      toast({ 
+        variant: "destructive", 
+        title: "Falta Email", 
+        description: "Por favor ingrese el email del receptor en la sección de Recepción Terreno." 
+      });
+      return;
+    }
+
+    setIsSendingSignature(true);
+    try {
+      const result = await sendSignatureRequest({
+        orderId: id,
+        recipientEmail: formData.clientReceiverEmail,
+        clientName: formData.clientReceiverName || formData.clientName,
+        folio: order?.folio || 0,
+        baseUrl: window.location.origin,
+      });
+
+      if (result.success) {
+        toast({ title: "Solicitud Enviada", description: "Se ha enviado el enlace de firma remota al cliente." });
+        router.push("/dashboard");
+      } else {
+        toast({ variant: "destructive", title: "Error", description: result.error });
+      }
+    } catch (error) {
+      toast({ variant: "destructive", title: "Error", description: "No se pudo enviar la solicitud." });
+    } finally {
+      setIsSendingSignature(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user || !db || !id) return;
@@ -279,9 +314,14 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
             </Link>
             <h1 className="font-bold text-lg text-primary uppercase tracking-tighter">Editar OT #{order?.folio}</h1>
           </div>
-          <Button onClick={handleSubmit} disabled={loading} className="bg-primary h-10 px-4 font-bold uppercase text-xs">
-            <Save className="h-4 w-4 mr-2" /> Guardar
-          </Button>
+          <div className="flex gap-2">
+            <Button onClick={handleSendRemoteSignature} disabled={isSendingSignature || loading} variant="outline" className="h-10 px-4 font-bold uppercase text-xs border-primary text-primary hover:bg-primary/5">
+              <Send className="h-4 w-4 mr-2" /> {isSendingSignature ? "Enviando..." : "Firma Remota"}
+            </Button>
+            <Button onClick={handleSubmit} disabled={loading || isSendingSignature} className="bg-primary h-10 px-4 font-bold uppercase text-xs">
+              <Save className="h-4 w-4 mr-2" /> Guardar
+            </Button>
+          </div>
         </div>
       </header>
 

@@ -47,7 +47,7 @@
         },
         "status": {
           "type": "string",
-          "description": "Status (Completed/Pending)."
+          "description": "Status (Completed/Pending/Pending Signature)."
         },
         "team": {
           "type": "array",
@@ -79,7 +79,10 @@
         "clientReceiverRut": { "type": "string" },
         "clientReceiverEmail": { "type": "string", "format": "email" },
         "clientSignatureUrl": { "type": "string", "format": "uri" },
-        "sketchImageUrl": { "type": "string", "format": "uri" }
+        "sketchImageUrl": { "type": "string", "format": "uri" },
+        "signatureToken": { "type": "string", "description": "Secure token for remote signature." },
+        "tokenExpiry": { "type": "string", "format": "date-time", "description": "Expiry date for the signature token." },
+        "signatureDate": { "type": "string", "format": "date-time" }
       },
       "required": [
         "id",
