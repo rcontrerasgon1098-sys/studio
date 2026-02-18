@@ -1,49 +1,63 @@
-# Informe Técnico: Estructura de la Base de Datos
+# Informe Técnico: Estructura y Conexiones de la Base de Datos
 
 ## 1. Introducción
 
-Este documento describe, de manera sencilla, cómo está organizada la información de la aplicación en la base de datos. Pensemos en la base de datos como un archivador digital con diferentes carpetas (que llamaremos "colecciones" o "tablas"). Cada tabla guarda un tipo de información específica y se comunican entre sí para que la aplicación funcione correctamente.
-
-## 2. Las "Tablas" Principales y su Función
-
-Nuestra base de datos se compone de 4 tablas principales:
-
-### Tabla 1: `personnel` (Personal de ICSA)
-
-*   **¿Qué guarda?**: Es la tabla central de usuarios. Contiene la ficha de cada empleado de ICSA, guardando su nombre, RUT, correo y, lo más importante, su rol (**Administrador, Supervisor o Técnico**). También puede almacenar su firma digitalizada.
-*   **¿Para qué se usa?**: Es la única fuente de verdad para la autenticación y los permisos. Se usa para:
-    *   Verificar si un usuario que intenta iniciar sesión tiene un rol permitido (Supervisor o Admin).
-    *   Poblar la lista de selección de equipo cuando un supervisor crea una OT.
-    *   Autocompletar el nombre y RUT del supervisor en una OT.
-    *   Cargar la firma guardada del personal.
-
-### Tabla 2: `clients` (Clientes)
-
-*   **¿Qué guarda?**: Es la agenda de contactos de los clientes de ICSA. Contiene toda la información de cada empresa: Razón Social, RUT, Nombre de Contacto, Dirección, Teléfono, etc.
-*   **¿Para qué se usa?**: Para no tener que escribir los datos del cliente cada vez. Cuando un supervisor crea una nueva Orden de Trabajo, puede buscar al cliente en esta tabla y el sistema rellena los datos automáticamente.
-
-### Tabla 3: `ordenes` (Órdenes de Trabajo Activas)
-
-*   **¿Qué guarda?**: Todas las Órdenes de Trabajo que están **pendientes** o en curso. Ahora también guarda el **equipo de trabajo** asignado a esa OT (una lista con los nombres del personal).
-*   **¿Para qué se usa?**: Es el corazón operativo. Cuando se crea una nueva OT, se guarda aquí. La pantalla de "Inicio" del Dashboard muestra la información que está en esta tabla.
-
-### Tabla 4: `historial` (Archivo de Órdenes Completadas)
-
-*   **¿Qué guarda?**: Es el archivo digital de la empresa. Contiene una copia de todas las Órdenes de Trabajo que ya fueron **finalizadas**. También incluye la información del equipo que fue asignado.
-*   **¿Para qué se usa?**: Para la trazabilidad y consulta. Cuando una OT se completa, el sistema la "mueve" desde la tabla `ordenes` a esta tabla. La sección "Historial" y la página de visualización de una OT completada consultan esta tabla.
+Este documento detalla la arquitectura de datos de la aplicación ICSA. La base de datos está organizada en **colecciones** (tablas) dentro de Firebase Firestore, diseñadas para garantizar la trazabilidad, la seguridad basada en roles y la eficiencia operativa.
 
 ---
 
-## 3. ¿Cómo Interactúan entre Sí? (El Flujo de Trabajo)
+## 2. Colecciones Principales
 
-1.  Un **supervisor** (`personnel`) inicia sesión. El sistema valida sus credenciales y luego verifica directamente en la tabla `personnel` que su rol sea "Supervisor" o "Administrador".
-2.  El supervisor crea una nueva **Orden de Trabajo**.
-3.  Busca un **cliente** en la tabla `clients` para autocompletar sus datos.
-4.  En la misma OT, selecciona a varios miembros del personal (`personnel`) para formar su **equipo de trabajo**. La lista de nombres del equipo se guarda en la OT.
-5.  Los datos del propio supervisor (nombre, RUT y firma) se sacan de `personnel` y se autocompletan.
-6.  Esta nueva OT se guarda en la tabla `ordenes`.
-7.  El personal en terreno y el cliente finalizan el trabajo y firman la OT.
-8.  Al presionar "Finalizar Orden", el sistema comprueba que todo esté completo y **mueve la OT de la tabla `ordenes` a la tabla `historial`**.
-9.  A partir de ese momento, la OT ya no aparece en "Pendientes", sino en la sección "Historial" para futuras consultas, donde se podrá ver también qué equipo fue asignado.
+### A. `personnel` (Personal y Usuarios)
+*   **Identificador (ID)**: El ID del documento es el `uid` único generado por Firebase Auth.
+*   **Propósito**: Es el núcleo de seguridad y gestión de recursos humanos.
+*   **Campos Clave**:
+    *   `nombre_t`, `rut_t`, `email_t`: Datos de identificación.
+    *   `rol_t`: Define el acceso (**admin**, **supervisor**, **tecnico**).
+    *   `signatureUrl`: Firma digital guardada del empleado para autocompletado.
+*   **Uso en la App**: 
+    *   Determina qué ve el usuario al iniciar sesión.
+    *   Puebla la lista de "Equipo de Trabajo" en las OTs.
 
-Esta estructura asegura que la información esté organizada y que el flujo de trabajo sea eficiente, centralizando los perfiles y permisos en una única tabla (`personnel`).
+### B. `clients` (Cartera de Clientes)
+*   **Propósito**: Directorio centralizado de empresas clientes.
+*   **Campos Clave**: `razonSocial`, `nombreCliente`, `rutCliente`, `emailClientes`, `telefonoCliente`.
+*   **Uso en la App**: Permite al supervisor buscar un cliente y autocompletar toda su ficha técnica en una nueva OT con un solo clic.
+
+### C. `ordenes` (Órdenes de Trabajo Activas)
+*   **Propósito**: Gestión de trabajos en curso o pendientes de firma.
+*   **Campos Clave**:
+    *   `folio`: Número correlativo de la OT.
+    *   `supervisorId` / `createdBy`: Vinculación directa con el creador (`personnel`).
+    *   `status`: Estados como "Pending", "Active" o "Pending Signature".
+    *   `team`: Array de nombres del personal asignado.
+*   **Uso en la App**: Se muestra en el Dashboard principal. Es donde ocurre toda la edición técnica y captura de evidencia.
+
+### D. `historial` (Archivo Histórico)
+*   **Propósito**: Almacenamiento inmutable de trabajos finalizados.
+*   **Conexión**: Cuando una OT en `ordenes` recibe todas las firmas (técnico y receptor), el sistema la **mueve** físicamente a esta colección y la elimina de la tabla de activos.
+
+---
+
+## 3. Conexiones y Flujo de Datos
+
+1.  **Autenticación**: El usuario entra con su correo. El sistema busca su `uid` en `personnel` para obtener su `rol_t`.
+2.  **Creación de OT**:
+    *   El sistema toma el `uid` del supervisor y lo guarda en `supervisorId`.
+    *   Se extraen los datos de `clients` para llenar la información del receptor.
+    *   Se consultan otros documentos de `personnel` para formar el `team`.
+3.  **Firma Remota**:
+    *   Se genera un `signatureToken` en la OT.
+    *   Las **Reglas de Seguridad** permiten que un cliente externo lea *solo* esa OT si el token en la URL coincide con el de la base de datos.
+4.  **Finalización**: Al detectar ambas firmas, el documento se transfiere de `ordenes` a `historial`, manteniendo la integridad de los datos para auditorías futuras.
+
+---
+
+## 4. Resumen de Relaciones
+
+| Colección A | Relación | Colección B | Propósito |
+| :--- | :---: | :--- | :--- |
+| `Auth User` | 1:1 | `personnel` | Vincula credenciales con perfil y rol. |
+| `personnel` | 1:N | `ordenes` | Un supervisor gestiona múltiples órdenes. |
+| `clients` | 1:N | `ordenes` | Un cliente puede tener múltiples trabajos. |
+| `ordenes` | Migración | `historial` | Traspaso de datos al completar el ciclo de vida. |
