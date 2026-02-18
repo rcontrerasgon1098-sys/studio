@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, useRef } from "react";
@@ -585,8 +584,22 @@ export default function NewWorkOrder() {
                   </div>
                 </div>
                 {formData.techSignatureUrl ? (
-                  <div className="relative h-40 w-full bg-muted/20 rounded-2xl border-2 border-dashed flex items-center justify-center overflow-hidden">
-                    <Image src={formData.techSignatureUrl} alt="Firma Técnico" fill className="object-contain" />
+                  <div className="space-y-4">
+                    <div className="relative h-40 w-full bg-muted/20 rounded-2xl border-2 border-dashed flex items-center justify-center overflow-hidden group">
+                      <Image src={formData.techSignatureUrl} alt="Firma Técnico" fill className="object-contain" />
+                      <Button 
+                        type="button" 
+                        variant="destructive" 
+                        size="sm" 
+                        className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity"
+                        onClick={() => setFormData({...formData, techSignatureUrl: ""})}
+                      >
+                        <X className="h-4 w-4 mr-1" /> Cambiar
+                      </Button>
+                    </div>
+                    <p className="text-[10px] text-center text-muted-foreground italic">
+                      Firma cargada automáticamente. Presione "Cambiar" para firmar nuevamente.
+                    </p>
                   </div>
                 ) : (
                   <SignaturePad label="Firma del Técnico" onSave={handleTechSignatureConfirm} />
