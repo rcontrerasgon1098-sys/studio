@@ -79,9 +79,9 @@ export default function Dashboard() {
     }
   }, [user, isUserLoading, router]);
 
-  // Query for active orders
+  // Query for active orders - Unificado mediante supervisorId
   const ordersQuery = useMemoFirebase(() => {
-    if (!db || !user || !userProfile) return null;
+    if (!db || !user?.uid || !userProfile) return null;
     const baseCollection = collection(db, "ordenes");
     
     if (userProfile.rol_t === 'supervisor') {
@@ -96,12 +96,12 @@ export default function Dashboard() {
     }
     
     return null;
-  }, [db, user, userProfile]);
+  }, [db, user?.uid, userProfile]);
   const { data: orders, isLoading: isOrdersLoading } = useCollection(ordersQuery);
 
-  // Query for historical orders
+  // Query for historical orders - Unificado mediante supervisorId
   const historyQuery = useMemoFirebase(() => {
-    if (!db || !user || !userProfile) return null;
+    if (!db || !user?.uid || !userProfile) return null;
     const baseCollection = collection(db, "historial");
     
     if (userProfile.rol_t === 'supervisor') {
@@ -116,7 +116,7 @@ export default function Dashboard() {
     }
     
     return null;
-  }, [db, user, userProfile]);
+  }, [db, user?.uid, userProfile]);
   const { data: history, isLoading: isHistoryLoading } = useCollection(historyQuery);
 
   const clientsQuery = useMemoFirebase(() => {
@@ -132,7 +132,7 @@ export default function Dashboard() {
   const { data: personnel } = useCollection(personnelQuery);
 
   const statsData = useMemo(() => {
-    const pendingCount = orders?.filter(o => o.status === "Pending" || o.status === "Pending Signature").length || 0;
+    const pendingCount = orders?.filter(o => o.status === "Pending" || o.status === "Pending Signature" || o.status === "Active").length || 0;
     const completedCount = history?.length || 0;
     
     return [
@@ -171,37 +171,6 @@ export default function Dashboard() {
     return result;
   }, [history]);
   
-  const topClientsData = useMemo(() => {
-    if (!history) return [];
-    const counts = history.reduce((acc, order) => {
-        const client = order.clientName || "Desconocido";
-        acc[client] = (acc[client] || 0) + 1;
-        return acc;
-    }, {} as Record<string, number>);
-
-    return Object.entries(counts)
-        .map(([name, count]) => ({ name, count }))
-        .sort((a, b) => b.count - a.count)
-        .slice(0, 5);
-  }, [history]);
-
-  const techProductivityData = useMemo(() => {
-    if (!history) return [];
-    const counts = history.reduce((acc, order) => {
-        const tech = order.techName || "No Asignado";
-        acc[tech] = (acc[tech] || 0) + 1;
-        return acc;
-    }, {} as Record<string, number>);
-
-    return Object.entries(counts)
-        .map(([name, count]) => ({
-            name: name.split(" ")[0], 
-            count 
-        }))
-        .sort((a, b) => b.count - a.count)
-        .slice(0, 5);
-  }, [history]);
-
   const filteredOrders = useMemo(() => {
     if (!orders) return [];
     return orders.filter(o => {
@@ -232,22 +201,6 @@ export default function Dashboard() {
       return matchesSearch && matchesDate;
     });
   }, [history, searchTerm, dateFilter]);
-
-  const filteredClients = useMemo(() => {
-    if (!clients) return [];
-    return clients.filter(c => 
-      c.nombreCliente?.toLowerCase().includes(searchTerm.toLowerCase()) || 
-      c.rutCliente?.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-  }, [clients, searchTerm]);
-
-  const filteredPersonnel = useMemo(() => {
-    if (!personnel) return [];
-    return personnel.filter(p => 
-      p.nombre_t?.toLowerCase().includes(searchTerm.toLowerCase()) || 
-      p.rut_t?.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-  }, [personnel, searchTerm]);
 
   const handleLogout = async () => {
     if (!auth) return;
@@ -416,7 +369,7 @@ export default function Dashboard() {
                   <div>
                     <p className="text-xs font-black text-muted-foreground uppercase tracking-widest">Órdenes Activas</p>
                     <h3 className="text-4xl font-black text-primary leading-none mt-1">
-                      {isOrdersLoading ? <Loader2 className="h-6 w-6 animate-spin" /> : (orders?.filter(o => o.status !== "Completed").length || 0)}
+                      {isOrdersLoading ? <Loader2 className="h-6 w-6 animate-spin" /> : (orders?.length || 0)}
                     </h3>
                   </div>
                 </CardContent>
@@ -429,7 +382,7 @@ export default function Dashboard() {
                 <CardDescription>Acceso rápido a los trabajos en curso.</CardDescription>
               </CardHeader>
               <CardContent className="p-0">
-                <OrderTable orders={orders?.filter(o => o.status !== "Completed") || []} isLoading={isOrdersLoading} type="ordenes" setDeleteConfirm={setDeleteConfirm} isAdmin={userProfile?.rol_t === 'admin'} />
+                <OrderTable orders={orders || []} isLoading={isOrdersLoading} type="ordenes" setDeleteConfirm={setDeleteConfirm} isAdmin={userProfile?.rol_t === 'admin'} />
               </CardContent>
             </Card>
           </div>

@@ -146,18 +146,6 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
     }
   }, [user, isUserLoading, router]);
 
-  useEffect(() => {
-    if (techProfiles && techProfiles.length > 0 && isInitialized) {
-      const tech = techProfiles[0];
-      setFormData(prev => ({
-        ...prev,
-        techName: prev.techName || tech.nombre_t || "",
-        techRut: prev.techRut || tech.rut_t || "",
-        techSignatureUrl: prev.techSignatureUrl || tech.signatureUrl || ""
-      }));
-    }
-  }, [techProfiles, isInitialized]);
-
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -203,6 +191,11 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
   };
 
   const handleSendRemoteSignature = async () => {
+    if (!user || !db) {
+      toast({ variant: "destructive", title: "Error de Sesión", description: "No se encontró un usuario autenticado." });
+      return;
+    }
+
     if (!formData.clientReceiverEmail) {
       toast({ 
         variant: "destructive", 
@@ -237,7 +230,10 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user || !db || !id) return;
+    if (!user || !db || !id) {
+       toast({ variant: "destructive", title: "Error Crítico", description: "No se pudo identificar la sesión de usuario." });
+       return;
+    }
     
     setLoading(true);
 
@@ -247,13 +243,14 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
 
     const finalStatus = isValidationComplete ? "Completed" : "Pending";
 
+    // Mantenemos los IDs de propiedad originales si existen, si no usamos los actuales.
     const updateData = {
       ...formData,
       createdBy: formData.createdBy || user.uid,
       supervisorId: formData.supervisorId || user.uid,
       status: finalStatus,
       updatedAt: new Date().toISOString(),
-      updatedBy: user.email
+      updatedBy: user.email || ""
     };
 
     if (finalStatus === "Completed") {

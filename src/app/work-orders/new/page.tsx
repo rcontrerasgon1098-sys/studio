@@ -207,7 +207,11 @@ export default function NewWorkOrder() {
   };
 
   const handleSendRemoteSignature = async () => {
-    if (!user || !db) return;
+    if (!user || !db) {
+      toast({ variant: "destructive", title: "Error", description: "No se pudo identificar al usuario autenticado." });
+      return;
+    }
+    
     if (!formData.clientReceiverEmail) {
       toast({ 
         variant: "destructive", 
@@ -229,7 +233,7 @@ export default function NewWorkOrder() {
         status: "Pending Signature",
         createdBy: user.uid,
         supervisorId: user.uid,
-        creatorEmail: user.email,
+        creatorEmail: user.email || "",
         startDate: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };
@@ -259,7 +263,10 @@ export default function NewWorkOrder() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user || !db) return;
+    if (!user || !db) {
+      toast({ variant: "destructive", title: "Error", description: "No hay una sesión activa de usuario." });
+      return;
+    }
     
     setLoading(true);
 
@@ -283,7 +290,7 @@ export default function NewWorkOrder() {
       status: finalStatus,
       createdBy: user.uid,
       supervisorId: user.uid,
-      creatorEmail: user.email,
+      creatorEmail: user.email || "",
       startDate: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
