@@ -7,12 +7,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SignaturePad } from "@/components/SignaturePad";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Save, Camera, CheckCircle2, Clock, Search, X, Image as ImageIcon, User, CreditCard, Sparkles, UserCheck, Users, PlusCircle, Loader2, Building2, MapPin, Hash, CheckSquare } from "lucide-react";
+import { ArrowLeft, Save, Camera, CheckCircle2, Search, X, Image as ImageIcon, User, Phone, Mail, MapPin, Building2, Hash, Users, PlusCircle, Loader2, CheckSquare } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import { useUser, useFirestore, useCollection, useMemoFirebase, useUserProfile } from "@/firebase";
@@ -69,8 +67,12 @@ export default function NewWorkOrder() {
 
   const [formData, setFormData] = useState({
     clientName: "",
-    clientContact: "",
+    clientPhone: "",
+    clientEmail: "",
     clientId: "",
+    address: "",
+    building: "",
+    floor: "",
     signalType: "Simple",
     signalCount: 1,
     isCert: false,
@@ -79,12 +81,6 @@ export default function NewWorkOrder() {
     isLabeled: false,
     labelDetails: "",
     isCanalized: false,
-    connectionSwitch: false,
-    hubConnection: false,
-    address: "",
-    building: "",
-    floor: "",
-    cdsCanalization: "",
     description: "",
     techName: "",
     techRut: "",
@@ -115,7 +111,6 @@ export default function NewWorkOrder() {
     }
   }, [user, isUserLoading, router]);
 
-  // Automatic addition of the current supervisor to the team
   useEffect(() => {
     if (userProfile?.nombre_t) {
       setFormData(prev => {
@@ -136,26 +131,15 @@ export default function NewWorkOrder() {
         techRut: prev.techRut || tech.rut_t || "",
         techSignatureUrl: prev.techSignatureUrl || tech.signatureUrl || ""
       }));
-      
-      if (tech.signatureUrl && !formData.techSignatureUrl) {
-        toast({
-          title: "Firma cargada",
-          description: "Se ha aplicado su firma digital guardada en el perfil.",
-          icon: <Sparkles className="h-4 w-4 text-accent" />
-        });
-      }
     }
-  }, [techProfiles, toast, formData.techSignatureUrl]);
+  }, [techProfiles]);
 
   const handleSelectClient = (client: any) => {
-    const email = client.emailClientes || "";
-    const phone = client.telefonoCliente || "";
-    const contactInfo = [email, phone].filter(Boolean).join(" / ");
-
     setFormData({
       ...formData,
       clientName: client.nombreCliente || "",
-      clientContact: contactInfo,
+      clientPhone: client.telefonoCliente || "",
+      clientEmail: client.emailClientes || "",
       clientId: client.id,
       address: client.direccionCliente || ""
     });
@@ -229,18 +213,6 @@ export default function NewWorkOrder() {
       return;
     }
 
-    if (formData.techRut && !validateRut(formData.techRut)) {
-      toast({ variant: "destructive", title: "RUT Técnico Inválido", description: "El RUT del técnico no es correcto." });
-      setLoading(false);
-      return;
-    }
-
-    if (formData.clientReceiverRut && !validateRut(formData.clientReceiverRut)) {
-      toast({ variant: "destructive", title: "RUT Receptor Inválido", description: "El RUT de quien recibe no es correcto." });
-      setLoading(false);
-      return;
-    }
-
     const isValidationComplete = !!formData.techSignatureUrl && 
                                 !!formData.clientSignatureUrl && 
                                 !!formData.clientReceiverRut;
@@ -283,7 +255,7 @@ export default function NewWorkOrder() {
   if (isUserLoading || isProfileLoading) return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-background text-primary gap-4">
       <Loader2 className="h-10 w-10 animate-spin" />
-      <p className="font-black tracking-tighter text-xl uppercase">Cargando perfil...</p>
+      <p className="font-black tracking-tighter text-xl uppercase">Cargando...</p>
     </div>
   );
 
@@ -291,16 +263,16 @@ export default function NewWorkOrder() {
     <div className="min-h-screen bg-background pb-24 md:pb-12">
       <header className="bg-white border-b sticky top-0 z-40 shadow-sm">
         <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-2 md:gap-4">
+          <div className="flex items-center gap-2">
             <Link href="/dashboard">
               <Button variant="ghost" size="icon" className="h-10 w-10">
                 <ArrowLeft className="h-6 w-6" />
               </Button>
             </Link>
-            <h1 className="font-bold text-lg md:text-xl text-primary truncate max-w-[180px] md:max-w-none uppercase tracking-tighter">Nueva OT #{folio || '...'}</h1>
+            <h1 className="font-bold text-lg text-primary uppercase tracking-tighter">Nueva OT #{folio || '...'}</h1>
           </div>
-          <Button onClick={handleSubmit} disabled={loading} className="bg-primary hover:bg-primary/90 h-10 px-4 md:px-6 font-bold uppercase text-xs">
-            <Save className="h-4 w-4 md:mr-2" /> <span className="hidden md:inline">Guardar Orden</span>
+          <Button onClick={handleSubmit} disabled={loading} className="bg-primary h-10 px-4 font-bold uppercase text-xs">
+            <Save className="h-4 w-4 mr-2" /> Guardar
           </Button>
         </div>
       </header>
@@ -308,47 +280,44 @@ export default function NewWorkOrder() {
       <main className="container mx-auto px-4 mt-6 max-w-3xl space-y-6">
         <form onSubmit={handleSubmit} className="space-y-6">
           <Card className="shadow-md border-none bg-white overflow-hidden">
-            <CardHeader className="bg-secondary/20 p-4 border-b">
+            <CardHeader className="bg-primary/5 p-4 border-b">
               <CardTitle className="text-primary text-xl flex items-center gap-2 uppercase font-black tracking-tighter">
-                <Users className="h-5 w-5" /> Información General
+                <User className="h-5 w-5" /> Información del Cliente
               </CardTitle>
             </CardHeader>
             <CardContent className="pt-6 space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="clientName" className="font-bold uppercase text-xs tracking-widest text-muted-foreground">Cliente / Empresa</Label>
+                  <Label className="font-bold uppercase text-xs tracking-widest text-muted-foreground">Nombre Cliente / Empresa</Label>
                   <div className="flex gap-2">
                     <Input 
-                      placeholder="Buscar empresa..." 
+                      placeholder="Nombre de la empresa" 
                       value={formData.clientName}
                       onChange={e => setFormData({...formData, clientName: e.target.value})}
                       className="h-14 text-base font-bold shadow-sm"
                     />
                     <Popover open={openClientSearch} onOpenChange={setOpenClientSearch}>
                       <PopoverTrigger asChild>
-                        <Button variant="outline" size="icon" className="h-14 w-14 shrink-0 bg-primary/5 border-primary/20 hover:bg-primary/10 transition-colors">
+                        <Button variant="outline" size="icon" className="h-14 w-14 bg-primary/5 border-primary/20">
                           <Search className="h-5 w-5 text-primary" />
                         </Button>
                       </PopoverTrigger>
-                      <PopoverContent className="w-[320px] md:w-[450px] p-0 shadow-2xl border-primary/10" align="end">
+                      <PopoverContent className="w-[320px] md:w-[450px] p-0 shadow-2xl" align="end">
                         <Command className="rounded-xl">
                           <CommandInput placeholder="Filtrar por nombre..." className="h-12" />
                           <CommandList className="max-h-[400px]">
-                            <CommandEmpty className="p-6 text-sm text-center text-muted-foreground">Sin resultados.</CommandEmpty>
+                            <CommandEmpty className="p-6 text-sm text-center">Sin resultados.</CommandEmpty>
                             <CommandGroup heading="Empresas Registradas" className="p-2">
                               {clients?.map((client) => (
                                 <CommandItem 
                                   key={client.id} 
-                                  value={client.nombreCliente} 
                                   onSelect={() => handleSelectClient(client)}
-                                  className="flex items-center gap-3 p-3 cursor-pointer hover:bg-primary/5 rounded-lg transition-colors"
+                                  className="flex items-center gap-3 p-3 cursor-pointer rounded-lg"
                                 >
-                                  <div className="bg-primary/10 p-2 rounded-full">
-                                    <User className="h-4 w-4 text-primary" />
-                                  </div>
-                                  <div className="flex flex-col flex-1">
-                                    <span className="font-black text-primary text-base">{client.nombreCliente}</span>
-                                    <span className="text-[11px] font-bold text-muted-foreground uppercase">{client.rutCliente}</span>
+                                  <User className="h-5 w-5 text-primary" />
+                                  <div className="flex flex-col">
+                                    <span className="font-bold text-primary">{client.nombreCliente}</span>
+                                    <span className="text-[10px] uppercase font-bold text-muted-foreground">{client.rutCliente}</span>
                                   </div>
                                 </CommandItem>
                               ))}
@@ -359,44 +328,76 @@ export default function NewWorkOrder() {
                     </Popover>
                   </div>
                 </div>
+
                 <div className="space-y-2">
-                  <Label htmlFor="address" className="font-bold uppercase text-xs tracking-widest text-muted-foreground">Dirección del Servicio</Label>
-                  <Input 
-                    id="address" 
-                    placeholder="Dirección completa" 
-                    value={formData.address}
-                    onChange={e => setFormData({...formData, address: e.target.value})}
-                    className="h-14 text-base shadow-sm"
-                  />
+                  <Label className="font-bold uppercase text-xs tracking-widest text-muted-foreground">Dirección del Cliente</Label>
+                  <div className="relative">
+                    <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input 
+                      placeholder="Calle, Número, Comuna" 
+                      value={formData.address}
+                      onChange={e => setFormData({...formData, address: e.target.value})}
+                      className="h-12 pl-10"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label className="font-bold uppercase text-xs tracking-widest text-muted-foreground">Número de Teléfono</Label>
+                    <div className="relative">
+                      <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input 
+                        placeholder="+56 9..." 
+                        value={formData.clientPhone}
+                        onChange={e => setFormData({...formData, clientPhone: e.target.value})}
+                        className="h-12 pl-10"
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="font-bold uppercase text-xs tracking-widest text-muted-foreground">Correo Electrónico</Label>
+                    <div className="relative">
+                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input 
+                        type="email"
+                        placeholder="ejemplo@correo.com" 
+                        value={formData.clientEmail}
+                        onChange={e => setFormData({...formData, clientEmail: e.target.value})}
+                        className="h-12 pl-10"
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
+            </CardContent>
+          </Card>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <Card className="shadow-md border-none bg-white overflow-hidden">
+            <CardHeader className="bg-secondary/10 p-4 border-b">
+              <CardTitle className="text-primary text-lg flex items-center gap-2 uppercase font-black tracking-tighter">
+                <Building2 className="h-5 w-5" /> Ubicación Técnica
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pt-6 space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="building" className="font-bold uppercase text-xs tracking-widest text-muted-foreground">Edificio</Label>
-                  <div className="relative">
-                    <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input 
-                      id="building" 
-                      placeholder="Ej: Torre A / Central" 
-                      value={formData.building}
-                      onChange={e => setFormData({...formData, building: e.target.value})}
-                      className="h-12 pl-10"
-                    />
-                  </div>
+                  <Label className="font-bold uppercase text-xs tracking-widest text-muted-foreground">Edificio</Label>
+                  <Input 
+                    placeholder="Ej: Torre A" 
+                    value={formData.building}
+                    onChange={e => setFormData({...formData, building: e.target.value})}
+                    className="h-12"
+                  />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="floor" className="font-bold uppercase text-xs tracking-widest text-muted-foreground">Piso</Label>
-                  <div className="relative">
-                    <Hash className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input 
-                      id="floor" 
-                      placeholder="Ej: 4 / Subterráneo" 
-                      value={formData.floor}
-                      onChange={e => setFormData({...formData, floor: e.target.value})}
-                      className="h-12 pl-10"
-                    />
-                  </div>
+                  <Label className="font-bold uppercase text-xs tracking-widest text-muted-foreground">Piso</Label>
+                  <Input 
+                    placeholder="Ej: 5" 
+                    value={formData.floor}
+                    onChange={e => setFormData({...formData, floor: e.target.value})}
+                    className="h-12"
+                  />
                 </div>
               </div>
             </CardContent>
@@ -407,7 +408,6 @@ export default function NewWorkOrder() {
               <CardTitle className="text-lg flex items-center gap-2 uppercase font-bold tracking-tight">
                 <Users className="h-5 w-5 text-primary"/> Equipo de Trabajo
               </CardTitle>
-              <CardDescription className="text-xs uppercase font-medium text-muted-foreground/60">Asignación de personal operativo</CardDescription>
             </CardHeader>
             <CardContent className="p-4 md:p-6 space-y-4">
                <div className="flex flex-wrap gap-2">
@@ -424,15 +424,15 @@ export default function NewWorkOrder() {
               </div>
               <Popover open={openTeamSearch} onOpenChange={setOpenTeamSearch}>
                 <PopoverTrigger asChild>
-                  <Button variant="outline" className="w-full h-12 text-sm font-black border-dashed border-2 hover:bg-primary/5 transition-all uppercase tracking-widest">
-                    <PlusCircle className="h-4 w-4 mr-2" /> Añadir Personal al Equipo
+                  <Button variant="outline" className="w-full h-12 text-sm font-black border-dashed border-2 uppercase tracking-widest">
+                    <PlusCircle className="h-4 w-4 mr-2" /> Añadir Personal
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-[320px] md:w-[450px] p-0 shadow-2xl" align="start">
                   <Command>
                     <CommandInput placeholder="Buscar colaborador..." className="h-12"/>
                     <CommandList>
-                      <CommandEmpty className="p-4 text-sm">Sin resultados.</CommandEmpty>
+                      <CommandEmpty className="p-4 text-sm text-center">Sin resultados.</CommandEmpty>
                       <CommandGroup heading="Personal ICSA" className="p-2">
                         {availablePersonnel.map(person => (
                           <CommandItem key={person.id} onSelect={() => handleTeamSelect(person)} className="p-3 cursor-pointer rounded-lg">
@@ -460,7 +460,7 @@ export default function NewWorkOrder() {
                 <div className="md:col-span-2 space-y-2">
                   <Label className="font-bold uppercase text-xs tracking-widest text-muted-foreground">Tipo de Señal</Label>
                   <Select value={formData.signalType} onValueChange={v => setFormData({...formData, signalType: v})}>
-                    <SelectTrigger className="h-12 shadow-sm">
+                    <SelectTrigger className="h-12">
                       <SelectValue placeholder="Seleccionar señal" />
                     </SelectTrigger>
                     <SelectContent>
@@ -473,97 +473,59 @@ export default function NewWorkOrder() {
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="signalCount" className="font-bold uppercase text-xs tracking-widest text-muted-foreground">Cantidad</Label>
+                  <Label className="font-bold uppercase text-xs tracking-widest text-muted-foreground">Cantidad</Label>
                   <Input 
-                    id="signalCount" 
                     type="number"
                     min="1"
                     value={formData.signalCount}
                     onChange={e => setFormData({...formData, signalCount: parseInt(e.target.value) || 0})}
-                    className="h-12 shadow-sm"
+                    className="h-12"
                   />
                 </div>
               </div>
 
               <div className="space-y-6">
                 <Label className="font-black uppercase text-xs tracking-[0.2em] text-primary flex items-center gap-2">
-                  <CheckSquare className="h-4 w-4" /> Checklist de Instalación
+                  <CheckSquare className="h-4 w-4" /> Checklist Técnico
                 </Label>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="flex flex-col gap-4 p-5 bg-muted/30 rounded-2xl border border-dashed transition-all hover:border-primary/40">
+                  <div className="flex flex-col gap-4 p-5 bg-muted/30 rounded-2xl border border-dashed">
                     <div className="flex items-center justify-between">
-                      <Label htmlFor="cert" className="font-bold text-sm cursor-pointer">¿Certificación Realizada?</Label>
-                      <Switch 
-                        id="cert" 
-                        checked={formData.isCert}
-                        onCheckedChange={(v) => setFormData({...formData, isCert: v})}
-                      />
+                      <Label className="font-bold text-sm">¿Certificación Realizada?</Label>
+                      <Switch checked={formData.isCert} onCheckedChange={(v) => setFormData({...formData, isCert: v})} />
                     </div>
                     {formData.isCert && (
-                      <div className="space-y-2 animate-in fade-in slide-in-from-top-2">
+                      <div className="space-y-2 animate-in fade-in">
                         <Label className="text-[10px] font-bold uppercase text-muted-foreground">Puntos Certificados</Label>
-                        <Input 
-                          type="number" 
-                          placeholder="Cantidad de puntos" 
-                          value={formData.certifiedPointsCount}
-                          onChange={e => setFormData({...formData, certifiedPointsCount: parseInt(e.target.value) || 0})}
-                          className="h-10 bg-white"
-                        />
+                        <Input type="number" value={formData.certifiedPointsCount} onChange={e => setFormData({...formData, certifiedPointsCount: parseInt(e.target.value) || 0})} className="h-10 bg-white" />
                       </div>
                     )}
                   </div>
 
-                  <div className="flex flex-col gap-4 p-5 bg-muted/30 rounded-2xl border border-dashed transition-all hover:border-primary/40">
+                  <div className="flex flex-col gap-4 p-5 bg-muted/30 rounded-2xl border border-dashed">
                     <div className="flex items-center justify-between">
-                      <Label htmlFor="labeled" className="font-bold text-sm cursor-pointer">¿Rotulación Realizada?</Label>
-                      <Switch 
-                        id="labeled" 
-                        checked={formData.isLabeled}
-                        onCheckedChange={(v) => setFormData({...formData, isLabeled: v})}
-                      />
+                      <Label className="font-bold text-sm">¿Rotulación Realizada?</Label>
+                      <Switch checked={formData.isLabeled} onCheckedChange={(v) => setFormData({...formData, isLabeled: v})} />
                     </div>
                     {formData.isLabeled && (
-                      <div className="space-y-2 animate-in fade-in slide-in-from-top-2">
+                      <div className="space-y-2 animate-in fade-in">
                         <Label className="text-[10px] font-bold uppercase text-muted-foreground">Detalle de Rótulos</Label>
-                        <Input 
-                          placeholder="Ej: A01, A02, B01..." 
-                          value={formData.labelDetails}
-                          onChange={e => setFormData({...formData, labelDetails: e.target.value})}
-                          className="h-10 bg-white"
-                        />
+                        <Input value={formData.labelDetails} onChange={e => setFormData({...formData, labelDetails: e.target.value})} className="h-10 bg-white" />
                       </div>
                     )}
                   </div>
 
-                  <div className="flex items-center justify-between p-5 bg-muted/30 rounded-2xl border border-dashed transition-all hover:border-primary/40">
-                    <Label htmlFor="canalized" className="font-bold text-sm cursor-pointer">¿Canalización Realizada?</Label>
-                    <Switch 
-                      id="canalized" 
-                      checked={formData.isCanalized}
-                      onCheckedChange={(v) => setFormData({...formData, isCanalized: v})}
-                    />
-                  </div>
-
-                  <div className="flex items-center justify-between p-5 bg-muted/30 rounded-2xl border border-dashed transition-all hover:border-primary/40">
-                    <Label htmlFor="plan" className="font-bold text-sm cursor-pointer">¿Planos Actualizados?</Label>
-                    <Switch 
-                      id="plan" 
-                      checked={formData.isPlan}
-                      onCheckedChange={(v) => setFormData({...formData, isPlan: v})}
-                    />
+                  <div className="flex items-center justify-between p-5 bg-muted/30 rounded-2xl border border-dashed">
+                    <Label className="font-bold text-sm">¿Canalización?</Label>
+                    <Switch checked={formData.isCanalized} onCheckedChange={(v) => setFormData({...formData, isCanalized: v})} />
                   </div>
                 </div>
               </div>
 
               <div className="space-y-2">
-                <Label className="font-bold uppercase text-xs tracking-widest text-muted-foreground">Descripción Adicional de Trabajos</Label>
-                <Textarea 
-                  placeholder="Describa el detalle de las actividades realizadas..." 
-                  className="min-h-[140px] shadow-sm rounded-xl"
-                  value={formData.description}
-                  onChange={e => setFormData({...formData, description: e.target.value})}
-                />
+                <Label className="font-bold uppercase text-xs tracking-widest text-muted-foreground">Descripción de Trabajos</Label>
+                <Textarea value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} className="min-h-[140px] rounded-xl" />
               </div>
             </CardContent>
           </Card>
@@ -574,24 +536,23 @@ export default function NewWorkOrder() {
                 <ImageIcon className="h-5 w-5 text-primary" /> Multimedia
               </CardTitle>
             </CardHeader>
-            <CardContent className="p-6">
+            <CardContent className="p-6 text-center">
               <input type="file" ref={fileInputRef} onChange={handleFileChange} accept="image/*" capture="environment" className="hidden" />
               {!formData.sketchImageUrl ? (
-                <div onClick={() => fileInputRef.current?.click()} className="border-4 border-dashed rounded-3xl p-12 flex flex-col items-center justify-center text-muted-foreground bg-muted/10 hover:bg-primary/5 hover:border-primary/40 transition-all cursor-pointer active:scale-95 group">
-                  <Camera className="h-16 w-16 mb-4 text-muted-foreground/40 group-hover:text-primary/60 transition-colors" />
-                  <p className="text-sm font-black uppercase tracking-[0.2em]">Capturar Evidencia Visual</p>
-                  <p className="text-[10px] mt-2 opacity-60">Foto del bosquejo, terreno o canalización</p>
+                <div onClick={() => fileInputRef.current?.click()} className="border-4 border-dashed rounded-3xl p-12 flex flex-col items-center justify-center text-muted-foreground bg-muted/10 hover:bg-primary/5 transition-all cursor-pointer">
+                  <Camera className="h-16 w-16 mb-4 opacity-40" />
+                  <p className="text-sm font-black uppercase tracking-widest">Capturar Evidencia</p>
                 </div>
               ) : (
                 <div className="space-y-4">
-                  <div className="relative aspect-video rounded-3xl overflow-hidden bg-muted group border shadow-2xl">
+                  <div className="relative aspect-video rounded-3xl overflow-hidden bg-muted group border shadow-xl">
                     <Image src={formData.sketchImageUrl} alt="Preview" fill className="object-contain" />
-                    <Button type="button" variant="destructive" size="icon" className="absolute top-4 right-4 h-12 w-12 rounded-full shadow-2xl opacity-0 group-hover:opacity-100 transition-opacity" onClick={removeImage}>
+                    <Button type="button" variant="destructive" size="icon" className="absolute top-4 right-4 h-12 w-12 rounded-full shadow-2xl" onClick={removeImage}>
                       <X className="h-6 w-6" />
                     </Button>
                   </div>
                   <Button type="button" variant="outline" className="w-full h-14 font-black uppercase tracking-widest rounded-2xl" onClick={() => fileInputRef.current?.click()}>
-                    <ImageIcon className="h-5 w-5 mr-2" /> Reemplazar Imagen
+                    Reemplazar Imagen
                   </Button>
                 </div>
               )}
@@ -601,28 +562,25 @@ export default function NewWorkOrder() {
           <div className="grid grid-cols-1 gap-6 pb-6">
             <Card className="shadow-md border-none bg-white overflow-hidden">
               <CardHeader className="border-b bg-muted/20 p-4">
-                <CardTitle className="text-xs font-black uppercase tracking-[0.2em] flex items-center justify-between text-primary">
-                  Validación Técnico Responsable
-                  {hasSavedSignature && <Badge variant="secondary" className="bg-primary/10 text-primary border-none gap-1 font-bold text-[9px]"><UserCheck size={10} /> Firma Autorizada</Badge>}
+                <CardTitle className="text-xs font-black uppercase tracking-widest flex items-center justify-between text-primary">
+                  Técnico Responsable
+                  {hasSavedSignature && <Badge variant="secondary" className="bg-primary/10 text-primary border-none text-[9px]">Firma Autorizada</Badge>}
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-5 space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest flex items-center gap-1"><User className="h-3 w-3" /> Nombre Técnico</Label>
-                    <Input placeholder="Nombre completo" value={formData.techName} onChange={e => setFormData({...formData, techName: e.target.value})} className="h-12 rounded-xl" />
+                    <Label className="text-[10px] font-bold uppercase text-muted-foreground">Nombre Técnico</Label>
+                    <Input value={formData.techName} onChange={e => setFormData({...formData, techName: e.target.value})} />
                   </div>
                   <div className="space-y-2">
-                    <Label className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest flex items-center gap-1"><CreditCard className="h-3 w-3" /> RUT Técnico</Label>
-                    <Input placeholder="RUT" value={formData.techRut} onChange={e => setFormData({...formData, techRut: e.target.value})} className="h-12 rounded-xl" />
+                    <Label className="text-[10px] font-bold uppercase text-muted-foreground">RUT Técnico</Label>
+                    <Input value={formData.techRut} onChange={e => setFormData({...formData, techRut: e.target.value})} />
                   </div>
                 </div>
                 {formData.techSignatureUrl ? (
-                  <div className="space-y-2">
-                    <div className="relative h-40 w-full bg-muted/20 rounded-2xl border-2 border-dashed flex items-center justify-center overflow-hidden">
-                      <Image src={formData.techSignatureUrl} alt="Firma Técnico" fill className="object-contain" />
-                    </div>
-                    <Button type="button" variant="ghost" size="sm" onClick={() => setFormData({...formData, techSignatureUrl: ""})} className="w-full text-[10px] font-black uppercase text-muted-foreground tracking-widest">Cambiar Firma</Button>
+                  <div className="relative h-40 w-full bg-muted/20 rounded-2xl border-2 border-dashed flex items-center justify-center overflow-hidden">
+                    <Image src={formData.techSignatureUrl} alt="Firma Técnico" fill className="object-contain" />
                   </div>
                 ) : (
                   <SignaturePad label="Firma del Técnico" onSave={handleTechSignatureConfirm} />
@@ -632,25 +590,22 @@ export default function NewWorkOrder() {
 
             <Card className="shadow-md border-none bg-white overflow-hidden">
               <CardHeader className="border-b bg-muted/20 p-4">
-                <CardTitle className="text-xs font-black uppercase tracking-[0.2em] text-primary">Conformidad de Recepción</CardTitle>
+                <CardTitle className="text-xs font-black uppercase tracking-widest text-primary">Recepción Terreno</CardTitle>
               </CardHeader>
               <CardContent className="p-5 space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest flex items-center gap-1"><User className="h-3 w-3" /> Nombre Receptor</Label>
-                    <Input placeholder="Nombre cliente" value={formData.clientReceiverName} onChange={e => setFormData({...formData, clientReceiverName: e.target.value})} className="h-12 rounded-xl" />
+                    <Label className="text-[10px] font-bold uppercase text-muted-foreground">Nombre Receptor</Label>
+                    <Input value={formData.clientReceiverName} onChange={e => setFormData({...formData, clientReceiverName: e.target.value})} />
                   </div>
                   <div className="space-y-2">
-                    <Label className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest flex items-center gap-1"><CreditCard className="h-3 w-3" /> RUT Receptor</Label>
-                    <Input placeholder="RUT (Requerido para finalizar)" value={formData.clientReceiverRut} onChange={e => setFormData({...formData, clientReceiverRut: e.target.value})} className={`h-12 rounded-xl ${!formData.clientReceiverRut ? "border-primary/20" : "border-primary"}`} />
+                    <Label className="text-[10px] font-bold uppercase text-muted-foreground">RUT Receptor</Label>
+                    <Input value={formData.clientReceiverRut} onChange={e => setFormData({...formData, clientReceiverRut: e.target.value})} />
                   </div>
                 </div>
                 {formData.clientSignatureUrl ? (
-                  <div className="space-y-2">
-                    <div className="relative h-40 w-full bg-muted/20 rounded-2xl border-2 border-dashed flex items-center justify-center overflow-hidden">
-                      <Image src={formData.clientSignatureUrl} alt="Firma Cliente" fill className="object-contain" />
-                    </div>
-                    <Button type="button" variant="ghost" size="sm" onClick={() => setFormData({...formData, clientSignatureUrl: ""})} className="w-full text-[10px] font-black uppercase text-muted-foreground tracking-widest">Cambiar Firma</Button>
+                  <div className="relative h-40 w-full bg-muted/20 rounded-2xl border-2 border-dashed flex items-center justify-center overflow-hidden">
+                    <Image src={formData.clientSignatureUrl} alt="Firma Cliente" fill className="object-contain" />
                   </div>
                 ) : (
                   <SignaturePad label="Firma de Recepción" onSave={(dataUrl) => setFormData({...formData, clientSignatureUrl: dataUrl})} />
@@ -660,8 +615,8 @@ export default function NewWorkOrder() {
           </div>
 
           <div className="fixed bottom-0 left-0 right-0 p-4 bg-white/95 backdrop-blur-xl border-t md:relative md:bg-transparent md:border-none md:p-0 z-50">
-            <Button type="submit" size="lg" className="bg-primary hover:bg-primary/90 w-full h-16 text-xl font-black gap-3 shadow-[0_10px_40px_rgba(56,163,165,0.4)] active:scale-95 transition-all rounded-2xl uppercase tracking-tighter" disabled={loading}>
-              <CheckCircle2 size={28} /> {!!formData.techSignatureUrl && !!formData.clientSignatureUrl && !!formData.clientReceiverRut ? "Cerrar y Finalizar OT" : "Guardar Avances"}
+            <Button type="submit" size="lg" className="bg-primary hover:bg-primary/90 w-full h-16 text-xl font-black gap-3 shadow-xl active:scale-95 transition-all rounded-2xl uppercase tracking-tighter" disabled={loading}>
+              <CheckCircle2 size={28} /> Finalizar y Cerrar OT
             </Button>
           </div>
         </form>

@@ -67,39 +67,42 @@ export const generateWorkOrderPDF = async (data: any) => {
   doc.setTextColor(0, 0, 0);
   doc.setFont("helvetica", "normal");
   doc.setFontSize(10);
-  doc.text(`Nombre: ${data.clientName || "N/A"}`, 15, 90);
-  doc.text(`Dirección: ${data.address || data.location || "N/A"}`, 15, 96);
-  doc.text(`Edificio: ${data.building || "N/A"}  |  Piso: ${data.floor || "N/A"}`, 15, 102);
+  doc.text(`Empresa: ${data.clientName || "N/A"}`, 15, 90);
+  doc.text(`Dirección: ${data.address || "N/A"}`, 15, 96);
+  doc.text(`Teléfono: ${data.clientPhone || "N/A"}`, 15, 102);
+  doc.text(`Email: ${data.clientEmail || "N/A"}`, 15, 108);
+
+  // Location Details
+  doc.text(`Edificio: ${data.building || "N/A"}  |  Piso: ${data.floor || "N/A"}`, 15, 114);
 
   // Technical Specs Section
   doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
   doc.setFont("helvetica", "bold");
-  doc.text("DETALLES TÉCNICOS Y RED", 15, 115);
-  doc.line(15, 117, 195, 117);
+  doc.text("DETALLES TÉCNICOS Y RED", 15, 125);
+  doc.line(15, 127, 195, 127);
 
   doc.setTextColor(0, 0, 0);
   doc.setFont("helvetica", "normal");
-  doc.text(`Señal: ${data.signalType || "Simple"} (${data.signalCount || 1} unidades)`, 15, 125);
+  doc.text(`Señal: ${data.signalType || "Simple"} (${data.signalCount || 1} unidades)`, 15, 135);
   
   const cert = data.isCert ? `SÍ (${data.certifiedPointsCount || 0} puntos)` : "NO";
   const labeled = data.isLabeled ? `SÍ (${data.labelDetails || "N/A"})` : "NO";
   const canalized = data.isCanalized ? "SÍ" : "NO";
-  const plans = data.isPlan ? "SÍ" : "NO";
 
-  doc.text(`Certificación de Red: ${cert}`, 15, 132);
-  doc.text(`Rotulación: ${labeled}`, 15, 138);
-  doc.text(`Canalización: ${canalized}  |  Planos Actualizados: ${plans}`, 15, 144);
+  doc.text(`Certificación: ${cert}`, 15, 142);
+  doc.text(`Rotulación: ${labeled}`, 15, 148);
+  doc.text(`Canalización: ${canalized}`, 15, 154);
 
   // Description Section
   doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
   doc.setFont("helvetica", "bold");
-  doc.text("RESUMEN DE ACTIVIDADES", 15, 155);
-  doc.line(15, 157, 195, 157);
+  doc.text("RESUMEN DE ACTIVIDADES", 15, 165);
+  doc.line(15, 167, 195, 167);
 
   doc.setTextColor(0, 0, 0);
   doc.setFont("helvetica", "normal");
   const splitDesc = doc.splitTextToSize(data.description || "Sin descripción adicional.", 180);
-  doc.text(splitDesc, 15, 165);
+  doc.text(splitDesc, 15, 175);
 
   // Signatures
   const sigY = 240;
@@ -119,7 +122,7 @@ export const generateWorkOrderPDF = async (data: any) => {
 
   // Client Signature
   doc.setTextColor(100, 100, 100);
-  doc.text("RECEPCIÓN DE TRABAJOS (CLIENTE)", 130, sigY - 5);
+  doc.text("RECEPCIÓN DE TRABAJOS", 130, sigY - 5);
   doc.setFont("helvetica", "bold");
   doc.setTextColor(0,0,0);
   doc.text(`${data.clientReceiverName || "N/A"}`, 130, sigY);

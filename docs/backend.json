@@ -21,7 +21,15 @@
         },
         "clientContact": {
           "type": "string",
-          "description": "Contact info of the client."
+          "description": "Legacy combined contact info."
+        },
+        "clientPhone": {
+          "type": "string",
+          "description": "Phone number of the client."
+        },
+        "clientEmail": {
+          "type": "string",
+          "description": "Email of the client."
         },
         "createdBy": {
           "type": "string",

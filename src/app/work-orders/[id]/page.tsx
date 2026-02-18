@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Download, Printer, User, Calendar, MapPin, ClipboardCheck, Info, Pencil, CreditCard, Loader2, Users, Building2, Hash, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, Download, Printer, User, Phone, Mail, MapPin, Building2, Hash, Calendar, ClipboardCheck, Info, Users, CreditCard, Loader2 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import { generateWorkOrderPDF } from "@/lib/pdf-generator";
@@ -62,7 +62,7 @@ export default function WorkOrderView({ params }: { params: Promise<{ id: string
             <h1 className="font-black text-lg text-primary truncate uppercase tracking-tighter">OT #{order.folio}</h1>
           </div>
           <div className="flex gap-2">
-            <Button size="icon" onClick={() => generateWorkOrderPDF(order)} className="bg-primary hover:bg-primary/90 h-10 w-10">
+            <Button size="icon" onClick={() => generateWorkOrderPDF(order)} className="bg-primary h-10 w-10">
               <Download className="h-5 w-5" />
             </Button>
             <Button variant="outline" size="icon" onClick={() => window.print()} className="h-10 w-10 hidden md:flex">
@@ -82,42 +82,62 @@ export default function WorkOrderView({ params }: { params: Promise<{ id: string
           </div>
         </div>
 
-        <div className="grid grid-cols-1 gap-4">
-          <Card className="shadow-md border-none bg-white overflow-hidden">
-            <CardHeader className="bg-secondary/10 p-4 border-b">
-              <CardTitle className="text-xs font-black uppercase tracking-widest text-primary flex items-center gap-2">
-                <User className="h-4 w-4" /> Datos del Cliente
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-4 space-y-2">
-              <p className="font-black text-primary text-lg">{order.clientName}</p>
-              <p className="text-xs text-muted-foreground font-medium">{order.clientContact || "Sin contacto registrado"}</p>
-              <div className="flex items-center gap-2 mt-2 pt-2 border-t border-dashed">
-                <MapPin className="h-3 w-3 text-muted-foreground" />
-                <p className="text-xs font-bold text-muted-foreground">{order.address || order.location || "N/A"}</p>
+        <Card className="shadow-md border-none bg-white overflow-hidden">
+          <CardHeader className="bg-primary/5 p-4 border-b">
+            <CardTitle className="text-xs font-black uppercase tracking-widest text-primary flex items-center gap-2">
+              <User className="h-4 w-4" /> Ficha del Cliente
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-5 space-y-4">
+            <div>
+              <p className="text-[10px] uppercase font-black text-muted-foreground mb-1">Empresa / Cliente</p>
+              <p className="font-black text-primary text-xl leading-none">{order.clientName}</p>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 border-t border-dashed">
+              <div className="flex items-start gap-3">
+                <MapPin className="h-4 w-4 text-primary mt-0.5" />
+                <div>
+                  <p className="text-[9px] uppercase font-black text-muted-foreground">Dirección</p>
+                  <p className="text-sm font-bold">{order.address || "N/A"}</p>
+                </div>
               </div>
-            </CardContent>
-          </Card>
+              <div className="flex items-start gap-3">
+                <Phone className="h-4 w-4 text-primary mt-0.5" />
+                <div>
+                  <p className="text-[9px] uppercase font-black text-muted-foreground">Teléfono</p>
+                  <p className="text-sm font-bold">{order.clientPhone || "N/A"}</p>
+                </div>
+              </div>
+              <div className="flex items-start gap-3 col-span-full">
+                <Mail className="h-4 w-4 text-primary mt-0.5" />
+                <div>
+                  <p className="text-[9px] uppercase font-black text-muted-foreground">Correo Electrónico</p>
+                  <p className="text-sm font-bold">{order.clientEmail || "N/A"}</p>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
-          <div className="grid grid-cols-2 gap-4">
-            <Card className="shadow-sm border-none bg-white p-4 flex flex-col items-center justify-center text-center">
-              <Building2 className="h-5 w-5 text-primary mb-1 opacity-60" />
-              <p className="text-[10px] uppercase font-black text-muted-foreground">Edificio</p>
-              <p className="font-bold text-sm text-primary">{order.building || "N/A"}</p>
-            </Card>
-            <Card className="shadow-sm border-none bg-white p-4 flex flex-col items-center justify-center text-center">
-              <Hash className="h-5 w-5 text-primary mb-1 opacity-60" />
-              <p className="text-[10px] uppercase font-black text-muted-foreground">Piso</p>
-              <p className="font-bold text-sm text-primary">{order.floor || "N/A"}</p>
-            </Card>
-          </div>
+        <div className="grid grid-cols-2 gap-4">
+          <Card className="shadow-sm border-none bg-white p-4 flex flex-col items-center justify-center text-center">
+            <Building2 className="h-5 w-5 text-primary mb-1 opacity-60" />
+            <p className="text-[10px] uppercase font-black text-muted-foreground">Edificio</p>
+            <p className="font-bold text-sm text-primary">{order.building || "N/A"}</p>
+          </Card>
+          <Card className="shadow-sm border-none bg-white p-4 flex flex-col items-center justify-center text-center">
+            <Hash className="h-5 w-5 text-primary mb-1 opacity-60" />
+            <p className="text-[10px] uppercase font-black text-muted-foreground">Piso</p>
+            <p className="font-bold text-sm text-primary">{order.floor || "N/A"}</p>
+          </Card>
         </div>
 
         {order.team && order.team.length > 0 && (
           <Card className="shadow-md border-none bg-white">
             <CardHeader className="p-4 border-b bg-muted/5">
               <CardTitle className="text-xs font-black uppercase tracking-widest text-primary flex items-center gap-2">
-                <Users className="h-4 w-4" /> Personal Asignado
+                <Users className="h-4 w-4" /> Equipo de Trabajo
               </CardTitle>
             </CardHeader>
             <CardContent className="p-4">
@@ -168,7 +188,7 @@ export default function WorkOrderView({ params }: { params: Promise<{ id: string
                 <Info className="h-3 w-3" /> Resumen de Actividades
               </p>
               <div className="p-5 bg-muted/20 rounded-2xl text-sm leading-relaxed border border-dashed font-medium text-muted-foreground">
-                {order.description || "No se ingresó una descripción detallada de los trabajos."}
+                {order.description || "No se ingresó una descripción."}
               </div>
             </div>
           </CardContent>
@@ -177,10 +197,10 @@ export default function WorkOrderView({ params }: { params: Promise<{ id: string
         {order.sketchImageUrl && (
           <Card className="shadow-md border-none bg-white overflow-hidden">
             <CardHeader className="p-4 pb-0">
-              <CardTitle className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Evidencia Multimedia</CardTitle>
+              <CardTitle className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Evidencia Visual</CardTitle>
             </CardHeader>
             <CardContent className="p-4 pt-2">
-              <div className="relative aspect-video rounded-3xl overflow-hidden bg-muted border-2 shadow-inner">
+              <div className="relative aspect-video rounded-3xl overflow-hidden bg-muted border-2">
                 <Image src={order.sketchImageUrl} alt="Sketch" fill className="object-contain" />
               </div>
             </CardContent>
@@ -228,7 +248,7 @@ export default function WorkOrderView({ params }: { params: Promise<{ id: string
         </div>
 
         <div className="flex flex-col gap-3 mt-4">
-           <Button onClick={() => generateWorkOrderPDF(order)} className="bg-primary h-14 w-full text-lg font-black gap-3 shadow-[0_10px_30px_rgba(56,163,165,0.3)] rounded-2xl uppercase tracking-tighter">
+           <Button onClick={() => generateWorkOrderPDF(order)} className="bg-primary h-14 w-full text-lg font-black gap-3 rounded-2xl uppercase">
              <Download /> Descargar Reporte PDF
            </Button>
            <Link href="/dashboard" className="w-full">
