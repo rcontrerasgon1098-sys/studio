@@ -85,7 +85,6 @@ export default function Dashboard() {
     const baseCollection = collection(db, "ordenes");
     
     // Explicitly filter by supervisorId for supervisors. 
-    // Simplified query (no orderBy) to avoid mandatory composite index errors initially.
     if (userProfile.rol_t === 'supervisor') {
       return query(
         baseCollection, 
@@ -368,7 +367,7 @@ export default function Dashboard() {
         <header className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
           <div>
             <h1 className="text-3xl font-black text-primary tracking-tight uppercase">
-              {activeTab === "dashboard" ? "Inicio" : 
+              {activeTab === "dashboard" ? (userProfile?.nombre_t ? `BIENVENIDO, ${userProfile.nombre_t}` : "Inicio") : 
                activeTab === "stats" ? "Estadísticas y Análisis" :
                activeTab === "orders" ? "Gestión de Órdenes" : 
                activeTab === "history" ? "Historial de Trabajo" : 
