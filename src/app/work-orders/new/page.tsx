@@ -280,6 +280,7 @@ export default function NewWorkOrder() {
 
       <main className="container mx-auto px-4 mt-6 max-w-3xl space-y-6">
         <form onSubmit={handleSubmit} className="space-y-6">
+          {/* SECCIÓN 1: CLIENTE */}
           <Card className="shadow-md border-none bg-white overflow-hidden">
             <CardHeader className="bg-primary/5 p-4 border-b">
               <CardTitle className="text-primary text-xl flex items-center gap-2 uppercase font-black tracking-tighter">
@@ -374,6 +375,7 @@ export default function NewWorkOrder() {
             </CardContent>
           </Card>
 
+          {/* SECCIÓN 2: EQUIPO */}
           <Card className="shadow-md border-none bg-white">
             <CardHeader className="p-4 md:p-6 border-b bg-muted/5">
               <CardTitle className="text-lg flex items-center gap-2 uppercase font-bold tracking-tight">
@@ -422,66 +424,69 @@ export default function NewWorkOrder() {
             </CardContent>
           </Card>
 
-          <Card className="shadow-md border-none bg-white overflow-hidden">
-            <CardHeader className="bg-secondary/10 p-4 border-b">
-              <CardTitle className="text-primary text-lg flex items-center gap-2 uppercase font-black tracking-tighter">
-                <Building2 className="h-5 w-5" /> Ubicación Técnica
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="pt-6 space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label className="font-bold uppercase text-xs tracking-widest text-muted-foreground">Edificio</Label>
-                  <Input 
-                    placeholder="Ej: Torre A" 
-                    value={formData.building}
-                    onChange={e => setFormData({...formData, building: e.target.value})}
-                    className="h-12"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label className="font-bold uppercase text-xs tracking-widest text-muted-foreground">Piso</Label>
-                  <Input 
-                    placeholder="Ej: 5" 
-                    value={formData.floor}
-                    onChange={e => setFormData({...formData, floor: e.target.value})}
-                    className="h-12"
-                  />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
+          {/* SECCIÓN 3: UBICACIÓN Y DETALLES TÉCNICOS FUSIONADOS */}
           <Card className="shadow-md border-none bg-white overflow-hidden">
             <CardHeader className="p-4 md:p-6 border-b bg-primary/5">
               <CardTitle className="text-lg uppercase font-black text-primary tracking-tighter">Detalles Técnicos y Red</CardTitle>
             </CardHeader>
             <CardContent className="p-4 md:p-6 space-y-8">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="md:col-span-2 space-y-2">
-                  <Label className="font-bold uppercase text-xs tracking-widest text-muted-foreground">Tipo de Señal</Label>
-                  <Select value={formData.signalType} onValueChange={v => setFormData({...formData, signalType: v})}>
-                    <SelectTrigger className="h-12">
-                      <SelectValue placeholder="Seleccionar señal" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Simple">Simple</SelectItem>
-                      <SelectItem value="Doble">Doble</SelectItem>
-                      <SelectItem value="Triple">Triple</SelectItem>
-                      <SelectItem value="Cuádruple">Cuádruple</SelectItem>
-                      <SelectItem value="Fibra Óptica">Fibra Óptica</SelectItem>
-                    </SelectContent>
-                  </Select>
+              {/* Ubicación Técnica integrada */}
+              <div className="space-y-4 pt-2">
+                <Label className="font-black uppercase text-xs tracking-[0.2em] text-primary flex items-center gap-2">
+                  <Building2 className="h-4 w-4" /> Ubicación Técnica
+                </Label>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label className="font-bold uppercase text-xs tracking-widest text-muted-foreground">Edificio</Label>
+                    <Input 
+                      placeholder="Ej: Torre A" 
+                      value={formData.building}
+                      onChange={e => setFormData({...formData, building: e.target.value})}
+                      className="h-12"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="font-bold uppercase text-xs tracking-widest text-muted-foreground">Piso</Label>
+                    <Input 
+                      placeholder="Ej: 5" 
+                      value={formData.floor}
+                      onChange={e => setFormData({...formData, floor: e.target.value})}
+                      className="h-12"
+                    />
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  <Label className="font-bold uppercase text-xs tracking-widest text-muted-foreground">Cantidad</Label>
-                  <Input 
-                    type="number"
-                    min="1"
-                    value={formData.signalCount}
-                    onChange={e => setFormData({...formData, signalCount: parseInt(e.target.value) || 0})}
-                    className="h-12"
-                  />
+              </div>
+
+              <div className="space-y-4">
+                <Label className="font-black uppercase text-xs tracking-[0.2em] text-primary flex items-center gap-2">
+                  <Hash className="h-4 w-4" /> Configuración de Señal
+                </Label>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div className="md:col-span-2 space-y-2">
+                    <Label className="font-bold uppercase text-xs tracking-widest text-muted-foreground">Tipo de Señal</Label>
+                    <Select value={formData.signalType} onValueChange={v => setFormData({...formData, signalType: v})}>
+                      <SelectTrigger className="h-12">
+                        <SelectValue placeholder="Seleccionar señal" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Simple">Simple</SelectItem>
+                        <SelectItem value="Doble">Doble</SelectItem>
+                        <SelectItem value="Triple">Triple</SelectItem>
+                        <SelectItem value="Cuádruple">Cuádruple</SelectItem>
+                        <SelectItem value="Fibra Óptica">Fibra Óptica</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="font-bold uppercase text-xs tracking-widest text-muted-foreground">Cantidad</Label>
+                    <Input 
+                      type="number"
+                      min="1"
+                      value={formData.signalCount}
+                      onChange={e => setFormData({...formData, signalCount: parseInt(e.target.value) || 0})}
+                      className="h-12"
+                    />
+                  </div>
                 </div>
               </div>
 

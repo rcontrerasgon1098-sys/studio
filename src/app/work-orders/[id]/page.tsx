@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Download, Printer, User, Phone, Mail, MapPin, Building2, Hash, Calendar, ClipboardCheck, Info, Users, CreditCard, Loader2 } from "lucide-react";
+import { ArrowLeft, Download, Printer, User, Phone, Mail, MapPin, Building2, Hash, Calendar, ClipboardCheck, Info, Users, CreditCard, Loader2 } from "lucide-center";
 import Link from "next/link";
 import Image from "next/image";
 import { generateWorkOrderPDF } from "@/lib/pdf-generator";
@@ -82,6 +82,7 @@ export default function WorkOrderView({ params }: { params: Promise<{ id: string
           </div>
         </div>
 
+        {/* FICHA CLIENTE */}
         <Card className="shadow-md border-none bg-white overflow-hidden">
           <CardHeader className="bg-primary/5 p-4 border-b">
             <CardTitle className="text-xs font-black uppercase tracking-widest text-primary flex items-center gap-2">
@@ -120,6 +121,7 @@ export default function WorkOrderView({ params }: { params: Promise<{ id: string
           </CardContent>
         </Card>
 
+        {/* EQUIPO */}
         {order.team && order.team.length > 0 && (
           <Card className="shadow-md border-none bg-white">
             <CardHeader className="p-4 border-b bg-muted/5">
@@ -139,26 +141,28 @@ export default function WorkOrderView({ params }: { params: Promise<{ id: string
           </Card>
         )}
 
-        <div className="grid grid-cols-2 gap-4">
-          <Card className="shadow-sm border-none bg-white p-4 flex flex-col items-center justify-center text-center">
-            <Building2 className="h-5 w-5 text-primary mb-1 opacity-60" />
-            <p className="text-[10px] uppercase font-black text-muted-foreground">Edificio</p>
-            <p className="font-bold text-sm text-primary">{order.building || "N/A"}</p>
-          </Card>
-          <Card className="shadow-sm border-none bg-white p-4 flex flex-col items-center justify-center text-center">
-            <Hash className="h-5 w-5 text-primary mb-1 opacity-60" />
-            <p className="text-[10px] uppercase font-black text-muted-foreground">Piso</p>
-            <p className="font-bold text-sm text-primary">{order.floor || "N/A"}</p>
-          </Card>
-        </div>
-
+        {/* DETALLES TÉCNICOS FUSIONADOS */}
         <Card className="shadow-md border-none bg-white">
           <CardHeader className="p-4 border-b bg-primary/5">
             <CardTitle className="text-xs font-black uppercase tracking-widest text-primary flex items-center gap-2">
-              <ClipboardCheck className="h-4 w-4" /> Especificaciones Técnicas
+              <ClipboardCheck className="h-4 w-4" /> Detalles Técnicos y Ubicación
             </CardTitle>
           </CardHeader>
           <CardContent className="p-4 space-y-6">
+            {/* Ubicación en grid */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="p-4 bg-muted/10 rounded-2xl flex flex-col items-center justify-center text-center border border-dashed border-primary/20">
+                <Building2 className="h-4 w-4 text-primary mb-1 opacity-60" />
+                <p className="text-[10px] uppercase font-black text-muted-foreground">Edificio</p>
+                <p className="font-bold text-sm text-primary">{order.building || "N/A"}</p>
+              </div>
+              <div className="p-4 bg-muted/10 rounded-2xl flex flex-col items-center justify-center text-center border border-dashed border-primary/20">
+                <Hash className="h-4 w-4 text-primary mb-1 opacity-60" />
+                <p className="text-[10px] uppercase font-black text-muted-foreground">Piso</p>
+                <p className="font-bold text-sm text-primary">{order.floor || "N/A"}</p>
+              </div>
+            </div>
+
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               <div className="col-span-2 p-4 bg-muted/20 rounded-2xl flex flex-col items-center justify-center border border-dashed">
                 <p className="text-[10px] text-muted-foreground uppercase font-black mb-1">Señal ({order.signalCount || 1} u.)</p>
