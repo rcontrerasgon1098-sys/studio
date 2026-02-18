@@ -227,8 +227,8 @@ export default function NewWorkOrder() {
         id: orderId,
         folio: currentFolio,
         status: "Pending Signature",
-        createdBy: user.uid,
-        supervisorId: user.uid,
+        createdBy: user.uid, // Asegurar que el UID se guarde
+        supervisorId: user.uid, // Asegurar que el UID se guarde para el filtro del Dashboard
         creatorEmail: user.email,
         startDate: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
@@ -281,8 +281,8 @@ export default function NewWorkOrder() {
       id: orderId,
       folio: folio || generateFolio(),
       status: finalStatus,
-      createdBy: user.uid,
-      supervisorId: user.uid,
+      createdBy: user.uid, // 🔥 CRÍTICO: Guardar UID del creador
+      supervisorId: user.uid, // 🔥 CRÍTICO: Guardar UID como supervisor para queries del dashboard
       creatorEmail: user.email,
       startDate: new Date().toISOString(),
       updatedAt: new Date().toISOString(),

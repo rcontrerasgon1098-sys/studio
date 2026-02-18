@@ -251,8 +251,8 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
 
     const updateData = {
       ...formData,
-      createdBy: formData.createdBy || user.uid,
-      supervisorId: formData.supervisorId || user.uid, // Ensure supervisorId is set
+      createdBy: formData.createdBy || user.uid, // Asegurar persistencia de createdBy
+      supervisorId: formData.supervisorId || user.uid, // Asegurar persistencia de supervisorId
       status: finalStatus,
       updatedAt: new Date().toISOString(),
       updatedBy: user.email
@@ -262,7 +262,7 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
       const historyRef = doc(db, "historial", id);
       const originalRef = doc(db, "ordenes", id);
       try {
-        setDocumentNonBlocking(historyRef, updateData, { merge: true });
+        setDoc(historyRef, updateData, { merge: true });
         deleteDocumentNonBlocking(originalRef);
 
         if (formData.clientReceiverEmail) {
