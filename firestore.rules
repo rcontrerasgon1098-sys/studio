@@ -22,7 +22,7 @@ service cloud.firestore {
 
     match /historial/{docId} {
       allow read: if isAdmin()
-        || (isSupervisor() && resource.data.createdBy == request.auth.uid);
+        || (isSupervisor() && (resource.data.createdBy == request.auth.uid || resource.data.supervisorId == request.auth.uid));
 
       allow write: if isAdmin() || isSupervisor();
     }
@@ -30,13 +30,13 @@ service cloud.firestore {
     match /ordenes/{docId} {
       // Allow public read if it's a remote signature request
       allow read: if isAdmin()
-        || (isSupervisor() && resource.data.createdBy == request.auth.uid)
+        || (isSupervisor() && (resource.data.createdBy == request.auth.uid || resource.data.supervisorId == request.auth.uid))
         || (resource.data.status == "Pending Signature");
 
       allow create: if isAdmin() || isSupervisor();
 
       allow update: if isAdmin()
-        || (isSupervisor() && resource.data.createdBy == request.auth.uid);
+        || (isSupervisor() && (resource.data.createdBy == request.auth.uid || resource.data.supervisorId == request.auth.uid));
 
       allow delete: if isAdmin();
     }

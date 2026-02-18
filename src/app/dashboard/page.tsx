@@ -79,28 +79,45 @@ export default function Dashboard() {
     }
   }, [user, isUserLoading, router]);
 
+  // Query for active orders
   const ordersQuery = useMemoFirebase(() => {
     if (!db || !user || !userProfile) return null;
     const baseCollection = collection(db, "ordenes");
+    
+    // Explicitly filter by supervisorId or createdBy for supervisors
     if (userProfile.rol_t === 'supervisor') {
-      return query(baseCollection, where("createdBy", "==", user.uid), orderBy("startDate", "desc"));
+      return query(
+        baseCollection, 
+        where("supervisorId", "==", user.uid), 
+        orderBy("startDate", "desc")
+      );
     }
+    
     if (userProfile.rol_t === 'admin') {
       return query(baseCollection, orderBy("startDate", "desc"));
     }
+    
     return null;
   }, [db, user, userProfile]);
   const { data: orders, isLoading: isOrdersLoading } = useCollection(ordersQuery);
 
+  // Query for historical orders
   const historyQuery = useMemoFirebase(() => {
     if (!db || !user || !userProfile) return null;
     const baseCollection = collection(db, "historial");
-     if (userProfile.rol_t === 'supervisor') {
-        return query(baseCollection, where("createdBy", "==", user.uid), orderBy("startDate", "desc"));
+    
+    if (userProfile.rol_t === 'supervisor') {
+      return query(
+        baseCollection, 
+        where("supervisorId", "==", user.uid), 
+        orderBy("startDate", "desc")
+      );
     }
+    
     if (userProfile.rol_t === 'admin') {
-        return query(baseCollection, orderBy("startDate", "desc"));
+      return query(baseCollection, orderBy("startDate", "desc"));
     }
+    
     return null;
   }, [db, user, userProfile]);
   const { data: history, isLoading: isHistoryLoading } = useCollection(historyQuery);
@@ -118,7 +135,7 @@ export default function Dashboard() {
   const { data: personnel } = useCollection(personnelQuery);
 
   const statsData = useMemo(() => {
-    const pendingCount = orders?.filter(o => o.status === "Pending").length || 0;
+    const pendingCount = orders?.filter(o => o.status === "Pending" || o.status === "Pending Signature").length || 0;
     const completedCount = history?.length || 0;
     
     return [
@@ -322,7 +339,9 @@ export default function Dashboard() {
     </div>
   );
 
-  if (isUserLoading || !mounted || isProfileLoading) return <div className="min-h-screen flex items-center justify-center text-primary font-black animate-pulse bg-background">CARGANDO...</div>;
+  const isLoading = isUserLoading || !mounted || isProfileLoading;
+
+  if (isLoading) return <div className="min-h-screen flex items-center justify-center text-primary font-black animate-pulse bg-background">CARGANDO...</div>;
 
   return (
     <div className="min-h-screen bg-background flex flex-col md:flex-row">
@@ -401,7 +420,7 @@ export default function Dashboard() {
                   <div>
                     <p className="text-xs font-black text-muted-foreground uppercase tracking-widest">Órdenes Activas</p>
                     <h3 className="text-4xl font-black text-primary leading-none mt-1">
-                      {isOrdersLoading ? <Loader2 className="h-6 w-6 animate-spin" /> : (orders?.filter(o => o.status === "Pending").length || 0)}
+                      {isOrdersLoading ? <Loader2 className="h-6 w-6 animate-spin" /> : (orders?.filter(o => o.status !== "Completed").length || 0)}
                     </h3>
                   </div>
                 </CardContent>
@@ -414,7 +433,7 @@ export default function Dashboard() {
                 <CardDescription>Acceso rápido a los trabajos en curso.</CardDescription>
               </CardHeader>
               <CardContent className="p-0">
-                <OrderTable orders={orders?.filter(o => o.status === "Pending") || []} isLoading={isOrdersLoading} type="ordenes" setDeleteConfirm={setDeleteConfirm} isAdmin={userProfile?.rol_t === 'admin'} />
+                <OrderTable orders={orders?.filter(o => o.status !== "Completed") || []} isLoading={isOrdersLoading} type="ordenes" setDeleteConfirm={setDeleteConfirm} isAdmin={userProfile?.rol_t === 'admin'} />
               </CardContent>
             </Card>
           </div>

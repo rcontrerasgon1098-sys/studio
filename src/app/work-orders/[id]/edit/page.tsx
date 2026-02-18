@@ -97,6 +97,7 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
     status: "Pending",
     team: [] as string[],
     createdBy: "",
+    supervisorId: "",
   });
 
   useEffect(() => {
@@ -135,6 +136,7 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
         status: order.status || "Pending",
         team: order.team || [],
         createdBy: order.createdBy || "",
+        supervisorId: order.supervisorId || "",
       });
       setIsInitialized(true);
     }
@@ -250,6 +252,7 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
     const updateData = {
       ...formData,
       createdBy: formData.createdBy || user.uid,
+      supervisorId: formData.supervisorId || user.uid, // Ensure supervisorId is set
       status: finalStatus,
       updatedAt: new Date().toISOString(),
       updatedBy: user.email

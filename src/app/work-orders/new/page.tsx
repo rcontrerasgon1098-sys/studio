@@ -226,8 +226,9 @@ export default function NewWorkOrder() {
         ...formData,
         id: orderId,
         folio: currentFolio,
-        status: "Pending",
+        status: "Pending Signature",
         createdBy: user.uid,
+        supervisorId: user.uid, // Explicitly save supervisorId
         creatorEmail: user.email,
         startDate: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
@@ -281,6 +282,7 @@ export default function NewWorkOrder() {
       folio: folio || generateFolio(),
       status: finalStatus,
       createdBy: user.uid,
+      supervisorId: user.uid, // Explicitly save supervisorId
       creatorEmail: user.email,
       startDate: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
