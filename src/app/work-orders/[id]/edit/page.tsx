@@ -1,3 +1,4 @@
+
 "use client";
 
 import { use, useState, useEffect, useRef } from "react";
@@ -31,6 +32,7 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Switch } from "@/components/ui/switch";
+import { sendWorkOrderEmail } from "@/ai/flows/send-work-order-email-flow";
 
 export default function EditWorkOrder({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -87,6 +89,7 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
     techSignatureUrl: "",
     clientReceiverName: "",
     clientReceiverRut: "",
+    clientReceiverEmail: "",
     clientSignatureUrl: "",
     sketchImageUrl: "",
     status: "Pending",
@@ -124,6 +127,7 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
         techSignatureUrl: order.techSignatureUrl || "",
         clientReceiverName: order.clientReceiverName || "",
         clientReceiverRut: order.clientReceiverRut || "",
+        clientReceiverEmail: order.clientReceiverEmail || "",
         clientSignatureUrl: order.clientSignatureUrl || "",
         sketchImageUrl: order.sketchImageUrl || "",
         status: order.status || "Pending",
@@ -222,7 +226,20 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
       try {
         setDocumentNonBlocking(historyRef, updateData, { merge: true });
         deleteDocumentNonBlocking(originalRef);
-        toast({ title: "Orden Finalizada", description: "La orden se ha movido al historial con éxito." });
+
+        // Send email notification
+        if (formData.clientReceiverEmail) {
+          sendWorkOrderEmail({
+            recipientEmail: formData.clientReceiverEmail,
+            clientName: formData.clientReceiverName || formData.clientName,
+            folio: order?.folio || 0,
+            orderDate: updateData.updatedAt,
+            summary: formData.description,
+            pdfLink: `${window.location.origin}/work-orders/${id}`
+          }).catch(err => console.error("Email flow error:", err));
+        }
+
+        toast({ title: "Orden Finalizada", description: "La orden se ha movido al historial y se enviará el correo." });
         router.push("/dashboard");
       } catch (error) {
         setLoading(false);
@@ -541,6 +558,15 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
                   <div className="space-y-2">
                     <Label className="text-[10px] font-bold uppercase text-muted-foreground">RUT Receptor</Label>
                     <Input value={formData.clientReceiverRut} onChange={e => setFormData({...formData, clientReceiverRut: e.target.value})} />
+                  </div>
+                  <div className="md:col-span-2 space-y-2">
+                    <Label className="text-[10px] font-bold uppercase text-muted-foreground">Email Receptor (para envío de PDF)</Label>
+                    <Input 
+                      type="email" 
+                      placeholder="ejemplo@gmail.com" 
+                      value={formData.clientReceiverEmail} 
+                      onChange={e => setFormData({...formData, clientReceiverEmail: e.target.value})} 
+                    />
                   </div>
                 </div>
                 {formData.clientSignatureUrl ? (

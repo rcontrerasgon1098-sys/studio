@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useRef } from "react";
@@ -31,6 +32,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
+import { sendWorkOrderEmail } from "@/ai/flows/send-work-order-email-flow";
 
 export default function NewWorkOrder() {
   const router = useRouter();
@@ -87,6 +89,7 @@ export default function NewWorkOrder() {
     techSignatureUrl: "",
     clientReceiverName: "",
     clientReceiverRut: "",
+    clientReceiverEmail: "",
     clientSignatureUrl: "",
     sketchImageUrl: "",
     status: "Pending",
@@ -236,10 +239,23 @@ export default function NewWorkOrder() {
     
     try {
       setDocumentNonBlocking(orderRef, workOrderData, { merge: true });
+      
+      // Send email if completed and email provided
+      if (finalStatus === "Completed" && formData.clientReceiverEmail) {
+        sendWorkOrderEmail({
+          recipientEmail: formData.clientReceiverEmail,
+          clientName: formData.clientReceiverName || formData.clientName,
+          folio: workOrderData.folio,
+          orderDate: workOrderData.startDate,
+          summary: formData.description,
+          pdfLink: `${window.location.origin}/work-orders/${orderId}`
+        }).catch(err => console.error("Email flow error:", err));
+      }
+
       toast({ 
         title: finalStatus === "Completed" ? "Orden Finalizada" : "Orden Guardada", 
         description: finalStatus === "Completed" 
-          ? "La orden se ha movido al historial correctamente." 
+          ? "La orden se ha movido al historial y se enviará el correo." 
           : "La orden se guardó como pendiente."
       });
       router.push("/dashboard");
@@ -620,6 +636,15 @@ export default function NewWorkOrder() {
                   <div className="space-y-2">
                     <Label className="text-[10px] font-bold uppercase text-muted-foreground">RUT Receptor</Label>
                     <Input value={formData.clientReceiverRut} onChange={e => setFormData({...formData, clientReceiverRut: e.target.value})} />
+                  </div>
+                  <div className="md:col-span-2 space-y-2">
+                    <Label className="text-[10px] font-bold uppercase text-muted-foreground">Email Receptor (para envío de PDF)</Label>
+                    <Input 
+                      type="email" 
+                      placeholder="ejemplo@gmail.com" 
+                      value={formData.clientReceiverEmail} 
+                      onChange={e => setFormData({...formData, clientReceiverEmail: e.target.value})} 
+                    />
                   </div>
                 </div>
                 {formData.clientSignatureUrl ? (

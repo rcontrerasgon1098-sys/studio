@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Download, Printer, User, Phone, Mail, MapPin, Building2, Hash, Calendar, ClipboardCheck, Info, Users, CreditCard, Loader2 } from "lucide-center";
+import { ArrowLeft, Download, Printer, User, Phone, Mail, MapPin, Building2, Hash, Calendar, ClipboardCheck, Info, Users, CreditCard, Loader2 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import { generateWorkOrderPDF } from "@/lib/pdf-generator";
@@ -239,6 +239,9 @@ export default function WorkOrderView({ params }: { params: Promise<{ id: string
               <div className="text-[10px] space-y-1 p-3 bg-muted/20 rounded-xl font-bold">
                 <p className="uppercase flex items-center gap-2 text-primary"><User className="h-3 w-3" /> {order.clientReceiverName || "N/A"}</p>
                 <p className="text-muted-foreground flex items-center gap-2"><CreditCard className="h-3 w-3" /> {order.clientReceiverRut || "N/A"}</p>
+                {order.clientReceiverEmail && (
+                  <p className="text-muted-foreground flex items-center gap-2"><Mail className="h-3 w-3" /> {order.clientReceiverEmail}</p>
+                )}
               </div>
               <div className="relative h-32 w-full bg-muted/5 rounded-xl border border-dashed flex items-center justify-center overflow-hidden">
                 {order.clientSignatureUrl ? (

@@ -128,8 +128,12 @@ export const generateWorkOrderPDF = async (data: any) => {
   doc.text(`${data.clientReceiverName || "N/A"}`, 130, sigY);
   doc.setFont("helvetica", "normal");
   doc.text(`RUT: ${data.clientReceiverRut || "N/A"}`, 130, sigY + 5);
+  if (data.clientReceiverEmail) {
+    doc.setFontSize(7);
+    doc.text(`Email: ${data.clientReceiverEmail}`, 130, sigY + 10);
+  }
   if (data.clientSignatureUrl) {
-    try { doc.addImage(data.clientSignatureUrl, "PNG", 130, sigY + 7, 50, 20); } catch(e) {}
+    try { doc.addImage(data.clientSignatureUrl, "PNG", 130, sigY + 12, 50, 20); } catch(e) {}
   }
 
   // Footer
