@@ -17,15 +17,11 @@ service cloud.firestore {
       return isLoggedIn() && getPersonnelDoc().data.rol_t == "admin";
     }
 
-    function isSupervisor() {
-      return isLoggedIn() && getPersonnelDoc().data.rol_t == "supervisor";
-    }
-
     match /historial/{docId} {
       allow read: if isAdmin()
         || (isLoggedIn() && (resource.data.supervisorId == request.auth.uid || resource.data.createdBy == request.auth.uid));
 
-      allow write: if isAdmin() || isSupervisor();
+      allow write: if isAdmin() || isLoggedIn();
     }
 
     match /ordenes/{docId} {
@@ -34,7 +30,7 @@ service cloud.firestore {
         || (isLoggedIn() && (resource.data.supervisorId == request.auth.uid || resource.data.createdBy == request.auth.uid))
         || (resource.data.status == "Pending Signature");
 
-      // Permite creación a cualquier usuario autenticado (la app inyecta el supervisorId)
+      // Permite creación a cualquier usuario autenticado
       allow create: if isLoggedIn(); 
 
       // Permite actualización a Admins o al Supervisor dueño
@@ -45,12 +41,11 @@ service cloud.firestore {
     }
 
     match /clients/{docId} {
-      allow read, write: if isAdmin() || isSupervisor();
+      allow read, write: if isLoggedIn();
     }
 
     match /personnel/{userId} {
-      // Un usuario siempre puede leer su propio perfil. Admins y Supervisores pueden ver el resto.
-      allow read: if isLoggedIn() && (request.auth.uid == userId || isAdmin() || isSupervisor());
+      allow read: if isLoggedIn();
       // Solo el Admin puede crear o modificar personal
       allow write: if isAdmin();
     }

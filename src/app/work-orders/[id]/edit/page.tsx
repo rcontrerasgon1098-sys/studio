@@ -16,8 +16,8 @@ import { ArrowLeft, Save, CheckCircle2, Camera, X, Image as ImageIcon, Loader2, 
 import Link from "next/link";
 import Image from "next/image";
 import { useUser, useFirestore, useDoc, useMemoFirebase, useCollection, useUserProfile } from "@/firebase";
-import { doc, collection, query, where, orderBy } from "firebase/firestore";
-import { updateDocumentNonBlocking, setDocumentNonBlocking, deleteDocumentNonBlocking } from "@/firebase/non-blocking-updates";
+import { doc, collection, query, where, orderBy, setDoc } from "firebase/firestore";
+import { updateDocumentNonBlocking, deleteDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 import { validateRut } from "@/lib/rut-utils";
 import {
   AlertDialog,
@@ -29,8 +29,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Switch } from "@/components/ui/switch";
 import { sendWorkOrderEmail } from "@/ai/flows/send-work-order-email-flow";
 import { sendSignatureRequest } from "@/ai/flows/send-signature-request-flow";
@@ -251,8 +249,8 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
 
     const updateData = {
       ...formData,
-      createdBy: formData.createdBy || user.uid, // Asegurar persistencia de createdBy
-      supervisorId: formData.supervisorId || user.uid, // Asegurar persistencia de supervisorId
+      createdBy: formData.createdBy || user.uid,
+      supervisorId: formData.supervisorId || user.uid,
       status: finalStatus,
       updatedAt: new Date().toISOString(),
       updatedBy: user.email
@@ -262,7 +260,7 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
       const historyRef = doc(db, "historial", id);
       const originalRef = doc(db, "ordenes", id);
       try {
-        setDoc(historyRef, updateData, { merge: true });
+        await setDoc(historyRef, updateData, { merge: true });
         deleteDocumentNonBlocking(originalRef);
 
         if (formData.clientReceiverEmail) {

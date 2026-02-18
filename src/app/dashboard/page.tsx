@@ -84,7 +84,6 @@ export default function Dashboard() {
     if (!db || !user || !userProfile) return null;
     const baseCollection = collection(db, "ordenes");
     
-    // Explicitly filter by supervisorId for supervisors. 
     if (userProfile.rol_t === 'supervisor') {
       return query(
         baseCollection, 
@@ -196,7 +195,7 @@ export default function Dashboard() {
 
     return Object.entries(counts)
         .map(([name, count]) => ({
-            name: name.split(" ")[0], // Use only the first name for brevity
+            name: name.split(" ")[0], 
             count 
         }))
         .sort((a, b) => b.count - a.count)
@@ -406,7 +405,6 @@ export default function Dashboard() {
           </div>
         </header>
 
-        {/* Dashboard / Inicio View */}
         {activeTab === "dashboard" && (
           <div className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -437,7 +435,6 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* Stats View */}
         {activeTab === "stats" && userProfile?.rol_t === 'admin' && (
           <div className="space-y-6">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -508,61 +505,10 @@ export default function Dashboard() {
                   </div>
                 </CardContent>
               </Card>
-              
-              <Card className="bg-white border-none shadow-md overflow-hidden">
-                <CardHeader className="border-b bg-muted/5">
-                  <CardTitle className="text-sm font-bold flex items-center gap-2">
-                    <Briefcase className="h-4 w-4 text-primary" /> Top 5 Clientes
-                  </CardTitle>
-                  <CardDescription>Clientes con más órdenes completadas.</CardDescription>
-                </CardHeader>
-                <CardContent className="p-6">
-                  <div className="h-[350px] w-full">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={topClientsData} layout="vertical" margin={{ left: 50 }}>
-                        <CartesianGrid strokeDasharray="3 3" horizontal={false} />
-                        <XAxis type="number" allowDecimals={false} />
-                        <YAxis dataKey="name" type="category" tick={{ fontSize: 12 }} />
-                        <RechartsTooltip 
-                          cursor={{ fill: 'hsl(var(--muted)/0.3)' }}
-                          contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
-                        />
-                        <Bar dataKey="count" fill="hsl(var(--primary))" radius={[0, 4, 4, 0]} barSize={30} />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="bg-white border-none shadow-md overflow-hidden">
-                <CardHeader className="border-b bg-muted/5">
-                  <CardTitle className="text-sm font-bold flex items-center gap-2">
-                    <TrendingUp className="h-4 w-4 text-primary" /> Productividad de Técnicos
-                  </CardTitle>
-                  <CardDescription>Top 5 técnicos por órdenes completadas.</CardDescription>
-                </CardHeader>
-                <CardContent className="p-6">
-                  <div className="h-[350px] w-full">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={techProductivityData} layout="vertical" margin={{ left: 20 }}>
-                        <CartesianGrid strokeDasharray="3 3" horizontal={false} />
-                        <XAxis type="number" allowDecimals={false} />
-                        <YAxis dataKey="name" type="category" tick={{ fontSize: 12 }} />
-                        <RechartsTooltip 
-                          cursor={{ fill: 'hsl(var(--muted)/0.3)' }}
-                          contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
-                        />
-                        <Bar dataKey="count" fill="hsl(var(--accent))" radius={[0, 4, 4, 0]} barSize={30} />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </div>
-                </CardContent>
-              </Card>
             </div>
           </div>
         )}
 
-        {/* Orders View */}
         {activeTab === "orders" && (
           <Card className="shadow-xl border-none bg-white rounded-2xl">
              <CardHeader className="border-b space-y-4">
@@ -594,7 +540,6 @@ export default function Dashboard() {
           </Card>
         )}
 
-        {/* History View */}
         {activeTab === "history" && (
           <Card className="shadow-xl border-none bg-white rounded-2xl">
              <CardHeader className="border-b space-y-4">
@@ -623,80 +568,6 @@ export default function Dashboard() {
              <CardContent className="p-0">
                <OrderTable orders={filteredHistory} isLoading={isHistoryLoading} type="historial" setDeleteConfirm={setDeleteConfirm} isAdmin={userProfile?.rol_t === 'admin'}/>
              </CardContent>
-          </Card>
-        )}
-
-        {/* Clients View */}
-        {activeTab === "clients" && userProfile?.rol_t === 'admin' && (
-          <Card className="shadow-xl border-none bg-white rounded-2xl">
-            <CardHeader className="border-b flex flex-row items-center justify-between">
-              <CardTitle className="text-lg font-bold">Listado de Clientes</CardTitle>
-              <Input placeholder="Buscar cliente..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="w-64 h-10" />
-            </CardHeader>
-            <CardContent className="p-0">
-              <Table>
-                <TableHeader>
-                  <TableRow className="bg-muted/40">
-                    <TableHead className="font-bold">RUT</TableHead>
-                    <TableHead className="font-bold">Nombre</TableHead>
-                    <TableHead className="font-bold">Estado</TableHead>
-                    <TableHead className="text-right font-bold">Acciones</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredClients?.map((client) => (
-                    <TableRow key={client.id}>
-                      <TableCell className="font-medium">{client.rutCliente}</TableCell>
-                      <TableCell>{client.nombreCliente}</TableCell>
-                      <TableCell>
-                        <Badge className={client.estadoCliente === 'Activo' ? 'bg-accent/20 text-primary' : 'bg-destructive/10 text-destructive'}>{client.estadoCliente}</Badge>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
-                          <Link href={`/clients/${client.id}/edit`}><Button variant="ghost" size="icon"><Pencil size={16} /></Button></Link>
-                          <Button variant="ghost" size="icon" onClick={() => setDeleteConfirm({ id: client.id, type: 'clients' })} className="text-destructive"><Trash2 size={16} /></Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Personnel View */}
-        {activeTab === "personnel" && userProfile?.rol_t === 'admin' && (
-          <Card className="shadow-xl border-none bg-white rounded-2xl">
-            <CardHeader className="border-b flex flex-row items-center justify-between">
-              <CardTitle className="text-lg font-bold">Gestión de Personal</CardTitle>
-              <Input placeholder="Buscar personal..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="w-64 h-10" />
-            </CardHeader>
-            <CardContent className="p-0">
-              <Table>
-                <TableHeader>
-                  <TableRow className="bg-muted/40">
-                    <TableHead className="font-bold">Nombre</TableHead>
-                    <TableHead className="font-bold">Rol</TableHead>
-                    <TableHead className="text-right font-bold">Acciones</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredPersonnel?.map((p) => (
-                    <TableRow key={p.id}>
-                      <TableCell>{p.nombre_t}</TableCell>
-                      <TableCell><Badge variant="outline" className="capitalize">{p.rol_t}</Badge></TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
-                          <Link href={`/technicians/${p.id}/edit`}><Button variant="ghost" size="icon"><Pencil size={16} /></Button></Link>
-                          <Button variant="ghost" size="icon" onClick={() => setDeleteConfirm({ id: p.id, type: 'personnel' })} className="text-destructive"><Trash2 size={16} /></Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardContent>
           </Card>
         )}
       </main>
