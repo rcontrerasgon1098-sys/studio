@@ -374,36 +374,6 @@ export default function NewWorkOrder() {
             </CardContent>
           </Card>
 
-          <Card className="shadow-md border-none bg-white overflow-hidden">
-            <CardHeader className="bg-secondary/10 p-4 border-b">
-              <CardTitle className="text-primary text-lg flex items-center gap-2 uppercase font-black tracking-tighter">
-                <Building2 className="h-5 w-5" /> Ubicación Técnica
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="pt-6 space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label className="font-bold uppercase text-xs tracking-widest text-muted-foreground">Edificio</Label>
-                  <Input 
-                    placeholder="Ej: Torre A" 
-                    value={formData.building}
-                    onChange={e => setFormData({...formData, building: e.target.value})}
-                    className="h-12"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label className="font-bold uppercase text-xs tracking-widest text-muted-foreground">Piso</Label>
-                  <Input 
-                    placeholder="Ej: 5" 
-                    value={formData.floor}
-                    onChange={e => setFormData({...formData, floor: e.target.value})}
-                    className="h-12"
-                  />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          
           <Card className="shadow-md border-none bg-white">
             <CardHeader className="p-4 md:p-6 border-b bg-muted/5">
               <CardTitle className="text-lg flex items-center gap-2 uppercase font-bold tracking-tight">
@@ -449,6 +419,36 @@ export default function NewWorkOrder() {
                   </Command>
                 </PopoverContent>
               </Popover>
+            </CardContent>
+          </Card>
+
+          <Card className="shadow-md border-none bg-white overflow-hidden">
+            <CardHeader className="bg-secondary/10 p-4 border-b">
+              <CardTitle className="text-primary text-lg flex items-center gap-2 uppercase font-black tracking-tighter">
+                <Building2 className="h-5 w-5" /> Ubicación Técnica
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pt-6 space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label className="font-bold uppercase text-xs tracking-widest text-muted-foreground">Edificio</Label>
+                  <Input 
+                    placeholder="Ej: Torre A" 
+                    value={formData.building}
+                    onChange={e => setFormData({...formData, building: e.target.value})}
+                    className="h-12"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="font-bold uppercase text-xs tracking-widest text-muted-foreground">Piso</Label>
+                  <Input 
+                    placeholder="Ej: 5" 
+                    value={formData.floor}
+                    onChange={e => setFormData({...formData, floor: e.target.value})}
+                    className="h-12"
+                  />
+                </div>
+              </div>
             </CardContent>
           </Card>
 

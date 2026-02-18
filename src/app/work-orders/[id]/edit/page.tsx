@@ -193,6 +193,10 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
     setShowSaveSignatureDialog(false);
   };
 
+  const handleTeamRemove = (memberName: string) => {
+    setFormData(prev => ({ ...prev, team: prev.team.filter(t => t !== memberName) }));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user || !db || !id) return;
@@ -237,8 +241,6 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
       }
     }
   };
-
-  const availablePersonnel = allPersonnel?.filter(p => !formData.team.includes(p.nombre_t)) || [];
 
   if (isUserLoading || isOrderLoading || !isInitialized || isProfileLoading) {
     return (
@@ -327,6 +329,28 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
             </CardContent>
           </Card>
 
+          <Card className="shadow-md border-none bg-white">
+            <CardHeader className="p-4 md:p-6 border-b bg-muted/5">
+              <CardTitle className="text-lg flex items-center gap-2 uppercase font-bold tracking-tight">
+                <Users className="h-5 w-5 text-primary"/> Equipo de Trabajo
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-4 md:p-6 space-y-4">
+               <div className="flex flex-wrap gap-2">
+                {formData.team.map((name, index) => (
+                  <Badge key={index} variant="secondary" className="text-sm py-1.5 px-4 rounded-xl bg-primary/10 text-primary gap-2 font-bold border-none">
+                    {name}
+                    {name !== userProfile?.nombre_t && (
+                      <button type="button" onClick={() => handleTeamRemove(name)} className="rounded-full hover:bg-primary/20 p-0.5 transition-colors">
+                        <X className="h-3 w-3" />
+                      </button>
+                    )}
+                  </Badge>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
           <Card className="shadow-md border-none bg-white overflow-hidden">
             <CardHeader className="bg-secondary/10 p-4 border-b">
               <CardTitle className="text-primary text-lg flex items-center gap-2 uppercase font-black tracking-tighter">
@@ -351,28 +375,6 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
                     className="h-12"
                   />
                 </div>
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card className="shadow-md border-none bg-white">
-            <CardHeader className="p-4 md:p-6 border-b bg-muted/5">
-              <CardTitle className="text-lg flex items-center gap-2 uppercase font-bold tracking-tight">
-                <Users className="h-5 w-5 text-primary"/> Equipo de Trabajo
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-4 md:p-6 space-y-4">
-               <div className="flex flex-wrap gap-2">
-                {formData.team.map((name, index) => (
-                  <Badge key={index} variant="secondary" className="text-sm py-1.5 px-4 rounded-xl bg-primary/10 text-primary gap-2 font-bold border-none">
-                    {name}
-                    {name !== userProfile?.nombre_t && (
-                      <button type="button" onClick={() => handleTeamRemove(name)} className="rounded-full hover:bg-primary/20 p-0.5 transition-colors">
-                        <X className="h-3 w-3" />
-                      </button>
-                    )}
-                  </Badge>
-                ))}
               </div>
             </CardContent>
           </Card>

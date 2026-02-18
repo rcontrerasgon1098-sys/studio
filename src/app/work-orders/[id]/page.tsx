@@ -120,19 +120,6 @@ export default function WorkOrderView({ params }: { params: Promise<{ id: string
           </CardContent>
         </Card>
 
-        <div className="grid grid-cols-2 gap-4">
-          <Card className="shadow-sm border-none bg-white p-4 flex flex-col items-center justify-center text-center">
-            <Building2 className="h-5 w-5 text-primary mb-1 opacity-60" />
-            <p className="text-[10px] uppercase font-black text-muted-foreground">Edificio</p>
-            <p className="font-bold text-sm text-primary">{order.building || "N/A"}</p>
-          </Card>
-          <Card className="shadow-sm border-none bg-white p-4 flex flex-col items-center justify-center text-center">
-            <Hash className="h-5 w-5 text-primary mb-1 opacity-60" />
-            <p className="text-[10px] uppercase font-black text-muted-foreground">Piso</p>
-            <p className="font-bold text-sm text-primary">{order.floor || "N/A"}</p>
-          </Card>
-        </div>
-
         {order.team && order.team.length > 0 && (
           <Card className="shadow-md border-none bg-white">
             <CardHeader className="p-4 border-b bg-muted/5">
@@ -151,6 +138,19 @@ export default function WorkOrderView({ params }: { params: Promise<{ id: string
             </CardContent>
           </Card>
         )}
+
+        <div className="grid grid-cols-2 gap-4">
+          <Card className="shadow-sm border-none bg-white p-4 flex flex-col items-center justify-center text-center">
+            <Building2 className="h-5 w-5 text-primary mb-1 opacity-60" />
+            <p className="text-[10px] uppercase font-black text-muted-foreground">Edificio</p>
+            <p className="font-bold text-sm text-primary">{order.building || "N/A"}</p>
+          </Card>
+          <Card className="shadow-sm border-none bg-white p-4 flex flex-col items-center justify-center text-center">
+            <Hash className="h-5 w-5 text-primary mb-1 opacity-60" />
+            <p className="text-[10px] uppercase font-black text-muted-foreground">Piso</p>
+            <p className="font-bold text-sm text-primary">{order.floor || "N/A"}</p>
+          </Card>
+        </div>
 
         <Card className="shadow-md border-none bg-white">
           <CardHeader className="p-4 border-b bg-primary/5">
