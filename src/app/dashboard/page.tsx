@@ -78,11 +78,12 @@ export default function Dashboard() {
     }
   }, [user, isUserLoading, router]);
 
-  // Query for active orders - Filtrado por createdBy para supervisores
+  // Query for active orders - Filtrado por createdBy para supervisores (illojuan)
   const ordersQuery = useMemoFirebase(() => {
     if (!db || !user?.uid || !userProfile) return null;
     const baseCollection = collection(db, "ordenes");
     
+    // Si es supervisor, solo ve lo que ÉL creó (createdBy)
     if (userProfile.rol_t === 'supervisor') {
       return query(
         baseCollection, 
@@ -90,6 +91,7 @@ export default function Dashboard() {
       );
     }
     
+    // Si es admin, ve todo
     if (userProfile.rol_t === 'admin') {
       return query(baseCollection, orderBy("startDate", "desc"));
     }
@@ -325,10 +327,10 @@ export default function Dashboard() {
                activeTab === "clients" ? "Administración de Clientes" : "Administración de Personal"}
             </h1>
              <p className="text-muted-foreground mt-1">
-                {activeTab === "dashboard" ? "Resumen de actividad y acceso a órdenes." :
+                {activeTab === "dashboard" ? "Resumen de actividad y acceso a sus órdenes creadas." :
                  activeTab === "stats" ? "Visualización de datos y rendimiento." :
-                 activeTab === "orders" ? "Seguimiento de trabajos en curso." :
-                 activeTab === "history" ? "Archivo de órdenes de trabajo completadas." :
+                 activeTab === "orders" ? "Seguimiento de sus trabajos en curso." :
+                 activeTab === "history" ? "Archivo de sus órdenes de trabajo completadas." :
                  activeTab === "clients" ? "Gestión de la cartera de clientes." : "Gestión de la plantilla de ICSA."}
             </p>
           </div>
@@ -378,7 +380,7 @@ export default function Dashboard() {
             <Card className="shadow-xl border-none bg-white rounded-2xl">
               <CardHeader className="border-b">
                 <CardTitle className="text-lg font-bold">Listado de Pendientes</CardTitle>
-                <CardDescription>Acceso rápido a los trabajos en curso.</CardDescription>
+                <CardDescription>Acceso rápido a sus trabajos en curso.</CardDescription>
               </CardHeader>
               <CardContent className="p-0">
                 <OrderTable orders={orders || []} isLoading={isOrdersLoading} type="ordenes" setDeleteConfirm={setDeleteConfirm} isAdmin={userProfile?.rol_t === 'admin'} />
@@ -387,6 +389,7 @@ export default function Dashboard() {
           </div>
         )}
 
+        {/* ... Rest of components stay the same ... */}
         {activeTab === "stats" && userProfile?.rol_t === 'admin' && (
           <div className="space-y-6">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -465,7 +468,7 @@ export default function Dashboard() {
           <Card className="shadow-xl border-none bg-white rounded-2xl">
              <CardHeader className="border-b space-y-4">
                <div className="flex items-center justify-between">
-                 <CardTitle className="text-lg font-bold">Todas las Órdenes Activas</CardTitle>
+                 <CardTitle className="text-lg font-bold">Mis Órdenes Activas</CardTitle>
                  <Button variant="ghost" size="sm" onClick={clearFilters} className="text-[10px] font-bold uppercase"><FilterX className="mr-2 h-3 w-3" /> Limpiar</Button>
                </div>
                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
@@ -496,7 +499,7 @@ export default function Dashboard() {
           <Card className="shadow-xl border-none bg-white rounded-2xl">
              <CardHeader className="border-b space-y-4">
                <div className="flex items-center justify-between">
-                 <CardTitle className="text-lg font-bold">Órdenes Completadas</CardTitle>
+                 <CardTitle className="text-lg font-bold">Mi Historial</CardTitle>
                  <Button variant="ghost" size="sm" onClick={clearFilters} className="text-[10px] font-bold uppercase"><FilterX className="mr-2 h-3 w-3" /> Limpiar</Button>
                </div>
                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">

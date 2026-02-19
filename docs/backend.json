@@ -33,7 +33,7 @@
         },
         "createdBy": {
           "type": "string",
-          "description": "UID of the supervisor who created the work order."
+          "description": "UID of the supervisor who created the work order. Used for ownership filtering."
         },
         "creatorEmail": {
           "type": "string",

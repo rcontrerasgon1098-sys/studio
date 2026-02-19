@@ -17,25 +17,28 @@ service cloud.firestore {
       return isLoggedIn() && getPersonnelDoc().data.rol_t == "admin";
     }
 
-    match /historial/{docId} {
-      allow read: if isAdmin()
-        || (isLoggedIn() && resource.data.createdBy == request.auth.uid);
+    function isOwner(resourceData) {
+      return isLoggedIn() && resourceData.createdBy == request.auth.uid;
+    }
 
+    match /historial/{docId} {
+      // Un supervisor puede leer si es el dueño (createdBy)
+      allow read: if isAdmin() || isOwner(resource.data);
+      // Cualquier usuario autenticado puede escribir (para mover de ordenes a historial)
       allow write: if isAdmin() || isLoggedIn();
     }
 
     match /ordenes/{docId} {
-      // Permite lectura a Admins, al creador de la OT, o acceso público si está en espera de firma
+      // Permite lectura a Admins, al dueño original (createdBy), o acceso público si está en espera de firma remota
       allow read: if isAdmin()
-        || (isLoggedIn() && resource.data.createdBy == request.auth.uid)
+        || isOwner(resource.data)
         || (resource.data.status == "Pending Signature");
 
-      // Permite creación a cualquier usuario autenticado
+      // Permite creación a cualquier usuario autenticado (se valida en la app que mande createdBy correcto)
       allow create: if isLoggedIn(); 
 
-      // Permite actualización a Admins o al creador original
-      allow update: if isAdmin()
-        || (isLoggedIn() && resource.data.createdBy == request.auth.uid);
+      // Permite actualización a Admins o al dueño original
+      allow update: if isAdmin() || isOwner(resource.data);
 
       allow delete: if isAdmin();
     }
