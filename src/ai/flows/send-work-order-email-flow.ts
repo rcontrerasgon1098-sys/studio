@@ -26,43 +26,48 @@ const sendWorkOrderEmailFlow = ai.defineFlow(
   {
     name: 'sendWorkOrderEmailFlow',
     inputSchema: SendWorkOrderEmailInputSchema,
-    outputSchema: z.object({ success: z.boolean() }),
+    outputSchema: z.object({ success: z.boolean(), error: z.string().optional() }),
   },
   async (input) => {
-    const htmlContent = `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e0e0e0; border-radius: 10px; overflow: hidden;">
-        <div style="background-color: #38A3A5; padding: 20px; text-align: center; color: white;">
-          <h1 style="margin: 0;">ICSA - Orden de Trabajo Finalizada</h1>
-        </div>
-        <div style="padding: 20px; line-height: 1.6; color: #333;">
-          <p>Estimado/a <strong>${input.clientName}</strong>,</p>
-          <p>Le informamos que la Orden de Trabajo <strong>#${input.folio}</strong> ha sido finalizada con éxito.</p>
-          
-          <div style="background-color: #f9f9f9; padding: 15px; border-radius: 5px; margin: 20px 0;">
-            <p style="margin: 0;"><strong>Fecha:</strong> ${new Date(input.orderDate).toLocaleDateString()}</p>
-            <p style="margin: 10px 0 0 0;"><strong>Resumen de Actividades:</strong></p>
-            <p style="margin: 5px 0 0 0; font-style: italic;">${input.summary || 'N/A'}</p>
+    try {
+      const htmlContent = `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e0e0e0; border-radius: 10px; overflow: hidden;">
+          <div style="background-color: #38A3A5; padding: 20px; text-align: center; color: white;">
+            <h1 style="margin: 0;">ICSA - Orden de Trabajo Finalizada</h1>
           </div>
+          <div style="padding: 20px; line-height: 1.6; color: #333;">
+            <p>Estimado/a <strong>${input.clientName}</strong>,</p>
+            <p>Le informamos que la Orden de Trabajo <strong>#${input.folio}</strong> ha sido finalizada con éxito.</p>
+            
+            <div style="background-color: #f9f9f9; padding: 15px; border-radius: 5px; margin: 20px 0;">
+              <p style="margin: 0;"><strong>Fecha:</strong> ${new Date(input.orderDate).toLocaleDateString()}</p>
+              <p style="margin: 10px 0 0 0;"><strong>Resumen de Actividades:</strong></p>
+              <p style="margin: 5px 0 0 0; font-style: italic;">${input.summary || 'N/A'}</p>
+            </div>
 
-          <p>Adjuntamos el enlace para visualizar su comprobante digital:</p>
-          <div style="text-align: center; margin: 30px 0;">
-            <a href="${input.pdfLink || '#'}" style="background-color: #22577A; color: white; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-weight: bold;">Ver Orden de Trabajo</a>
+            <p>Adjuntamos el enlace para visualizar su comprobante digital:</p>
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="${input.pdfLink || '#'}" style="background-color: #22577A; color: white; padding: 12px 25px; text-decoration: none; border-radius: 5px; font-weight: bold;">Ver Orden de Trabajo</a>
+            </div>
+
+            <p>Gracias por confiar en ICSA Ingeniería Comunicaciones S.A.</p>
           </div>
-
-          <p>Gracias por confiar en ICSA Ingeniería Comunicaciones S.A.</p>
+          <div style="background-color: #f1f1f1; padding: 10px; text-align: center; font-size: 12px; color: #888;">
+            Este es un mensaje automático, por favor no responda a este correo.
+          </div>
         </div>
-        <div style="background-color: #f1f1f1; padding: 10px; text-align: center; font-size: 12px; color: #888;">
-          Este es un mensaje automático, por favor no responda a este correo.
-        </div>
-      </div>
-    `;
+      `;
 
-    await sendEmailSMTP({
-      to: input.recipientEmail,
-      subject: `ICSA - Orden de Trabajo #${input.folio} Finalizada`,
-      html: htmlContent
-    });
+      await sendEmailSMTP({
+        to: input.recipientEmail,
+        subject: `ICSA - Orden de Trabajo #${input.folio} Finalizada`,
+        html: htmlContent
+      });
 
-    return { success: true };
+      return { success: true };
+    } catch (error: any) {
+      console.error('Error in sendWorkOrderEmailFlow:', error);
+      return { success: false, error: error.message };
+    }
   }
 );

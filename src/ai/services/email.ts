@@ -18,7 +18,6 @@ interface EmailOptions {
  * @param options Object containing recipient, subject, html content and optional attachments.
  */
 export async function sendEmailSMTP(options: EmailOptions) {
-  // We use the environment variables provided by the user for Brevo
   const transporter = nodemailer.createTransport({
     host: process.env.MAIL_HOST || "smtp-relay.brevo.com",
     port: Number(process.env.MAIL_PORT) || 587,
@@ -33,8 +32,11 @@ export async function sendEmailSMTP(options: EmailOptions) {
   });
 
   try {
+    const fromName = process.env.MAIL_FROM_NAME || "ICSA Operaciones";
+    const fromAddress = process.env.MAIL_FROM_ADDRESS || "no-reply@icsa.com";
+
     const info = await transporter.sendMail({
-      from: `"${process.env.MAIL_FROM_NAME || "ICSA Operaciones"}" <${process.env.MAIL_FROM_ADDRESS || "no-reply@icsa.com"}>`,
+      from: `"${fromName}" <${fromAddress}>`,
       to: options.to,
       subject: options.subject,
       html: options.html,
@@ -43,8 +45,14 @@ export async function sendEmailSMTP(options: EmailOptions) {
     
     console.log(`Email sent successfully via Brevo. MessageId: ${info.messageId}`);
     return { success: true, messageId: info.messageId };
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error sending email via SMTP (Brevo):", error);
+    
+    // Catch specific SMTP auth error to provide a better debug message
+    if (error.responseCode === 535) {
+      throw new Error("Fallo de autenticación SMTP. Por favor verifique su clave SMTP en el archivo .env.");
+    }
+    
     throw error;
   }
 }

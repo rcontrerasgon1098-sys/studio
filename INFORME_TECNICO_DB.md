@@ -24,30 +24,29 @@ Para un diagrama MER, la base de datos se comporta como un sistema relacional co
 3. **Órdenes de Trabajo (`ordenes` / `historial`)**
    - **PK**: `id`
    - **FK**: `clientId` (Referencia a la PK de Clientes)
-   - **FK**: `createdBy` (Referencia a la PK de Personal - Supervisor)
-   - **Atributos**: `folio`, `status`, `startDate`, `description`, `techName`, `techRut`, `techSignatureUrl`, `clientSignatureUrl`, `teamIds` (Array).
+   - **FK**: `createdBy` (Referencia a la PK de Personal - Dueño de la OT)
+   - **Atributos**: `folio`, `status`, `startDate`, `description`, `techName`, `techRut`, `techSignatureUrl`, `clientSignatureUrl`, `teamIds` (Array para membresía rápida).
 
 ### C. Entidad de Relación (Muchos a Muchos)
 4. **Asignaciones de Equipo (`Assignments`)**
-   - Lógicamente, existe una tabla intermedia entre **Personal** y **Órdenes**.
+   - Lógicamente, representa la tabla intermedia entre **Personal** y **Órdenes**.
    - **FK**: `orderId` (Referencia a Órdenes)
    - **FK**: `personnelId` (Referencia a Personal)
    - **Función**: Permite que múltiples técnicos trabajen en una misma orden.
 
 ---
 
-## 2. Implementación en Firestore (NoSQL)
+## 2. Automatización de Notificaciones (Brevo SMTP)
 
-Aunque el modelo lógico está normalizado para el diagrama MER, Firestore utiliza técnicas de optimización:
-
-- **Desnormalización de Propiedad**: El campo `createdBy` se utiliza como clave foránea oficial para filtrar la visibilidad del supervisor.
-- **Desnormalización de Equipo**: El campo `teamIds` (Array) actúa como una vista materializada de la tabla intermedia de asignaciones, permitiendo consultas instantáneas mediante `array-contains`.
-- **Integridad**: Al completar una orden, el sistema realiza una copia profunda de todos los metadatos desde `ordenes` hacia `historial`, preservando las claves foráneas originales.
+La aplicación integra el servicio **Brevo** para la comunicación con los clientes:
+1. **Firma Remota**: Se envía un enlace único al cliente para que firme desde su dispositivo móvil. El sistema valida el token de seguridad antes de permitir la firma.
+2. **Entrega de OT**: Una vez completada la orden, se envía automáticamente un correo electrónico con el resumen de los trabajos y un enlace directo al reporte PDF.
+3. **Configuración**: El sistema utiliza el puerto 587 (STARTTLS) con autenticación mediante claves SMTP específicas de Brevo.
 
 ---
 
-## 3. Automatización de Correo (Brevo)
+## 3. Implementación en Firestore (NoSQL)
 
-La aplicación integra **SMTP de Brevo** para notificar a los clientes:
-1. **Firma Remota**: Se envía un enlace único al cliente para que firme desde su dispositivo.
-2. **Entrega de OT**: Al finalizar, se envía un resumen con el enlace al reporte PDF generado.
+Aunque el modelo lógico es relacional, Firestore optimiza la lectura:
+- **Desnormalización**: El campo `createdBy` es la clave oficial para la visibilidad del supervisor.
+- **Integridad**: Al finalizar una orden, se realiza una copia profunda de todos los metadatos desde `ordenes` hacia `historial`, preservando la autoría y los IDs originales.
