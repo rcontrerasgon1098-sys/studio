@@ -1,7 +1,7 @@
-
 'use server';
 /**
  * @fileOverview Flow to validate and submit a remote signature for a Work Order.
+ * Ensures ownership metadata (createdBy/supervisorId) is preserved in history.
  */
 
 import { ai } from '@/ai/genkit';
@@ -50,18 +50,17 @@ const submitRemoteSignatureFlow = ai.defineFlow(
 
       const orderData = orderSnap.data();
 
-      // 1. Validate Token
+      // 1. Validar Token y Expiración
       if (orderData.signatureToken !== input.token) {
-        return { success: false, error: 'El token de firma no es válido.' };
+        return { success: false, error: 'Token no válido.' };
       }
 
-      // 2. Check Expiry
       const expiry = new Date(orderData.tokenExpiry);
       if (expiry < new Date()) {
-        return { success: false, error: 'El enlace de firma ha expirado.' };
+        return { success: false, error: 'Enlace expirado.' };
       }
 
-      // 3. Prepare completed data
+      // 2. Preparar datos finales preservando metadatos de propiedad
       const completedData = {
         ...orderData,
         clientReceiverName: input.receiverName,
@@ -70,9 +69,12 @@ const submitRemoteSignatureFlow = ai.defineFlow(
         signatureDate: new Date().toISOString(),
         status: 'Completed',
         updatedAt: new Date().toISOString(),
+        // Refuerzo explícito de propiedad para el historial
+        createdBy: orderData.createdBy,
+        supervisorId: orderData.supervisorId || orderData.createdBy,
       };
 
-      // 4. Move to Historial
+      // 3. Mover a Historial
       const historyRef = doc(db, 'historial', input.orderId);
       await setDoc(historyRef, completedData);
       await deleteDoc(orderRef);

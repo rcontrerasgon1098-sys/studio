@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
@@ -79,13 +78,15 @@ export default function Dashboard() {
     }
   }, [user, isUserLoading, router]);
 
+  // Consulta blindada para Supervisor usando el UID del creador
   const ordersQuery = useMemoFirebase(() => {
     if (!db || !user?.uid || !userProfile) return null;
     const baseCollection = collection(db, "ordenes");
     if (userProfile.rol_t === 'supervisor') {
+      // Busca órdenes donde el usuario es el creador o supervisor responsable
       return query(baseCollection, where("createdBy", "==", user.uid));
     }
-    if (userProfile.rol_t === 'admin') {
+    if (userProfile.rol_t === 'admin' || userProfile.rol_t === 'Administrador') {
       return query(baseCollection, orderBy("startDate", "desc"));
     }
     return null;
@@ -98,7 +99,7 @@ export default function Dashboard() {
     if (userProfile.rol_t === 'supervisor') {
       return query(baseCollection, where("createdBy", "==", user.uid));
     }
-    if (userProfile.rol_t === 'admin') {
+    if (userProfile.rol_t === 'admin' || userProfile.rol_t === 'Administrador') {
       return query(baseCollection, orderBy("startDate", "desc"));
     }
     return null;
@@ -106,13 +107,13 @@ export default function Dashboard() {
   const { data: history, isLoading: isHistoryLoading } = useCollection(historyQuery);
 
   const clientsQuery = useMemoFirebase(() => {
-    if (!db || !userProfile || userProfile.rol_t !== 'admin') return null;
+    if (!db || !userProfile || (userProfile.rol_t !== 'admin' && userProfile.rol_t !== 'Administrador')) return null;
     return query(collection(db, "clients"), orderBy("nombreCliente", "asc"));
   }, [db, userProfile]);
   const { data: clients } = useCollection(clientsQuery);
 
   const personnelQuery = useMemoFirebase(() => {
-    if (!db || !userProfile || userProfile.rol_t !== 'admin') return null;
+    if (!db || !userProfile || (userProfile.rol_t !== 'admin' && userProfile.rol_t !== 'Administrador')) return null;
     return query(collection(db, "personnel"), orderBy("nombre_t", "asc"));
   }, [db, userProfile]);
   const { data: personnel } = useCollection(personnelQuery);
@@ -154,7 +155,7 @@ export default function Dashboard() {
     const allWorkOrders = [...orders, ...history];
     const countMap = new Map<string, number>();
     allWorkOrders.forEach(order => {
-      const creatorId = order.createdBy;
+      const creatorId = order.createdBy || order.supervisorId;
       if (creatorId) {
         countMap.set(creatorId, (countMap.get(creatorId) || 0) + 1);
       }
@@ -259,7 +260,7 @@ export default function Dashboard() {
         >
           <LayoutDashboard size={20} /> Inicio
         </Button>
-        {userProfile?.rol_t === 'admin' && <Button 
+        {(userProfile?.rol_t === 'admin' || userProfile?.rol_t === 'Administrador') && <Button 
           variant={activeTab === "stats" ? "secondary" : "ghost"} 
           className={cn("w-full justify-start gap-3 h-12 font-semibold", activeTab === "stats" ? "bg-white/10 text-white" : "text-white/80 hover:bg-white/10")}
           onClick={() => { setActiveTab("stats"); clearFilters(); }}
@@ -280,7 +281,7 @@ export default function Dashboard() {
         >
           <History size={20} /> Historial
         </Button>
-        {userProfile?.rol_t === 'admin' && <>
+        {(userProfile?.rol_t === 'admin' || userProfile?.rol_t === 'Administrador') && <>
           <Button 
             variant={activeTab === "clients" ? "secondary" : "ghost"} 
             className={cn("w-full justify-start gap-3 h-12 font-semibold", activeTab === "clients" ? "bg-white/10 text-white" : "text-white/80 hover:bg-white/10")}
@@ -335,18 +336,11 @@ export default function Dashboard() {
           <div>
             <h1 className="text-3xl font-black text-primary tracking-tight uppercase">
               {activeTab === "dashboard" ? (userProfile?.nombre_t ? `BIENVENIDO, ${userProfile.nombre_t}` : "Inicio") : 
-               activeTab === "stats" ? "Estadísticas y Análisis" :
-               activeTab === "orders" ? "Gestión de Órdenes" : 
+               activeTab === "stats" ? "Estadísticas Operativas" :
+               activeTab === "orders" ? "Órdenes Activas" : 
                activeTab === "history" ? "Historial de Trabajo" : 
-               activeTab === "clients" ? "Administración de Clientes" : "Administración de Personal"}
+               activeTab === "clients" ? "Clientes" : "Personal"}
             </h1>
-             <p className="text-muted-foreground mt-1">
-                {activeTab === "dashboard" ? "Resumen de actividad y acceso a sus órdenes creadas." :
-                 activeTab === "stats" ? "Visualización de datos y rendimiento de equipo." :
-                 activeTab === "orders" ? "Seguimiento de sus trabajos en curso." :
-                 activeTab === "history" ? "Archivo de sus órdenes de trabajo completadas." :
-                 activeTab === "clients" ? "Gestión de la cartera de clientes." : "Gestión de la plantilla de ICSA."}
-            </p>
           </div>
           <div className="flex-shrink-0">
             {activeTab === "dashboard" && (
@@ -356,14 +350,14 @@ export default function Dashboard() {
                 </Button>
               </Link>
             )}
-            {activeTab === "clients" && userProfile?.rol_t === 'admin' && (
+            {activeTab === "clients" && (userProfile?.rol_t === 'admin' || userProfile?.rol_t === 'Administrador') && (
                 <Link href="/clients/new">
                 <Button className="bg-accent text-primary font-black h-12 px-6 shadow-lg rounded-xl">
                     <Plus size={20} className="mr-2" /> Nuevo Cliente
                 </Button>
                 </Link>
             )}
-            {activeTab === "personnel" && userProfile?.rol_t === 'admin' && (
+            {activeTab === "personnel" && (userProfile?.rol_t === 'admin' || userProfile?.rol_t === 'Administrador') && (
                 <Link href="/technicians/new">
                 <Button className="bg-accent text-primary font-black h-12 px-6 shadow-lg rounded-xl">
                     <Plus size={20} className="mr-2" /> Nuevo Personal
@@ -375,7 +369,7 @@ export default function Dashboard() {
 
         {activeTab === "dashboard" && (
           <div className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <Card className="shadow-lg border-none bg-white rounded-2xl overflow-hidden group">
                 <CardContent className="p-6 flex items-center gap-6">
                   <div className="p-4 bg-primary/10 rounded-2xl group-hover:scale-110 transition-transform">
@@ -389,29 +383,41 @@ export default function Dashboard() {
                   </div>
                 </CardContent>
               </Card>
+              <Card className="shadow-lg border-none bg-white rounded-2xl overflow-hidden group">
+                <CardContent className="p-6 flex items-center gap-6">
+                  <div className="p-4 bg-accent/10 rounded-2xl group-hover:scale-110 transition-transform">
+                    <History className="h-8 w-8 text-accent" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-black text-muted-foreground uppercase tracking-widest">Historial Total</p>
+                    <h3 className="text-4xl font-black text-accent leading-none mt-1">
+                      {isHistoryLoading ? <Loader2 className="h-6 w-6 animate-spin" /> : (history?.length || 0)}
+                    </h3>
+                  </div>
+                </CardContent>
+              </Card>
             </div>
 
             <Card className="shadow-xl border-none bg-white rounded-2xl">
               <CardHeader className="border-b">
                 <CardTitle className="text-lg font-bold">Listado de Pendientes</CardTitle>
-                <CardDescription>Acceso rápido a sus trabajos en curso.</CardDescription>
+                <CardDescription>Visualización inmediata de sus órdenes creadas.</CardDescription>
               </CardHeader>
               <CardContent className="p-0">
-                <OrderTable orders={orders || []} isLoading={isOrdersLoading} type="ordenes" setDeleteConfirm={setDeleteConfirm} isAdmin={userProfile?.rol_t === 'admin'} />
+                <OrderTable orders={orders || []} isLoading={isOrdersLoading} type="ordenes" setDeleteConfirm={setDeleteConfirm} isAdmin={userProfile?.rol_t === 'admin' || userProfile?.rol_t === 'Administrador'} />
               </CardContent>
             </Card>
           </div>
         )}
 
-        {activeTab === "stats" && userProfile?.rol_t === 'admin' && (
+        {activeTab === "stats" && (userProfile?.rol_t === 'admin' || userProfile?.rol_t === 'Administrador') && (
           <div className="space-y-8">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <Card className="bg-white border-none shadow-md overflow-hidden rounded-2xl">
                 <CardHeader className="border-b bg-muted/5">
                   <CardTitle className="text-sm font-bold flex items-center gap-2">
-                    <PieChartIcon className="h-4 w-4 text-primary" /> Carga Global de Trabajo
+                    <PieChartIcon className="h-4 w-4 text-primary" /> Carga Global
                   </CardTitle>
-                  <CardDescription>Proporción entre órdenes activas y completadas.</CardDescription>
                 </CardHeader>
                 <CardContent className="p-6">
                   <div className="h-[300px] w-full">
@@ -441,32 +447,8 @@ export default function Dashboard() {
               <Card className="bg-white border-none shadow-md overflow-hidden rounded-2xl">
                 <CardHeader className="border-b bg-muted/5">
                   <CardTitle className="text-sm font-bold flex items-center gap-2">
-                    <BarChartIcon className="h-4 w-4 text-primary" /> Rendimiento Semanal
+                    <Trophy className="h-4 w-4 text-primary" /> Top Supervisores
                   </CardTitle>
-                  <CardDescription>Órdenes completadas por día en la última semana.</CardDescription>
-                </CardHeader>
-                <CardContent className="p-6">
-                  <div className="h-[300px] w-full">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={activityData}>
-                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--muted))" />
-                        <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 11, fontWeight: 'bold' }} />
-                        <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fontWeight: 'bold' }} />
-                        <RechartsTooltip cursor={{ fill: 'hsl(var(--muted)/0.3)' }} />
-                        <Bar dataKey="count" fill="hsl(var(--accent))" radius={[4, 4, 0, 0]} barSize={30} />
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* NUEVO GRÁFICO: SUPERVISORES CON MÁS OTs */}
-              <Card className="bg-white border-none shadow-md overflow-hidden rounded-2xl">
-                <CardHeader className="border-b bg-muted/5">
-                  <CardTitle className="text-sm font-bold flex items-center gap-2">
-                    <Trophy className="h-4 w-4 text-primary" /> Top 5 Supervisores
-                  </CardTitle>
-                  <CardDescription>Supervisores con mayor número de OTs gestionadas.</CardDescription>
                 </CardHeader>
                 <CardContent className="p-6">
                   <div className="h-[300px] w-full">
@@ -483,13 +465,11 @@ export default function Dashboard() {
                 </CardContent>
               </Card>
 
-              {/* NUEVO GRÁFICO: CLIENTES CON MÁS OTs */}
               <Card className="bg-white border-none shadow-md overflow-hidden rounded-2xl">
                 <CardHeader className="border-b bg-muted/5">
                   <CardTitle className="text-sm font-bold flex items-center gap-2">
-                    <TrendingUp className="h-4 w-4 text-primary" /> Ranking de Clientes
+                    <TrendingUp className="h-4 w-4 text-primary" /> Ranking Clientes
                   </CardTitle>
-                  <CardDescription>Empresas que han solicitado mayor volumen de servicios.</CardDescription>
                 </CardHeader>
                 <CardContent className="p-6">
                   <div className="h-[300px] w-full">
@@ -513,29 +493,17 @@ export default function Dashboard() {
           <Card className="shadow-xl border-none bg-white rounded-2xl">
              <CardHeader className="border-b space-y-4">
                <div className="flex items-center justify-between">
-                 <CardTitle className="text-lg font-bold">Mis Órdenes Activas</CardTitle>
-                 <Button variant="ghost" size="sm" onClick={clearFilters} className="text-[10px] font-bold uppercase"><FilterX className="mr-2 h-3 w-3" /> Limpiar</Button>
+                 <CardTitle className="text-lg font-bold">Órdenes en Curso</CardTitle>
                </div>
-               <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                  <div className="relative">
                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                   <Input placeholder="Buscar..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-10 h-10 bg-muted/20 border-none" />
+                   <Input placeholder="Buscar por folio o cliente..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-10 h-10 bg-muted/20 border-none" />
                  </div>
-                 <Popover>
-                    <PopoverTrigger asChild>
-                      <Button variant="outline" className={cn("h-10 justify-start text-left font-medium bg-muted/20 border-none", !dateFilter && "text-muted-foreground")}>
-                        <CalendarIcon className="mr-2 h-4 w-4" />
-                        {dateFilter ? format(dateFilter, "PPP", { locale: es }) : "Filtrar por fecha"}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="end">
-                      <Calendar mode="single" selected={dateFilter} onSelect={setDateFilter} initialFocus />
-                    </PopoverContent>
-                 </Popover>
                </div>
              </CardHeader>
              <CardContent className="p-0">
-               <OrderTable orders={filteredOrders} isLoading={isOrdersLoading} type="ordenes" setDeleteConfirm={setDeleteConfirm} isAdmin={userProfile?.rol_t === 'admin'} />
+               <OrderTable orders={filteredOrders} isLoading={isOrdersLoading} type="ordenes" setDeleteConfirm={setDeleteConfirm} isAdmin={userProfile?.rol_t === 'admin' || userProfile?.rol_t === 'Administrador'} />
              </CardContent>
           </Card>
         )}
@@ -544,29 +512,17 @@ export default function Dashboard() {
           <Card className="shadow-xl border-none bg-white rounded-2xl">
              <CardHeader className="border-b space-y-4">
                <div className="flex items-center justify-between">
-                 <CardTitle className="text-lg font-bold">Mi Historial</CardTitle>
-                 <Button variant="ghost" size="sm" onClick={clearFilters} className="text-[10px] font-bold uppercase"><FilterX className="mr-2 h-3 w-3" /> Limpiar</Button>
+                 <CardTitle className="text-lg font-bold">Archivo de Órdenes</CardTitle>
                </div>
                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                  <div className="relative">
                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                    <Input placeholder="Buscar en historial..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-10 h-10 bg-muted/20 border-none" />
                  </div>
-                 <Popover>
-                    <PopoverTrigger asChild>
-                      <Button variant="outline" className={cn("h-10 justify-start text-left font-medium bg-muted/20 border-none", !dateFilter && "text-muted-foreground")}>
-                        <CalendarIcon className="mr-2 h-4 w-4" />
-                        {dateFilter ? format(dateFilter, "PPP", { locale: es }) : "Fecha específica"}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="end">
-                      <Calendar mode="single" selected={dateFilter} onSelect={setDateFilter} initialFocus />
-                    </PopoverContent>
-                 </Popover>
                </div>
              </CardHeader>
              <CardContent className="p-0">
-               <OrderTable orders={filteredHistory} isLoading={isHistoryLoading} type="historial" setDeleteConfirm={setDeleteConfirm} isAdmin={userProfile?.rol_t === 'admin'}/>
+               <OrderTable orders={filteredHistory} isLoading={isHistoryLoading} type="historial" setDeleteConfirm={setDeleteConfirm} isAdmin={userProfile?.rol_t === 'admin' || userProfile?.rol_t === 'Administrador'}/>
              </CardContent>
           </Card>
         )}
@@ -576,7 +532,7 @@ export default function Dashboard() {
         <AlertDialogContent className="rounded-2xl">
           <AlertDialogHeader>
             <AlertDialogTitle className="text-primary font-black uppercase">Confirmar eliminación</AlertDialogTitle>
-            <AlertDialogDescription>¿Está seguro de que desea eliminar este registro permanentemente?</AlertDialogDescription>
+            <AlertDialogDescription>Esta acción no se puede deshacer.</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel className="font-bold">Cancelar</AlertDialogCancel>
@@ -590,7 +546,7 @@ export default function Dashboard() {
 
 function OrderTable({ orders, isLoading, type, setDeleteConfirm, isAdmin }: { orders: any[], isLoading: boolean, type: string, setDeleteConfirm: any, isAdmin: boolean }) {
   if (isLoading) return <div className="p-10 text-center font-bold text-muted-foreground uppercase text-xs animate-pulse">Recuperando registros...</div>;
-  if (orders.length === 0) return <div className="p-10 text-center font-bold text-muted-foreground uppercase text-xs">No hay datos para mostrar</div>;
+  if (orders.length === 0) return <div className="p-10 text-center font-bold text-muted-foreground uppercase text-xs">Sin registros que mostrar</div>;
 
   return (
     <Table>
@@ -611,7 +567,7 @@ function OrderTable({ orders, isLoading, type, setDeleteConfirm, isAdmin }: { or
             <TableCell className="text-xs">{order.startDate ? format(new Date(order.startDate), "dd/MM/yyyy") : "N/A"}</TableCell>
             <TableCell>
               <Badge className={cn("border-none text-[10px] px-2 py-0.5 uppercase font-bold", order.status === 'Completed' ? 'bg-accent/15 text-primary' : 'bg-primary/10 text-primary')}>
-                {order.status === 'Completed' ? 'Completado' : 'Pendiente'}
+                {order.status === 'Completed' ? 'Completado' : order.status === 'Pending Signature' ? 'Esperando Firma' : 'En Curso'}
               </Badge>
             </TableCell>
             <TableCell className="text-right">

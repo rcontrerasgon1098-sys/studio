@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, useRef } from "react";
@@ -16,7 +15,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useUser, useFirestore, useCollection, useMemoFirebase, useUserProfile } from "@/firebase";
 import { collection, doc, query, orderBy, where } from "firebase/firestore";
-import { setDocumentNonBlocking, updateDocumentNonBlocking } from "@/firebase/non-blocking-updates";
+import { setDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { validateRut } from "@/lib/rut-utils";
@@ -149,10 +148,6 @@ export default function NewWorkOrder() {
       address: client.direccionCliente || ""
     });
     setOpenClientSearch(false);
-    toast({
-      title: "Cliente Seleccionado",
-      description: `Se han cargado los datos de ${client.nombreCliente}`
-    });
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -208,7 +203,7 @@ export default function NewWorkOrder() {
 
   const handleSendRemoteSignature = async () => {
     if (!user || !db) {
-      toast({ variant: "destructive", title: "Error", description: "No se pudo identificar al usuario autenticado." });
+      toast({ variant: "destructive", title: "Error de Sesión", description: "No hay un usuario autenticado para realizar esta acción." });
       return;
     }
     
@@ -232,6 +227,7 @@ export default function NewWorkOrder() {
         folio: currentFolio,
         status: "Pending Signature",
         createdBy: user.uid,
+        supervisorId: user.uid, // Blindaje de identidad
         creatorEmail: user.email || "",
         startDate: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
@@ -263,14 +259,14 @@ export default function NewWorkOrder() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user || !db) {
-      toast({ variant: "destructive", title: "Error", description: "No hay una sesión activa de usuario." });
+      toast({ variant: "destructive", title: "Error de Sesión", description: "Sesión expirada. Por favor inicie sesión de nuevo." });
       return;
     }
     
     setLoading(true);
 
     if (!formData.clientName) {
-      toast({ variant: "destructive", title: "Cliente Requerido", description: "Por favor ingrese o seleccione un cliente." });
+      toast({ variant: "destructive", title: "Datos Faltantes", description: "Debe seleccionar o ingresar un cliente." });
       setLoading(false);
       return;
     }
@@ -282,12 +278,14 @@ export default function NewWorkOrder() {
     const finalStatus = isValidationComplete ? "Completed" : "Pending";
     const orderId = doc(collection(db, "ordenes")).id;
     
+    // Preparar el objeto con los campos de propiedad obligatorios
     const workOrderData = {
       ...formData,
       id: orderId,
       folio: folio || generateFolio(),
       status: finalStatus,
       createdBy: user.uid,
+      supervisorId: user.uid, // Unificación de propiedad
       creatorEmail: user.email || "",
       startDate: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -307,19 +305,19 @@ export default function NewWorkOrder() {
           orderDate: workOrderData.startDate,
           summary: formData.description,
           pdfLink: `${window.location.origin}/work-orders/${orderId}`
-        }).catch(err => console.error("Email flow error:", err));
+        }).catch(err => console.error("Error enviando email:", err));
       }
 
       toast({ 
         title: finalStatus === "Completed" ? "Orden Finalizada" : "Orden Guardada", 
         description: finalStatus === "Completed" 
-          ? "La orden se ha movido al historial y se enviará el correo." 
-          : "La orden se guardó como pendiente."
+          ? "La orden se ha movido al historial con éxito." 
+          : "Los avances han sido registrados."
       });
       router.push("/dashboard");
     } catch (error) {
       setLoading(false);
-      toast({ variant: "destructive", title: "Error", description: "No se pudo guardar la orden." });
+      toast({ variant: "destructive", title: "Error", description: "No se pudo guardar la información." });
     }
   };
 
@@ -355,6 +353,7 @@ export default function NewWorkOrder() {
 
       <main className="container mx-auto px-4 mt-6 max-w-3xl space-y-6">
         <form onSubmit={handleSubmit} className="space-y-6">
+          {/* CLIENTE */}
           <Card className="shadow-md border-none bg-white overflow-hidden">
             <CardHeader className="bg-primary/5 p-4 border-b">
               <CardTitle className="text-primary text-xl flex items-center gap-2 uppercase font-black tracking-tighter">
@@ -449,6 +448,7 @@ export default function NewWorkOrder() {
             </CardContent>
           </Card>
 
+          {/* EQUIPO */}
           <Card className="shadow-md border-none bg-white">
             <CardHeader className="p-4 md:p-6 border-b bg-muted/5">
               <CardTitle className="text-lg flex items-center gap-2 uppercase font-bold tracking-tight">
@@ -497,145 +497,7 @@ export default function NewWorkOrder() {
             </CardContent>
           </Card>
 
-          <Card className="shadow-md border-none bg-white overflow-hidden">
-            <CardHeader className="p-4 md:p-6 border-b bg-primary/5">
-              <CardTitle className="text-lg uppercase font-black text-primary tracking-tighter">Detalles Técnicos y Red</CardTitle>
-            </CardHeader>
-            <CardContent className="p-4 md:p-6 space-y-8">
-              <div className="space-y-4 pt-2">
-                <Label className="font-black uppercase text-xs tracking-[0.2em] text-primary flex items-center gap-2">
-                  <Building2 className="h-4 w-4" /> Ubicación Técnica
-                </Label>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label className="font-bold uppercase text-xs tracking-widest text-muted-foreground">Edificio</Label>
-                    <Input 
-                      placeholder="Ej: Torre A" 
-                      value={formData.building}
-                      onChange={e => setFormData({...formData, building: e.target.value})}
-                      className="h-12"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="font-bold uppercase text-xs tracking-widest text-muted-foreground">Piso</Label>
-                    <Input 
-                      placeholder="Ej: 5" 
-                      value={formData.floor}
-                      onChange={e => setFormData({...formData, floor: e.target.value})}
-                      className="h-12"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div className="space-y-4">
-                <Label className="font-black uppercase text-xs tracking-[0.2em] text-primary flex items-center gap-2">
-                  <Hash className="h-4 w-4" /> Configuración de Señal
-                </Label>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  <div className="md:col-span-2 space-y-2">
-                    <Label className="font-bold uppercase text-xs tracking-widest text-muted-foreground">Tipo de Señal</Label>
-                    <Select value={formData.signalType} onValueChange={v => setFormData({...formData, signalType: v})}>
-                      <SelectTrigger className="h-12">
-                        <SelectValue placeholder="Seleccionar señal" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Simple">Simple</SelectItem>
-                        <SelectItem value="Doble">Doble</SelectItem>
-                        <SelectItem value="Triple">Triple</SelectItem>
-                        <SelectItem value="Cuádruple">Cuádruple</SelectItem>
-                        <SelectItem value="Fibra Óptica">Fibra Óptica</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="font-bold uppercase text-xs tracking-widest text-muted-foreground">Cantidad</Label>
-                    <Input 
-                      type="number"
-                      min="1"
-                      value={formData.signalCount}
-                      onChange={e => setFormData({...formData, signalCount: parseInt(e.target.value) || 0})}
-                      className="h-12"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div className="space-y-6">
-                <Label className="font-black uppercase text-xs tracking-[0.2em] text-primary flex items-center gap-2">
-                  <CheckSquare className="h-4 w-4" /> Checklist Técnico
-                </Label>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="flex flex-col gap-4 p-5 bg-muted/30 rounded-2xl border border-dashed">
-                    <div className="flex items-center justify-between">
-                      <Label className="font-bold text-sm">¿Certificación Realizada?</Label>
-                      <Switch checked={formData.isCert} onCheckedChange={(v) => setFormData({...formData, isCert: v})} />
-                    </div>
-                    {formData.isCert && (
-                      <div className="space-y-2 animate-in fade-in">
-                        <Label className="text-[10px] font-bold uppercase text-muted-foreground">Puntos Certificados</Label>
-                        <Input type="number" value={formData.certifiedPointsCount} onChange={e => setFormData({...formData, certifiedPointsCount: parseInt(e.target.value) || 0})} className="h-10 bg-white" />
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="flex flex-col gap-4 p-5 bg-muted/30 rounded-2xl border border-dashed">
-                    <div className="flex items-center justify-between">
-                      <Label className="font-bold text-sm">¿Rotulación Realizada?</Label>
-                      <Switch checked={formData.isLabeled} onCheckedChange={(v) => setFormData({...formData, isLabeled: v})} />
-                    </div>
-                    {formData.isLabeled && (
-                      <div className="space-y-2 animate-in fade-in">
-                        <Label className="text-[10px] font-bold uppercase text-muted-foreground">Detalle de Rótulos</Label>
-                        <Input value={formData.labelDetails} onChange={e => setFormData({...formData, labelDetails: e.target.value})} className="h-10 bg-white" />
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="flex items-center justify-between p-5 bg-muted/30 rounded-2xl border border-dashed">
-                    <Label className="font-bold text-sm">¿Canalización?</Label>
-                    <Switch checked={formData.isCanalized} onCheckedChange={(v) => setFormData({...formData, isCanalized: v})} />
-                  </div>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label className="font-bold uppercase text-xs tracking-widest text-muted-foreground">Descripción de Trabajos</Label>
-                <Textarea value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} className="min-h-[140px] rounded-xl" />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="shadow-md border-none bg-white">
-            <CardHeader className="p-4 border-b bg-muted/5">
-              <CardTitle className="text-lg flex items-center gap-2 uppercase font-bold tracking-tight">
-                <ImageIcon className="h-5 w-5 text-primary" /> Multimedia
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-6 text-center">
-              <input type="file" ref={fileInputRef} onChange={handleFileChange} accept="image/*" capture="environment" className="hidden" />
-              {!formData.sketchImageUrl ? (
-                <div onClick={() => fileInputRef.current?.click()} className="border-4 border-dashed rounded-3xl p-12 flex flex-col items-center justify-center text-muted-foreground bg-muted/10 hover:bg-primary/5 transition-all cursor-pointer">
-                  <Camera className="h-16 w-16 mb-4 opacity-40" />
-                  <p className="text-sm font-black uppercase tracking-widest">Capturar Evidencia</p>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  <div className="relative aspect-video rounded-3xl overflow-hidden bg-muted group border shadow-xl">
-                    <Image src={formData.sketchImageUrl} alt="Preview" fill className="object-contain" />
-                    <Button type="button" variant="destructive" size="icon" className="absolute top-4 right-4 h-12 w-12 rounded-full shadow-2xl" onClick={removeImage}>
-                      <X className="h-6 w-6" />
-                    </Button>
-                  </div>
-                  <Button type="button" variant="outline" className="w-full h-14 font-black uppercase tracking-widest rounded-2xl" onClick={() => fileInputRef.current?.click()}>
-                    Reemplazar Imagen
-                  </Button>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
+          {/* TÉCNICO Y FIRMA */}
           <div className="grid grid-cols-1 gap-6 pb-6">
             <Card className="shadow-md border-none bg-white overflow-hidden">
               <CardHeader className="border-b bg-muted/20 p-4">
@@ -669,9 +531,6 @@ export default function NewWorkOrder() {
                         <X className="h-4 w-4 mr-1" /> Cambiar
                       </Button>
                     </div>
-                    <p className="text-[10px] text-center text-muted-foreground italic">
-                      Firma cargada automáticamente. Presione "Cambiar" para firmar nuevamente.
-                    </p>
                   </div>
                 ) : (
                   <SignaturePad label="Firma del Técnico" onSave={handleTechSignatureConfirm} />
@@ -694,7 +553,7 @@ export default function NewWorkOrder() {
                     <Input value={formData.clientReceiverRut} onChange={e => setFormData({...formData, clientReceiverRut: e.target.value})} />
                   </div>
                   <div className="md:col-span-2 space-y-2">
-                    <Label className="text-[10px] font-bold uppercase text-muted-foreground">Email Receptor (para envío de PDF)</Label>
+                    <Label className="text-[10px] font-bold uppercase text-muted-foreground">Email Receptor</Label>
                     <Input 
                       type="email" 
                       placeholder="ejemplo@gmail.com" 
@@ -716,7 +575,7 @@ export default function NewWorkOrder() {
 
           <div className="fixed bottom-0 left-0 right-0 p-4 bg-white/95 backdrop-blur-xl border-t md:relative md:bg-transparent md:border-none md:p-0 z-50">
             <Button type="submit" size="lg" className="bg-primary hover:bg-primary/90 w-full h-16 text-xl font-black gap-3 shadow-xl active:scale-95 transition-all rounded-2xl uppercase tracking-tighter" disabled={loading}>
-              <CheckCircle2 size={28} /> Finalizar y Cerrar OT
+              <CheckCircle2 size={28} /> Finalizar y Guardar OT
             </Button>
           </div>
         </form>
