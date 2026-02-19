@@ -16,7 +16,7 @@ import {
   Eye, Download, Menu, Users, UserRound, 
   Pencil, Trash2, PieChart as PieChartIcon, BarChart as BarChartIcon,
   Calendar as CalendarIcon, FilterX, Loader2, History,
-  Activity, TrendingUp, Trophy
+  Activity, TrendingUp, Trophy, Building, ShieldCheck
 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
@@ -78,12 +78,11 @@ export default function Dashboard() {
     }
   }, [user, isUserLoading, router]);
 
-  // Consulta blindada para Supervisor usando el UID del creador
+  // Consultas
   const ordersQuery = useMemoFirebase(() => {
     if (!db || !user?.uid || !userProfile) return null;
     const baseCollection = collection(db, "ordenes");
     if (userProfile.rol_t === 'supervisor') {
-      // Busca órdenes donde el usuario es el creador o supervisor responsable
       return query(baseCollection, where("createdBy", "==", user.uid));
     }
     if (userProfile.rol_t === 'admin' || userProfile.rol_t === 'Administrador') {
@@ -110,14 +109,15 @@ export default function Dashboard() {
     if (!db || !userProfile || (userProfile.rol_t !== 'admin' && userProfile.rol_t !== 'Administrador')) return null;
     return query(collection(db, "clients"), orderBy("nombreCliente", "asc"));
   }, [db, userProfile]);
-  const { data: clients } = useCollection(clientsQuery);
+  const { data: clients, isLoading: isClientsLoading } = useCollection(clientsQuery);
 
   const personnelQuery = useMemoFirebase(() => {
     if (!db || !userProfile || (userProfile.rol_t !== 'admin' && userProfile.rol_t !== 'Administrador')) return null;
     return query(collection(db, "personnel"), orderBy("nombre_t", "asc"));
   }, [db, userProfile]);
-  const { data: personnel } = useCollection(personnelQuery);
+  const { data: personnel, isLoading: isPersonnelLoading } = useCollection(personnelQuery);
 
+  // Stats
   const statsData = useMemo(() => {
     const pendingCount = orders?.filter(o => o.status === "Pending" || o.status === "Pending Signature" || o.status === "Active").length || 0;
     const completedCount = history?.length || 0;
@@ -127,35 +127,12 @@ export default function Dashboard() {
     ];
   }, [orders, history]);
 
-  const activityData = useMemo(() => {
-    if (!history) return [];
-    const activityMap = new Map<string, number>();
-    const sevenDaysAgo = startOfDay(subDays(new Date(), 6));
-    history.forEach(order => {
-      if (order.startDate) {
-        const orderDate = startOfDay(new Date(order.startDate));
-        if (orderDate >= sevenDaysAgo) {
-          const dayKey = format(orderDate, 'yyyy-MM-dd');
-          activityMap.set(dayKey, (activityMap.get(dayKey) || 0) + 1);
-        }
-      }
-    });
-    return Array.from({ length: 7 }, (_, i) => {
-      const d = subDays(startOfDay(new Date()), 6 - i);
-      const dayKey = format(d, 'yyyy-MM-dd');
-      return {
-        date: format(d, "dd/MM", { locale: es }),
-        count: activityMap.get(dayKey) || 0,
-      };
-    });
-  }, [history]);
-
   const supervisorPerformanceData = useMemo(() => {
     if (!orders || !history || !personnel) return [];
     const allWorkOrders = [...orders, ...history];
     const countMap = new Map<string, number>();
     allWorkOrders.forEach(order => {
-      const creatorId = order.createdBy || order.supervisorId;
+      const creatorId = order.createdBy;
       if (creatorId) {
         countMap.set(creatorId, (countMap.get(creatorId) || 0) + 1);
       }
@@ -188,6 +165,7 @@ export default function Dashboard() {
       .slice(0, 5);
   }, [orders, history]);
   
+  // Filtros
   const filteredOrders = useMemo(() => {
     if (!orders) return [];
     return orders.filter(o => {
@@ -218,6 +196,26 @@ export default function Dashboard() {
       return matchesSearch && matchesDate;
     });
   }, [history, searchTerm, dateFilter]);
+
+  const filteredClients = useMemo(() => {
+    if (!clients) return [];
+    return clients.filter(c => {
+      const name = c.nombreCliente?.toLowerCase() || "";
+      const rut = c.rutCliente?.toLowerCase() || "";
+      const term = searchTerm.toLowerCase();
+      return name.includes(term) || rut.includes(term);
+    });
+  }, [clients, searchTerm]);
+
+  const filteredPersonnel = useMemo(() => {
+    if (!personnel) return [];
+    return personnel.filter(p => {
+      const name = p.nombre_t?.toLowerCase() || "";
+      const rut = p.rut_t?.toLowerCase() || "";
+      const term = searchTerm.toLowerCase();
+      return name.includes(term) || rut.includes(term);
+    });
+  }, [personnel, searchTerm]);
 
   const handleLogout = async () => {
     if (!auth) return;
@@ -339,7 +337,7 @@ export default function Dashboard() {
                activeTab === "stats" ? "Estadísticas Operativas" :
                activeTab === "orders" ? "Órdenes Activas" : 
                activeTab === "history" ? "Historial de Trabajo" : 
-               activeTab === "clients" ? "Clientes" : "Personal"}
+               activeTab === "clients" ? "Listado de Clientes" : "Gestión de Personal"}
             </h1>
           </div>
           <div className="flex-shrink-0">
@@ -495,11 +493,9 @@ export default function Dashboard() {
                <div className="flex items-center justify-between">
                  <CardTitle className="text-lg font-bold">Órdenes en Curso</CardTitle>
                </div>
-               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                 <div className="relative">
-                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                   <Input placeholder="Buscar por folio o cliente..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-10 h-10 bg-muted/20 border-none" />
-                 </div>
+               <div className="relative">
+                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                 <Input placeholder="Buscar por folio o cliente..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-10 h-10 bg-muted/20 border-none" />
                </div>
              </CardHeader>
              <CardContent className="p-0">
@@ -514,15 +510,47 @@ export default function Dashboard() {
                <div className="flex items-center justify-between">
                  <CardTitle className="text-lg font-bold">Archivo de Órdenes</CardTitle>
                </div>
-               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                 <div className="relative">
-                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                   <Input placeholder="Buscar en historial..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-10 h-10 bg-muted/20 border-none" />
-                 </div>
+               <div className="relative">
+                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                 <Input placeholder="Buscar en historial..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-10 h-10 bg-muted/20 border-none" />
                </div>
              </CardHeader>
              <CardContent className="p-0">
                <OrderTable orders={filteredHistory} isLoading={isHistoryLoading} type="historial" setDeleteConfirm={setDeleteConfirm} isAdmin={userProfile?.rol_t === 'admin' || userProfile?.rol_t === 'Administrador'}/>
+             </CardContent>
+          </Card>
+        )}
+
+        {activeTab === "clients" && (
+          <Card className="shadow-xl border-none bg-white rounded-2xl">
+             <CardHeader className="border-b space-y-4">
+               <div className="flex items-center justify-between">
+                 <CardTitle className="text-lg font-bold">Clientes Registrados</CardTitle>
+               </div>
+               <div className="relative">
+                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                 <Input placeholder="Buscar por nombre o RUT..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-10 h-10 bg-muted/20 border-none" />
+               </div>
+             </CardHeader>
+             <CardContent className="p-0">
+               <ClientTable clients={filteredClients} isLoading={isClientsLoading} setDeleteConfirm={setDeleteConfirm} />
+             </CardContent>
+          </Card>
+        )}
+
+        {activeTab === "personnel" && (
+          <Card className="shadow-xl border-none bg-white rounded-2xl">
+             <CardHeader className="border-b space-y-4">
+               <div className="flex items-center justify-between">
+                 <CardTitle className="text-lg font-bold">Personal de la Empresa</CardTitle>
+               </div>
+               <div className="relative">
+                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                 <Input placeholder="Buscar por nombre o RUT..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-10 h-10 bg-muted/20 border-none" />
+               </div>
+             </CardHeader>
+             <CardContent className="p-0">
+               <PersonnelTable personnel={filteredPersonnel} isLoading={isPersonnelLoading} setDeleteConfirm={setDeleteConfirm} />
              </CardContent>
           </Card>
         )}
@@ -532,7 +560,7 @@ export default function Dashboard() {
         <AlertDialogContent className="rounded-2xl">
           <AlertDialogHeader>
             <AlertDialogTitle className="text-primary font-black uppercase">Confirmar eliminación</AlertDialogTitle>
-            <AlertDialogDescription>Esta acción no se puede deshacer.</AlertDialogDescription>
+            <AlertDialogDescription>Esta acción no se puede deshacer y borrará el registro permanentemente.</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel className="font-bold">Cancelar</AlertDialogCancel>
@@ -583,6 +611,92 @@ function OrderTable({ orders, isLoading, type, setDeleteConfirm, isAdmin }: { or
                 )}
                 <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => generateWorkOrderPDF(order)} disabled={order.status === 'Pending'}><Download className="h-4 w-4" /></Button>
                 {isAdmin && <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => setDeleteConfirm({ id: order.id, type })}><Trash2 className="h-4 w-4" /></Button>}
+              </div>
+            </TableCell>
+          </TableRow>
+        ))}
+      </TableBody>
+    </Table>
+  );
+}
+
+function ClientTable({ clients, isLoading, setDeleteConfirm }: { clients: any[], isLoading: boolean, setDeleteConfirm: any }) {
+  if (isLoading) return <div className="p-10 text-center font-bold text-muted-foreground animate-pulse">Cargando Clientes...</div>;
+  if (clients.length === 0) return <div className="p-10 text-center text-muted-foreground">No se encontraron clientes.</div>;
+
+  return (
+    <Table>
+      <TableHeader>
+        <TableRow className="bg-muted/40">
+          <TableHead className="font-bold">Nombre</TableHead>
+          <TableHead className="font-bold">RUT</TableHead>
+          <TableHead className="font-bold">Contacto</TableHead>
+          <TableHead className="font-bold">Estado</TableHead>
+          <TableHead className="text-right font-bold">Acciones</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {clients.map((client) => (
+          <TableRow key={client.id} className="hover:bg-muted/10">
+            <TableCell className="font-bold text-primary flex items-center gap-2">
+              <Building className="h-4 w-4 opacity-40" /> {client.nombreCliente}
+            </TableCell>
+            <TableCell className="text-xs font-medium">{client.rutCliente}</TableCell>
+            <TableCell className="text-xs text-muted-foreground">{client.emailClientes || "S/N"}</TableCell>
+            <TableCell>
+              <Badge variant={client.estadoCliente === "Activo" ? "default" : "secondary"} className="text-[10px] px-2 py-0">
+                {client.estadoCliente}
+              </Badge>
+            </TableCell>
+            <TableCell className="text-right">
+              <div className="flex justify-end gap-1">
+                <Link href={`/clients/${client.id}/edit`}>
+                  <Button variant="ghost" size="icon" className="h-8 w-8"><Pencil className="h-4 w-4" /></Button>
+                </Link>
+                <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => setDeleteConfirm({ id: client.id, type: "clients" })}><Trash2 className="h-4 w-4" /></Button>
+              </div>
+            </TableCell>
+          </TableRow>
+        ))}
+      </TableBody>
+    </Table>
+  );
+}
+
+function PersonnelTable({ personnel, isLoading, setDeleteConfirm }: { personnel: any[], isLoading: boolean, setDeleteConfirm: any }) {
+  if (isLoading) return <div className="p-10 text-center font-bold text-muted-foreground animate-pulse">Cargando Personal...</div>;
+  if (personnel.length === 0) return <div className="p-10 text-center text-muted-foreground">No se encontró personal registrado.</div>;
+
+  return (
+    <Table>
+      <TableHeader>
+        <TableRow className="bg-muted/40">
+          <TableHead className="font-bold">Nombre</TableHead>
+          <TableHead className="font-bold">RUT</TableHead>
+          <TableHead className="font-bold">Rol</TableHead>
+          <TableHead className="font-bold">Email</TableHead>
+          <TableHead className="text-right font-bold">Acciones</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {personnel.map((person) => (
+          <TableRow key={person.id} className="hover:bg-muted/10">
+            <TableCell className="font-bold text-primary flex items-center gap-2">
+              <UserRound className="h-4 w-4 opacity-40" /> {person.nombre_t}
+            </TableCell>
+            <TableCell className="text-xs font-medium">{person.rut_t}</TableCell>
+            <TableCell>
+              <Badge variant="outline" className="text-[10px] px-2 py-0 uppercase border-primary/30 text-primary">
+                {person.rol_t}
+              </Badge>
+            </TableCell>
+            <TableCell className="text-xs text-muted-foreground">{person.email_t}</TableCell>
+            <TableCell className="text-right">
+              <div className="flex justify-end gap-1">
+                <Link href={`/technicians/${person.id}/edit`}>
+                  <Button variant="ghost" size="icon" className="h-8 w-8"><Pencil className="h-4 w-4" /></Button>
+                </Link>
+                <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => setDeleteConfirm({ id: person.id, type: "personnel" })}><Trash2 className="h-4 w-4" /></Button>
               </div>
             </TableCell>
           </TableRow>
