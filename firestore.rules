@@ -19,23 +19,23 @@ service cloud.firestore {
 
     match /historial/{docId} {
       allow read: if isAdmin()
-        || (isLoggedIn() && resource.data.supervisorId == request.auth.uid);
+        || (isLoggedIn() && resource.data.createdBy == request.auth.uid);
 
       allow write: if isAdmin() || isLoggedIn();
     }
 
     match /ordenes/{docId} {
-      // Permite lectura a Admins, al Supervisor dueño de la OT mediante supervisorId, o acceso público si está en espera de firma
+      // Permite lectura a Admins, al creador de la OT, o acceso público si está en espera de firma
       allow read: if isAdmin()
-        || (isLoggedIn() && resource.data.supervisorId == request.auth.uid)
+        || (isLoggedIn() && resource.data.createdBy == request.auth.uid)
         || (resource.data.status == "Pending Signature");
 
       // Permite creación a cualquier usuario autenticado
       allow create: if isLoggedIn(); 
 
-      // Permite actualización a Admins o al Supervisor dueño mediante supervisorId
+      // Permite actualización a Admins o al creador original
       allow update: if isAdmin()
-        || (isLoggedIn() && resource.data.supervisorId == request.auth.uid);
+        || (isLoggedIn() && resource.data.createdBy == request.auth.uid);
 
       allow delete: if isAdmin();
     }

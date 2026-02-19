@@ -35,10 +35,6 @@
           "type": "string",
           "description": "UID of the supervisor who created the work order."
         },
-        "supervisorId": {
-          "type": "string",
-          "description": "Explicit UID of the supervisor for querying purposes."
-        },
         "creatorEmail": {
           "type": "string",
           "description": "Email of the creator.",
@@ -90,7 +86,6 @@
         "folio",
         "clientName",
         "createdBy",
-        "supervisorId",
         "status"
       ]
     },

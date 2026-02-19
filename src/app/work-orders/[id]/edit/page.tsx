@@ -95,7 +95,6 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
     status: "Pending",
     team: [] as string[],
     createdBy: "",
-    supervisorId: "",
   });
 
   useEffect(() => {
@@ -134,7 +133,6 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
         status: order.status || "Pending",
         team: order.team || [],
         createdBy: order.createdBy || "",
-        supervisorId: order.supervisorId || "",
       });
       setIsInitialized(true);
     }
@@ -243,11 +241,9 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
 
     const finalStatus = isValidationComplete ? "Completed" : "Pending";
 
-    // Mantenemos los IDs de propiedad originales si existen, si no usamos los actuales.
     const updateData = {
       ...formData,
       createdBy: formData.createdBy || user.uid,
-      supervisorId: formData.supervisorId || user.uid,
       status: finalStatus,
       updatedAt: new Date().toISOString(),
       updatedBy: user.email || ""
@@ -509,7 +505,7 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
             </CardContent>
           </Card>
 
-          <Card className="shadow-md border-none bg-white">
+          <Card className="shadow-md border-none bg-white overflow-hidden">
             <CardHeader className="p-4 border-b bg-muted/5">
               <CardTitle className="text-lg flex items-center gap-2 uppercase font-bold tracking-tight">
                 <ImageIcon className="h-5 w-5 text-primary" /> Multimedia

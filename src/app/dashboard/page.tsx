@@ -8,17 +8,16 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { format, startOfDay, isSameDay, subDays } from "date-fns";
 import { es } from "date-fns/locale";
 import { 
   Plus, FileText, Search, LogOut, LayoutDashboard, 
-  Eye, Download, Menu, TrendingUp, Users, UserRound, Shield,
+  Eye, Download, Menu, Users, UserRound, 
   Pencil, Trash2, PieChart as PieChartIcon, BarChart as BarChartIcon,
-  Briefcase, Clock, Calendar as CalendarIcon, FilterX, Loader2, RefreshCw, History,
-  Activity, BarChartBig
+  Calendar as CalendarIcon, FilterX, Loader2, History,
+  Activity
 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
@@ -79,7 +78,7 @@ export default function Dashboard() {
     }
   }, [user, isUserLoading, router]);
 
-  // Query for active orders - Unificado mediante supervisorId
+  // Query for active orders - Filtrado por createdBy para supervisores
   const ordersQuery = useMemoFirebase(() => {
     if (!db || !user?.uid || !userProfile) return null;
     const baseCollection = collection(db, "ordenes");
@@ -87,7 +86,7 @@ export default function Dashboard() {
     if (userProfile.rol_t === 'supervisor') {
       return query(
         baseCollection, 
-        where("supervisorId", "==", user.uid)
+        where("createdBy", "==", user.uid)
       );
     }
     
@@ -99,7 +98,7 @@ export default function Dashboard() {
   }, [db, user?.uid, userProfile]);
   const { data: orders, isLoading: isOrdersLoading } = useCollection(ordersQuery);
 
-  // Query for historical orders - Unificado mediante supervisorId
+  // Query for historical orders - Filtrado por createdBy para supervisores
   const historyQuery = useMemoFirebase(() => {
     if (!db || !user?.uid || !userProfile) return null;
     const baseCollection = collection(db, "historial");
@@ -107,7 +106,7 @@ export default function Dashboard() {
     if (userProfile.rol_t === 'supervisor') {
       return query(
         baseCollection, 
-        where("supervisorId", "==", user.uid)
+        where("createdBy", "==", user.uid)
       );
     }
     
