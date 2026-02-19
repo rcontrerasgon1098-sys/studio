@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Input } from "@/components/ui/input";
 import { 
   Plus, FileText, Search, LogOut, LayoutDashboard, 
@@ -209,8 +209,6 @@ export default function Dashboard() {
   const handleDelete = () => {
     if (!deleteConfirm || !db) return;
 
-    // Si es personal, implementamos DESACTIVACIÓN en lugar de eliminación física
-    // para permitir reingresos con el mismo correo.
     if (deleteConfirm.type === 'personnel') {
       const docRef = doc(db, 'personnel', deleteConfirm.id);
       updateDocumentNonBlocking(docRef, { 
@@ -219,15 +217,14 @@ export default function Dashboard() {
       });
       toast({ 
         title: "Personal Desactivado", 
-        description: "El acceso ha sido revocado. El perfil permanece en el sistema para posibles reingresos." 
+        description: "El acceso ha sido revocado satisfactoriamente." 
       });
     } else {
-      // Para clientes y órdenes, mantenemos eliminación definitiva
       const docRef = doc(db, deleteConfirm.type, deleteConfirm.id);
       deleteDocumentNonBlocking(docRef);
       toast({ 
         title: "Registro eliminado", 
-        description: "El elemento ha sido removido permanentemente del sistema." 
+        description: "El elemento ha sido removido de forma definitiva." 
       });
     }
     setDeleteConfirm(null);
@@ -300,10 +297,9 @@ export default function Dashboard() {
     </div>
   );
 
-  const isLoading = isOrdersLoading || isHistoryLoading || !mounted || isProfileLoading;
-  if (isUserLoading || !mounted || isProfileLoading) return <div className="min-h-screen flex items-center justify-center text-primary font-black animate-pulse bg-background">CARGANDO...</div>;
-
   const isAdmin = userProfile?.rol_t === 'admin' || userProfile?.rol_t === 'Administrador';
+
+  if (isUserLoading || !mounted || isProfileLoading) return <div className="min-h-screen flex items-center justify-center text-primary font-black animate-pulse bg-background">CARGANDO...</div>;
 
   return (
     <div className="min-h-screen bg-background flex flex-col md:flex-row">
@@ -330,15 +326,18 @@ export default function Dashboard() {
       <main className="flex-1 p-4 md:p-10 overflow-y-auto">
         <header className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
           <div>
-            <h1 className="text-3xl font-black text-primary tracking-tight uppercase">
+            <h1 className="text-3xl font-black text-primary tracking-tight uppercase leading-none">
               {activeTab === "dashboard" ? (userProfile?.nombre_t ? `BIENVENIDO, ${userProfile.nombre_t}` : "Inicio") : 
                activeTab === "stats" ? "Estadísticas Operativas" :
                activeTab === "orders" ? "Órdenes Activas" : 
                activeTab === "history" ? "Historial de Trabajo" : 
                activeTab === "clients" ? "Listado de Clientes" : "Gestión de Personal"}
             </h1>
+            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mt-2">
+               Sistema de gestión de órdenes de trabajo ICSA v2.0
+            </p>
           </div>
-          <div className="flex-shrink-0">
+          <div className="flex-shrink-0 flex gap-2">
             {activeTab === "dashboard" && (
               <Link href="/work-orders/new">
                 <Button className="bg-accent text-primary font-black h-12 px-6 shadow-lg rounded-xl">
@@ -371,7 +370,7 @@ export default function Dashboard() {
                   <Activity className="h-8 w-8 text-primary" />
                 </div>
                 <div>
-                  <p className="text-xs font-black text-muted-foreground uppercase tracking-widest">Órdenes Activas</p>
+                  <p className="text-xs font-black text-muted-foreground uppercase tracking-widest">Carga de Trabajo Actual</p>
                   <h3 className="text-4xl font-black text-primary leading-none mt-1">
                     {isOrdersLoading ? <Loader2 className="h-6 w-6 animate-spin" /> : (orders?.length || 0)}
                   </h3>
@@ -381,8 +380,8 @@ export default function Dashboard() {
 
             <Card className="shadow-xl border-none bg-white rounded-2xl">
               <CardHeader className="border-b">
-                <CardTitle className="text-lg font-bold">Resumen de Actividad</CardTitle>
-                <CardDescription>Visualización inmediata de órdenes asignadas.</CardDescription>
+                <CardTitle className="text-lg font-bold">Órdenes Recientes</CardTitle>
+                <CardDescription>Visualización inmediata de órdenes activas en el sistema.</CardDescription>
               </CardHeader>
               <CardContent className="p-0">
                 <OrderTable orders={orders || []} isLoading={isOrdersLoading} type="ordenes" setDeleteConfirm={setDeleteConfirm} isAdmin={isAdmin} />
@@ -397,7 +396,7 @@ export default function Dashboard() {
               <Card className="bg-white border-none shadow-md overflow-hidden rounded-2xl">
                 <CardHeader className="border-b bg-muted/5">
                   <CardTitle className="text-sm font-bold flex items-center gap-2">
-                    <PieChartIcon className="h-4 w-4 text-primary" /> Carga Global
+                    <PieChartIcon className="h-4 w-4 text-primary" /> Distribución Operativa
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="p-6">
@@ -428,7 +427,7 @@ export default function Dashboard() {
               <Card className="bg-white border-none shadow-md overflow-hidden rounded-2xl">
                 <CardHeader className="border-b bg-muted/5">
                   <CardTitle className="text-sm font-bold flex items-center gap-2">
-                    <Trophy className="h-4 w-4 text-primary" /> Top Supervisores
+                    <Trophy className="h-4 w-4 text-primary" /> Productividad por Supervisor
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="p-6">
@@ -449,7 +448,7 @@ export default function Dashboard() {
               <Card className="bg-white border-none shadow-md overflow-hidden rounded-2xl">
                 <CardHeader className="border-b bg-muted/5">
                   <CardTitle className="text-sm font-bold flex items-center gap-2">
-                    <TrendingUp className="h-4 w-4 text-primary" /> Ranking Clientes
+                    <TrendingUp className="h-4 w-4 text-primary" /> Volumen por Empresa
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="p-6">
@@ -473,10 +472,10 @@ export default function Dashboard() {
         {activeTab === "orders" && (
           <Card className="shadow-xl border-none bg-white rounded-2xl">
              <CardHeader className="border-b space-y-4">
-               <CardTitle className="text-lg font-bold">Órdenes en Curso</CardTitle>
+               <CardTitle className="text-lg font-bold">Gestión de Órdenes Activas</CardTitle>
                <div className="relative">
                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                 <Input placeholder="Buscar por folio o cliente..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-10 h-10 bg-muted/20 border-none" />
+                 <Input placeholder="Buscar por folio o cliente..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-10 h-12 bg-muted/20 border-none shadow-inner" />
                </div>
              </CardHeader>
              <CardContent className="p-0">
@@ -491,7 +490,7 @@ export default function Dashboard() {
                <CardTitle className="text-lg font-bold">Archivo Histórico</CardTitle>
                <div className="relative">
                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                 <Input placeholder="Buscar en historial..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-10 h-10 bg-muted/20 border-none" />
+                 <Input placeholder="Buscar en el histórico..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-10 h-12 bg-muted/20 border-none shadow-inner" />
                </div>
              </CardHeader>
              <CardContent className="p-0">
@@ -503,10 +502,10 @@ export default function Dashboard() {
         {activeTab === "clients" && isAdmin && (
           <Card className="shadow-xl border-none bg-white rounded-2xl">
              <CardHeader className="border-b space-y-4">
-               <CardTitle className="text-lg font-bold">Clientes</CardTitle>
+               <CardTitle className="text-lg font-bold">Listado Maestro de Clientes</CardTitle>
                <div className="relative">
                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                 <Input placeholder="Buscar por nombre o RUT..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-10 h-10 bg-muted/20 border-none" />
+                 <Input placeholder="Buscar cliente por nombre o RUT..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-10 h-12 bg-muted/20 border-none shadow-inner" />
                </div>
              </CardHeader>
              <CardContent className="p-0">
@@ -518,10 +517,10 @@ export default function Dashboard() {
         {activeTab === "personnel" && isAdmin && (
           <Card className="shadow-xl border-none bg-white rounded-2xl">
              <CardHeader className="border-b space-y-4">
-               <CardTitle className="text-lg font-bold">Personal</CardTitle>
+               <CardTitle className="text-lg font-bold">Gestión de Personal Interno</CardTitle>
                <div className="relative">
                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                 <Input placeholder="Buscar por nombre o RUT..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-10 h-10 bg-muted/20 border-none" />
+                 <Input placeholder="Buscar personal por nombre o RUT..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-10 h-12 bg-muted/20 border-none shadow-inner" />
                </div>
              </CardHeader>
              <CardContent className="p-0">
@@ -534,19 +533,19 @@ export default function Dashboard() {
       <AlertDialog open={!!deleteConfirm} onOpenChange={() => setDeleteConfirm(null)}>
         <AlertDialogContent className="rounded-2xl">
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-primary font-black uppercase">
-              {deleteConfirm?.type === 'personnel' ? "Confirmar Desactivación" : "Confirmar Eliminación Definitiva"}
+            <AlertDialogTitle className="text-primary font-black uppercase tracking-tighter">
+              {deleteConfirm?.type === 'personnel' ? "Confirmar Desactivación" : "Confirmar Eliminación"}
             </AlertDialogTitle>
-            <AlertDialogDescription>
+            <AlertDialogDescription className="text-xs font-medium">
               {deleteConfirm?.type === 'personnel' 
-                ? "Esta acción revocará el acceso del personal. Los datos se mantendrán en el sistema para permitir un futuro reingreso sin dramas."
-                : "Esta acción eliminará el registro de forma permanente. Esta operación no se puede deshacer."}
+                ? "Esta acción revocará el acceso del personal al sistema. Su perfil quedará en estado 'Inactivo' para permitir reingresos futuros sin duplicar correos."
+                : "Esta acción eliminará el registro de forma permanente de la base de datos central. No se podrá revertir."}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="font-bold">Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} className="bg-destructive hover:bg-destructive/90 font-black">
-              {deleteConfirm?.type === 'personnel' ? "Desactivar Acceso" : "Eliminar de todo el sistema"}
+            <AlertDialogCancel className="font-bold rounded-xl h-12">Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} className="bg-destructive hover:bg-destructive/90 font-black rounded-xl h-12 uppercase tracking-tighter">
+              {deleteConfirm?.type === 'personnel' ? "Desactivar Acceso" : "Eliminar de Full"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -556,44 +555,46 @@ export default function Dashboard() {
 }
 
 function OrderTable({ orders, isLoading, type, setDeleteConfirm, isAdmin }: { orders: any[], isLoading: boolean, type: string, setDeleteConfirm: any, isAdmin: boolean }) {
-  if (isLoading) return <div className="p-10 text-center font-bold text-muted-foreground animate-pulse">Cargando registros...</div>;
-  if (orders.length === 0) return <div className="p-10 text-center text-muted-foreground">Sin registros.</div>;
+  if (isLoading) return <div className="p-10 text-center font-bold text-muted-foreground animate-pulse">CARGANDO REGISTROS...</div>;
+  if (orders.length === 0) return <div className="p-10 text-center text-muted-foreground italic font-medium">No se encontraron registros para mostrar.</div>;
 
   return (
     <Table>
       <TableHeader>
-        <TableRow className="bg-muted/40">
-          <TableHead className="font-bold">Folio</TableHead>
-          <TableHead className="font-bold">Cliente</TableHead>
-          <TableHead className="font-bold">Fecha</TableHead>
-          <TableHead className="font-bold">Estado</TableHead>
-          <TableHead className="text-right font-bold">Acciones</TableHead>
+        <TableRow className="bg-muted/40 hover:bg-muted/40">
+          <TableHead className="font-bold uppercase text-[10px] tracking-widest">Folio</TableHead>
+          <TableHead className="font-bold uppercase text-[10px] tracking-widest">Cliente / Empresa</TableHead>
+          <TableHead className="font-bold uppercase text-[10px] tracking-widest">Fecha</TableHead>
+          <TableHead className="font-bold uppercase text-[10px] tracking-widest">Estado</TableHead>
+          <TableHead className="text-right font-bold uppercase text-[10px] tracking-widest">Acciones</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
         {orders.map((order) => (
-          <TableRow key={order.id} className="hover:bg-muted/10">
+          <TableRow key={order.id} className="hover:bg-muted/10 border-muted/20">
             <TableCell className="font-black text-primary">#{order.folio}</TableCell>
             <TableCell className="font-bold">{order.clientName}</TableCell>
-            <TableCell className="text-xs">{order.startDate ? new Date(order.startDate).toLocaleDateString() : "N/A"}</TableCell>
+            <TableCell className="text-xs font-medium">{order.startDate ? new Date(order.startDate).toLocaleDateString() : "N/A"}</TableCell>
             <TableCell>
-              <Badge className={cn("border-none text-[10px] px-2 py-0.5 uppercase font-bold", order.status === 'Completed' ? 'bg-accent/15 text-primary' : 'bg-primary/10 text-primary')}>
-                {order.status === 'Completed' ? 'Completado' : order.status === 'Pending Signature' ? 'Esperando Firma' : 'En Curso'}
+              <Badge className={cn("border-none text-[9px] px-2 py-0.5 uppercase font-black tracking-tighter", order.status === 'Completed' ? 'bg-accent/15 text-primary' : order.status === 'Pending Signature' ? 'bg-yellow-100 text-yellow-700' : 'bg-primary/10 text-primary')}>
+                {order.status === 'Completed' ? 'FINALIZADO' : order.status === 'Pending Signature' ? 'POR FIRMAR' : 'EN CURSO'}
               </Badge>
             </TableCell>
             <TableCell className="text-right">
               <div className="flex justify-end gap-1">
                 {order.status === 'Completed' ? (
                   <Link href={`/work-orders/${order.id}`}>
-                    <Button variant="ghost" size="icon" className="h-8 w-8"><Eye className="h-4 w-4" /></Button>
+                    <Button variant="ghost" size="icon" className="h-9 w-9 text-primary hover:bg-primary/10"><Eye className="h-4 w-4" /></Button>
                   </Link>
                 ) : (
                   <Link href={`/work-orders/${order.id}/edit`}>
-                    <Button variant="ghost" size="icon" className="h-8 w-8 text-primary"><Pencil className="h-4 w-4" /></Button>
+                    <Button variant="ghost" size="icon" className="h-9 w-9 text-primary hover:bg-primary/10"><Pencil className="h-4 w-4" /></Button>
                   </Link>
                 )}
-                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => generateWorkOrderPDF(order)} disabled={order.status === 'Pending'}><Download className="h-4 w-4" /></Button>
-                {isAdmin && <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => setDeleteConfirm({ id: order.id, type })}><Trash2 className="h-4 w-4" /></Button>}
+                <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:bg-muted" onClick={() => generateWorkOrderPDF(order)} disabled={order.status === 'Pending'}>
+                  <Download className="h-4 w-4" />
+                </Button>
+                {isAdmin && <Button variant="ghost" size="icon" className="h-9 w-9 text-destructive hover:bg-destructive/10" onClick={() => setDeleteConfirm({ id: order.id, type })}><Trash2 className="h-4 w-4" /></Button>}
               </div>
             </TableCell>
           </TableRow>
@@ -604,37 +605,37 @@ function OrderTable({ orders, isLoading, type, setDeleteConfirm, isAdmin }: { or
 }
 
 function ClientTable({ clients, isLoading, setDeleteConfirm }: { clients: any[], isLoading: boolean, setDeleteConfirm: any }) {
-  if (isLoading) return <div className="p-10 text-center font-bold text-muted-foreground animate-pulse">Cargando Clientes...</div>;
-  if (clients.length === 0) return <div className="p-10 text-center text-muted-foreground">Sin clientes.</div>;
+  if (isLoading) return <div className="p-10 text-center font-bold text-muted-foreground animate-pulse">CARGANDO CLIENTES...</div>;
+  if (clients.length === 0) return <div className="p-10 text-center text-muted-foreground italic font-medium">Sin clientes registrados.</div>;
 
   return (
     <Table>
       <TableHeader>
-        <TableRow className="bg-muted/40">
-          <TableHead className="font-bold">Nombre</TableHead>
-          <TableHead className="font-bold">RUT</TableHead>
-          <TableHead className="font-bold">Estado</TableHead>
-          <TableHead className="text-right font-bold">Acciones</TableHead>
+        <TableRow className="bg-muted/40 hover:bg-muted/40">
+          <TableHead className="font-bold uppercase text-[10px] tracking-widest">Nombre Cliente</TableHead>
+          <TableHead className="font-bold uppercase text-[10px] tracking-widest">RUT Empresa</TableHead>
+          <TableHead className="font-bold uppercase text-[10px] tracking-widest">Estado</TableHead>
+          <TableHead className="text-right font-bold uppercase text-[10px] tracking-widest">Acciones</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
         {clients.map((client) => (
-          <TableRow key={client.id} className="hover:bg-muted/10">
+          <TableRow key={client.id} className="hover:bg-muted/10 border-muted/20">
             <TableCell className="font-bold text-primary flex items-center gap-2">
               <Building className="h-4 w-4 opacity-40" /> {client.nombreCliente}
             </TableCell>
-            <TableCell className="text-xs font-medium">{client.rutCliente}</TableCell>
+            <TableCell className="text-xs font-black tracking-tight">{client.rutCliente}</TableCell>
             <TableCell>
-              <Badge variant={client.estadoCliente === "Activo" ? "default" : "secondary"} className="text-[10px] px-2 py-0">
-                {client.estadoCliente}
+              <Badge variant={client.estadoCliente === "Activo" ? "default" : "secondary"} className="text-[9px] px-2 py-0 font-black uppercase">
+                {client.estadoCliente || "Activo"}
               </Badge>
             </TableCell>
             <TableCell className="text-right">
               <div className="flex justify-end gap-1">
                 <Link href={`/clients/${client.id}/edit`}>
-                  <Button variant="ghost" size="icon" className="h-8 w-8"><Pencil className="h-4 w-4" /></Button>
+                  <Button variant="ghost" size="icon" className="h-9 w-9 text-primary hover:bg-primary/10"><Pencil className="h-4 w-4" /></Button>
                 </Link>
-                <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => setDeleteConfirm({ id: client.id, type: "clients" })}><Trash2 className="h-4 w-4" /></Button>
+                <Button variant="ghost" size="icon" className="h-9 w-9 text-destructive hover:bg-destructive/10" onClick={() => setDeleteConfirm({ id: client.id, type: "clients" })}><Trash2 className="h-4 w-4" /></Button>
               </div>
             </TableCell>
           </TableRow>
@@ -645,45 +646,46 @@ function ClientTable({ clients, isLoading, setDeleteConfirm }: { clients: any[],
 }
 
 function PersonnelTable({ personnel, isLoading, setDeleteConfirm }: { personnel: any[], isLoading: boolean, setDeleteConfirm: any }) {
-  if (isLoading) return <div className="p-10 text-center font-bold text-muted-foreground animate-pulse">Cargando Personal...</div>;
-  if (personnel.length === 0) return <div className="p-10 text-center text-muted-foreground">Sin personal registrado.</div>;
+  const { firestore: db } = useFirebase();
+  if (isLoading) return <div className="p-10 text-center font-bold text-muted-foreground animate-pulse">CARGANDO PERSONAL...</div>;
+  if (personnel.length === 0) return <div className="p-10 text-center text-muted-foreground italic font-medium">Sin personal registrado.</div>;
 
   return (
     <Table>
       <TableHeader>
-        <TableRow className="bg-muted/40">
-          <TableHead className="font-bold">Nombre</TableHead>
-          <TableHead className="font-bold">Rol</TableHead>
-          <TableHead className="font-bold">Estado</TableHead>
-          <TableHead className="text-right font-bold">Acciones</TableHead>
+        <TableRow className="bg-muted/40 hover:bg-muted/40">
+          <TableHead className="font-bold uppercase text-[10px] tracking-widest">Nombre Completo</TableHead>
+          <TableHead className="font-bold uppercase text-[10px] tracking-widest">Rol / Cargo</TableHead>
+          <TableHead className="font-bold uppercase text-[10px] tracking-widest">Estado</TableHead>
+          <TableHead className="text-right font-bold uppercase text-[10px] tracking-widest">Acciones</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
         {personnel.map((person) => (
-          <TableRow key={person.id} className="hover:bg-muted/10">
+          <TableRow key={person.id} className="hover:bg-muted/10 border-muted/20">
             <TableCell className="font-bold text-primary flex items-center gap-2">
               <UserRound className="h-4 w-4 opacity-40" /> {person.nombre_t}
             </TableCell>
             <TableCell>
-              <Badge variant="outline" className="text-[10px] px-2 py-0 uppercase border-primary/30 text-primary">
+              <Badge variant="outline" className="text-[9px] px-2 py-0 uppercase border-primary/30 text-primary font-black">
                 {person.rol_t}
               </Badge>
             </TableCell>
             <TableCell>
-              <Badge variant={person.estado_t === "Activo" ? "default" : "destructive"} className="text-[10px] px-2 py-0">
+              <Badge variant={person.estado_t === "Activo" ? "default" : "destructive"} className="text-[9px] px-2 py-0 font-black uppercase">
                 {person.estado_t || "Inactivo"}
               </Badge>
             </TableCell>
             <TableCell className="text-right">
               <div className="flex justify-end gap-1">
                 <Link href={`/technicians/${person.id}/edit`}>
-                  <Button variant="ghost" size="icon" className="h-8 w-8" title="Editar datos"><Pencil className="h-4 w-4" /></Button>
+                  <Button variant="ghost" size="icon" className="h-9 w-9 text-primary hover:bg-primary/10" title="Editar perfil"><Pencil className="h-4 w-4" /></Button>
                 </Link>
                 {person.estado_t === "Inactivo" ? (
                   <Button 
                     variant="ghost" 
                     size="icon" 
-                    className="h-8 w-8 text-accent"
+                    className="h-9 w-9 text-accent hover:bg-accent/10"
                     title="Re-activar Personal"
                     onClick={() => {
                       const docRef = doc(db as any, 'personnel', person.id);
@@ -696,7 +698,7 @@ function PersonnelTable({ personnel, isLoading, setDeleteConfirm }: { personnel:
                   <Button 
                     variant="ghost" 
                     size="icon" 
-                    className="h-8 w-8 text-destructive"
+                    className="h-9 w-9 text-destructive hover:bg-destructive/10"
                     title="Desactivar Acceso"
                     onClick={() => setDeleteConfirm({ id: person.id, type: "personnel" })}
                   >
