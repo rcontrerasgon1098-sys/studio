@@ -11,30 +11,42 @@
         "folio": { "type": "number" },
         "clientName": { "type": "string" },
         "clientId": { "type": "string" },
-        "createdBy": { "type": "string", "description": "FK to Personnel. UID of the creator." },
-        "technicianId": { "type": "string", "description": "FK to Personnel. Primary technician." },
+        "clientPhone": { "type": "string" },
+        "clientEmail": { "type": "string" },
+        "createdBy": { "type": "string", "description": "UID of the supervisor who created the OT." },
+        "technicianId": { "type": "string", "description": "UID of the primary technician assigned." },
         "teamIds": { 
           "type": "array", 
           "items": { "type": "string" },
-          "description": "Denormalized array of Personnel IDs for fast querying (Membership)."
+          "description": "UIDs of all technical staff involved."
         },
         "team": { 
           "type": "array", 
           "items": { "type": "string" },
-          "description": "Denormalized array of Personnel names for display."
+          "description": "Names of all technical staff involved."
         },
         "status": { "type": "string", "enum": ["Pending", "Active", "Pending Signature", "Completed"] },
         "startDate": { "type": "string", "format": "date-time" },
         "address": { "type": "string" },
         "building": { "type": "string" },
         "floor": { "type": "string" },
+        "signalType": { "type": "string" },
+        "signalCount": { "type": "number" },
+        "isCert": { "type": "boolean" },
+        "certifiedPointsCount": { "type": "number" },
+        "isPlan": { "type": "boolean" },
+        "isLabeled": { "type": "boolean" },
+        "labelDetails": { "type": "string" },
+        "isCanalized": { "type": "boolean" },
         "description": { "type": "string" },
         "techName": { "type": "string" },
         "techRut": { "type": "string" },
         "techSignatureUrl": { "type": "string", "format": "uri" },
         "clientReceiverName": { "type": "string" },
         "clientReceiverRut": { "type": "string" },
-        "clientSignatureUrl": { "type": "string", "format": "uri" }
+        "clientReceiverEmail": { "type": "string" },
+        "clientSignatureUrl": { "type": "string", "format": "uri" },
+        "sketchImageUrl": { "type": "string", "format": "uri" }
       },
       "required": ["id", "folio", "clientName", "createdBy", "status"]
     },
@@ -56,19 +68,10 @@
         "id": { "type": "string" },
         "nombre_t": { "type": "string" },
         "rol_t": { "type": "string", "enum": ["admin", "supervisor", "tecnico"] },
-        "email_t": { "type": "string" }
+        "email_t": { "type": "string" },
+        "signatureUrl": { "type": "string" }
       },
       "required": ["id", "nombre_t", "rol_t"]
-    },
-    "TeamAssignment": {
-      "title": "TeamAssignment",
-      "type": "object",
-      "description": "Logical Join Table between WorkOrder and Personnel (Normalization).",
-      "properties": {
-        "orderId": { "type": "string", "description": "Ref to WorkOrder" },
-        "personnelId": { "type": "string", "description": "Ref to Personnel" },
-        "role": { "type": "string", "description": "Role in this specific order" }
-      }
     }
   },
   "auth": {

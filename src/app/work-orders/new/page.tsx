@@ -221,7 +221,7 @@ export default function NewWorkOrder() {
 
   const handleSendRemoteSignature = async () => {
     if (!user || !db) {
-      toast({ variant: "destructive", title: "Error de Sesión", description: "No hay un usuario autenticado para realizar esta acción." });
+      toast({ variant: "destructive", title: "Error de Sesión", description: "No hay un usuario autenticado." });
       return;
     }
     
@@ -229,7 +229,7 @@ export default function NewWorkOrder() {
       toast({ 
         variant: "destructive", 
         title: "Falta Email", 
-        description: "Por favor ingrese el email del receptor en la sección de Recepción Terreno." 
+        description: "Por favor ingrese el email del receptor." 
       });
       return;
     }
@@ -245,7 +245,6 @@ export default function NewWorkOrder() {
         folio: currentFolio,
         status: "Pending Signature",
         createdBy: user.uid,
-        supervisorId: user.uid,
         creatorEmail: user.email || "",
         startDate: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
@@ -277,17 +276,11 @@ export default function NewWorkOrder() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user || !db) {
-      toast({ variant: "destructive", title: "Error de Sesión", description: "Sesión expirada. Por favor inicie sesión de nuevo." });
+      toast({ variant: "destructive", title: "Error de Sesión", description: "Sesión expirada." });
       return;
     }
     
     setLoading(true);
-
-    if (!formData.clientName) {
-      toast({ variant: "destructive", title: "Datos Faltantes", description: "Debe seleccionar o ingresar un cliente." });
-      setLoading(false);
-      return;
-    }
 
     const isValidationComplete = !!formData.techSignatureUrl && 
                                 !!formData.clientSignatureUrl && 
@@ -302,7 +295,6 @@ export default function NewWorkOrder() {
       folio: folio || generateFolio(),
       status: finalStatus,
       createdBy: user.uid,
-      supervisorId: user.uid,
       creatorEmail: user.email || "",
       startDate: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -327,9 +319,7 @@ export default function NewWorkOrder() {
 
       toast({ 
         title: finalStatus === "Completed" ? "Orden Finalizada" : "Orden Guardada", 
-        description: finalStatus === "Completed" 
-          ? "La orden se ha movido al historial con éxito." 
-          : "Los avances han sido registrados."
+        description: "Operación realizada con éxito."
       });
       router.push("/dashboard");
     } catch (error) {
@@ -337,9 +327,6 @@ export default function NewWorkOrder() {
       toast({ variant: "destructive", title: "Error", description: "No se pudo guardar la información." });
     }
   };
-
-  const hasSavedSignature = techProfiles && techProfiles.length > 0 && !!techProfiles[0].signatureUrl;
-  const availablePersonnel = allPersonnel?.filter(p => !formData.teamIds.includes(p.id)) || [];
 
   if (isUserLoading || isProfileLoading) return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-background text-primary gap-4">
@@ -512,12 +499,120 @@ export default function NewWorkOrder() {
             </CardContent>
           </Card>
 
+          <Card className="shadow-md border-none bg-white overflow-hidden">
+            <CardHeader className="p-4 md:p-6 border-b bg-primary/5">
+              <CardTitle className="text-lg uppercase font-black text-primary tracking-tighter">Detalles Técnicos y Red</CardTitle>
+            </CardHeader>
+            <CardContent className="p-4 md:p-6 space-y-8">
+              <div className="space-y-4 pt-2">
+                <Label className="font-black uppercase text-xs tracking-[0.2em] text-primary flex items-center gap-2">
+                  <Building2 className="h-4 w-4" /> Ubicación Técnica
+                </Label>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label className="font-bold uppercase text-xs tracking-widest text-muted-foreground">Edificio</Label>
+                    <Input value={formData.building} onChange={e => setFormData({...formData, building: e.target.value})} className="h-12" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="font-bold uppercase text-xs tracking-widest text-muted-foreground">Piso</Label>
+                    <Input value={formData.floor} onChange={e => setFormData({...formData, floor: e.target.value})} className="h-12" />
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <Label className="font-black uppercase text-xs tracking-[0.2em] text-primary flex items-center gap-2">
+                  <Hash className="h-4 w-4" /> Configuración de Señal
+                </Label>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div className="md:col-span-2 space-y-2">
+                    <Label className="font-bold uppercase text-xs tracking-widest text-muted-foreground">Tipo de Señal</Label>
+                    <Select value={formData.signalType} onValueChange={v => setFormData({...formData, signalType: v})}>
+                      <SelectTrigger className="h-12">
+                        <SelectValue placeholder="Señal" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Simple">Simple</SelectItem>
+                        <SelectItem value="Doble">Doble</SelectItem>
+                        <SelectItem value="Triple">Triple</SelectItem>
+                        <SelectItem value="Cuádruple">Cuádruple</SelectItem>
+                        <SelectItem value="Fibra Óptica">Fibra Óptica</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="font-bold uppercase text-xs tracking-widest text-muted-foreground">Cantidad</Label>
+                    <Input type="number" value={formData.signalCount} onChange={e => setFormData({...formData, signalCount: parseInt(e.target.value) || 0})} className="h-12" />
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-6">
+                <Label className="font-black uppercase text-xs tracking-[0.2em] text-primary flex items-center gap-2">
+                  <CheckSquare className="h-4 w-4" /> Checklist
+                </Label>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="flex flex-col gap-4 p-5 bg-muted/30 rounded-2xl border border-dashed">
+                    <div className="flex items-center justify-between">
+                      <Label className="font-bold text-sm">¿Certificación Realizada?</Label>
+                      <Switch checked={formData.isCert} onCheckedChange={(v) => setFormData({...formData, isCert: v})} />
+                    </div>
+                  </div>
+                  <div className="flex flex-col gap-4 p-5 bg-muted/30 rounded-2xl border border-dashed">
+                    <div className="flex items-center justify-between">
+                      <Label className="font-bold text-sm">¿Rotulación Realizada?</Label>
+                      <Switch checked={formData.isLabeled} onCheckedChange={(v) => setFormData({...formData, isLabeled: v})} />
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between p-5 bg-muted/30 rounded-2xl border border-dashed">
+                    <Label className="font-bold text-sm">¿Canalización?</Label>
+                    <Switch checked={formData.isCanalized} onCheckedChange={(v) => setFormData({...formData, isCanalized: v})} />
+                  </div>
+                  <div className="flex items-center justify-between p-5 bg-muted/30 rounded-2xl border border-dashed">
+                    <Label className="font-bold text-sm">¿Planos?</Label>
+                    <Switch checked={formData.isPlan} onCheckedChange={(v) => setFormData({...formData, isPlan: v})} />
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label className="font-bold uppercase text-xs tracking-widest text-muted-foreground">Descripción de Trabajos</Label>
+                <Textarea value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} className="min-h-[140px] rounded-xl" />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="shadow-md border-none bg-white overflow-hidden">
+            <CardHeader className="p-4 border-b bg-muted/5">
+              <CardTitle className="text-lg flex items-center gap-2 uppercase font-bold tracking-tight">
+                <ImageIcon className="h-5 w-5 text-primary" /> Multimedia
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-6">
+              <input type="file" ref={fileInputRef} onChange={handleFileChange} accept="image/*" capture="environment" className="hidden" />
+              {!formData.sketchImageUrl ? (
+                <div onClick={() => fileInputRef.current?.click()} className="border-4 border-dashed rounded-3xl p-12 flex flex-col items-center justify-center text-muted-foreground bg-muted/10 hover:bg-primary/5 transition-all cursor-pointer">
+                  <Camera className="h-16 w-16 mb-4 opacity-40" />
+                  <p className="text-sm font-black uppercase tracking-widest">Capturar Evidencia</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <div className="relative aspect-video rounded-3xl overflow-hidden bg-muted group border shadow-xl">
+                    <Image src={formData.sketchImageUrl} alt="Preview" fill className="object-contain" />
+                    <Button type="button" variant="destructive" size="icon" className="absolute top-4 right-4 h-12 w-12 rounded-full shadow-2xl" onClick={removeImage}>
+                      <X className="h-6 w-6" />
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
           <div className="grid grid-cols-1 gap-6 pb-6">
             <Card className="shadow-md border-none bg-white overflow-hidden">
               <CardHeader className="border-b bg-muted/20 p-4">
                 <CardTitle className="text-xs font-black uppercase tracking-widest flex items-center justify-between text-primary">
                   Técnico Responsable
-                  {hasSavedSignature && <Badge variant="secondary" className="bg-primary/10 text-primary border-none text-[9px]">Firma Autorizada</Badge>}
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-5 space-y-4">
@@ -532,19 +627,8 @@ export default function NewWorkOrder() {
                   </div>
                 </div>
                 {formData.techSignatureUrl ? (
-                  <div className="space-y-4">
-                    <div className="relative h-40 w-full bg-muted/20 rounded-2xl border-2 border-dashed flex items-center justify-center overflow-hidden group">
-                      <Image src={formData.techSignatureUrl} alt="Firma Técnico" fill className="object-contain" />
-                      <Button 
-                        type="button" 
-                        variant="destructive" 
-                        size="sm" 
-                        className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity"
-                        onClick={() => setFormData({...formData, techSignatureUrl: ""})}
-                      >
-                        <X className="h-4 w-4 mr-1" /> Cambiar
-                      </Button>
-                    </div>
+                  <div className="relative h-40 w-full bg-muted/20 rounded-2xl border-2 border-dashed flex items-center justify-center overflow-hidden group">
+                    <Image src={formData.techSignatureUrl} alt="Firma Técnico" fill className="object-contain" />
                   </div>
                 ) : (
                   <SignaturePad label="Firma del Técnico" onSave={handleTechSignatureConfirm} />
@@ -568,12 +652,7 @@ export default function NewWorkOrder() {
                   </div>
                   <div className="md:col-span-2 space-y-2">
                     <Label className="text-[10px] font-bold uppercase text-muted-foreground">Email Receptor</Label>
-                    <Input 
-                      type="email" 
-                      placeholder="ejemplo@gmail.com" 
-                      value={formData.clientReceiverEmail} 
-                      onChange={e => setFormData({...formData, clientReceiverEmail: e.target.value})} 
-                    />
+                    <Input type="email" value={formData.clientReceiverEmail} onChange={e => setFormData({...formData, clientReceiverEmail: e.target.value})} />
                   </div>
                 </div>
                 {formData.clientSignatureUrl ? (
@@ -599,7 +678,7 @@ export default function NewWorkOrder() {
         <AlertDialogContent className="rounded-3xl max-w-[400px]">
           <AlertDialogHeader>
             <AlertDialogTitle className="text-primary font-black uppercase tracking-tighter text-2xl">¿Guardar Firma?</AlertDialogTitle>
-            <AlertDialogDescription className="text-base">¿Desea guardar esta firma para aplicarla automáticamente en sus futuras órdenes de trabajo?</AlertDialogDescription>
+            <AlertDialogDescription className="text-base">¿Desea guardar esta firma para aplicarla automáticamente?</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="gap-3 sm:gap-3 pt-6">
             <AlertDialogCancel className="h-14 font-black uppercase tracking-widest rounded-2xl" onClick={() => { setFormData({...formData, techSignatureUrl: tempSignature}); setShowSaveSignatureDialog(false); }}>Solo hoy</AlertDialogCancel>
