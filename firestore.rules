@@ -25,7 +25,9 @@ service cloud.firestore {
 
     match /historial/{docId} {
       allow read: if isAdmin() || isOrderOwner(resource.data);
-      allow write: if isAdmin() || isLoggedIn();
+      // Solo admin puede borrar del historial definitivamente
+      allow create, update: if isAdmin() || isLoggedIn();
+      allow delete: if isAdmin();
     }
 
     match /ordenes/{docId} {
@@ -34,19 +36,21 @@ service cloud.firestore {
         || (resource.data.status == "Pending Signature");
 
       allow create: if isLoggedIn(); 
-
       allow update: if isAdmin() || isOrderOwner(resource.data);
-
+      // Solo admin puede borrar órdenes activas (los técnicos/supervisores solo editan)
       allow delete: if isAdmin();
     }
 
     match /clients/{docId} {
-      allow read, write: if isLoggedIn();
+      allow read: if isLoggedIn();
+      allow create, update: if isLoggedIn();
+      allow delete: if isAdmin();
     }
 
     match /personnel/{userId} {
       allow read: if isLoggedIn();
-      allow write: if isAdmin();
+      allow create, update: if isAdmin();
+      allow delete: if isAdmin();
     }
   }
 }
