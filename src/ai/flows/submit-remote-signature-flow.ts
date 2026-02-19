@@ -1,7 +1,8 @@
+
 'use server';
 /**
  * @fileOverview Flow to validate and submit a remote signature for a Work Order.
- * Ensures ownership metadata (createdBy/supervisorId) is preserved in history.
+ * Ensures ALL metadata is copied to history to prevent visibility issues.
  */
 
 import { ai } from '@/ai/genkit';
@@ -60,18 +61,18 @@ const submitRemoteSignatureFlow = ai.defineFlow(
         return { success: false, error: 'Enlace expirado.' };
       }
 
-      // 2. Preparar datos finales preservando metadatos de propiedad
+      // 2. Preparar datos finales preservando ABSOLUTAMENTE TODO el contexto original
       const completedData = {
-        ...orderData,
+        ...orderData, // Copia profunda de todos los campos originales (createdBy, technicianId, teamIds, etc.)
         clientReceiverName: input.receiverName,
         clientReceiverRut: input.receiverRut,
         clientSignatureUrl: input.signatureUrl,
         signatureDate: new Date().toISOString(),
         status: 'Completed',
         updatedAt: new Date().toISOString(),
-        // Refuerzo explícito de propiedad para el historial
-        createdBy: orderData.createdBy,
+        // Refuerzo explícito de propiedad para el historial si faltaban en el original
         supervisorId: orderData.supervisorId || orderData.createdBy,
+        createdBy: orderData.createdBy
       };
 
       // 3. Mover a Historial

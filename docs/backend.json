@@ -35,6 +35,19 @@
           "type": "string",
           "description": "UID of the supervisor who created the work order. Used for ownership filtering."
         },
+        "supervisorId": {
+          "type": "string",
+          "description": "Redundant UID for the supervisor/creator for reinforced ownership."
+        },
+        "technicianId": {
+          "type": "string",
+          "description": "UID of the primary technician assigned."
+        },
+        "teamIds": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "List of UIDs for all team members."
+        },
         "creatorEmail": {
           "type": "string",
           "description": "Email of the creator.",
@@ -54,7 +67,7 @@
           "items": {
             "type": "string"
           },
-          "description": "List of team members assigned to the work order."
+          "description": "List of team member names."
         },
         "clientId": { "type": "string" },
         "signalType": { "type": "string" },

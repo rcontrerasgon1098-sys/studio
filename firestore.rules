@@ -1,3 +1,4 @@
+
 rules_version = '2';
 
 service cloud.firestore {
@@ -20,14 +21,13 @@ service cloud.firestore {
     function isOrderOwner(resourceData) {
       return isLoggedIn() && (
         resourceData.createdBy == request.auth.uid || 
-        resourceData.supervisorId == request.auth.uid
+        resourceData.supervisorId == request.auth.uid ||
+        (resourceData.teamIds != null && request.auth.uid in resourceData.teamIds)
       );
     }
 
     match /historial/{docId} {
-      // Admin ve todo, Supervisor ve lo suyo
       allow read: if isAdmin() || isOrderOwner(resource.data);
-      // Escritura permitida si se está moviendo una orden válida
       allow write: if isAdmin() || isLoggedIn();
     }
 

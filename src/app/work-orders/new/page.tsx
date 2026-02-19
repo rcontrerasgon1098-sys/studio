@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect, useRef } from "react";
@@ -95,6 +96,8 @@ export default function NewWorkOrder() {
     sketchImageUrl: "",
     status: "Pending",
     team: [] as string[],
+    teamIds: [] as string[],
+    technicianId: "",
   });
 
   const generateFolio = () => {
@@ -116,15 +119,21 @@ export default function NewWorkOrder() {
   }, [user, isUserLoading, router]);
 
   useEffect(() => {
-    if (userProfile?.nombre_t) {
+    if (userProfile?.nombre_t && user) {
       setFormData(prev => {
-        if (!prev.team.includes(userProfile.nombre_t!)) {
-          return { ...prev, team: [...prev.team, userProfile.nombre_t!] };
-        }
-        return prev;
+        const updatedTeam = prev.team.includes(userProfile.nombre_t!) ? prev.team : [...prev.team, userProfile.nombre_t!];
+        const updatedTeamIds = prev.teamIds.includes(user.uid) ? prev.teamIds : [...prev.teamIds, user.uid];
+        return { 
+          ...prev, 
+          team: updatedTeam, 
+          teamIds: updatedTeamIds,
+          technicianId: prev.technicianId || user.uid,
+          techName: prev.techName || userProfile.nombre_t || "",
+          techRut: prev.techRut || (userProfile as any).rut_t || ""
+        };
       });
     }
-  }, [userProfile]);
+  }, [userProfile, user]);
 
   useEffect(() => {
     if (techProfiles && techProfiles.length > 0) {
@@ -133,7 +142,8 @@ export default function NewWorkOrder() {
         ...prev,
         techName: prev.techName || tech.nombre_t || "",
         techRut: prev.techRut || tech.rut_t || "",
-        techSignatureUrl: prev.techSignatureUrl || tech.signatureUrl || ""
+        techSignatureUrl: prev.techSignatureUrl || tech.signatureUrl || "",
+        technicianId: prev.technicianId || tech.id
       }));
     }
   }, [techProfiles]);
@@ -191,14 +201,22 @@ export default function NewWorkOrder() {
   };
 
   const handleTeamSelect = (person: any) => {
-    if (!formData.team.find(t => t === person.nombre_t)) {
-      setFormData(prev => ({ ...prev, team: [...prev.team, person.nombre_t] }));
+    if (!formData.teamIds.includes(person.id)) {
+      setFormData(prev => ({ 
+        ...prev, 
+        team: [...prev.team, person.nombre_t],
+        teamIds: [...prev.teamIds, person.id]
+      }));
     }
     setOpenTeamSearch(false);
   };
   
-  const handleTeamRemove = (memberName: string) => {
-    setFormData(prev => ({ ...prev, team: prev.team.filter(t => t !== memberName) }));
+  const handleTeamRemove = (memberName: string, memberId: string) => {
+    setFormData(prev => ({ 
+      ...prev, 
+      team: prev.team.filter(t => t !== memberName),
+      teamIds: prev.teamIds.filter(id => id !== memberId)
+    }));
   };
 
   const handleSendRemoteSignature = async () => {
@@ -227,7 +245,7 @@ export default function NewWorkOrder() {
         folio: currentFolio,
         status: "Pending Signature",
         createdBy: user.uid,
-        supervisorId: user.uid, // Blindaje de identidad
+        supervisorId: user.uid,
         creatorEmail: user.email || "",
         startDate: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
@@ -278,14 +296,13 @@ export default function NewWorkOrder() {
     const finalStatus = isValidationComplete ? "Completed" : "Pending";
     const orderId = doc(collection(db, "ordenes")).id;
     
-    // Preparar el objeto con los campos de propiedad obligatorios
     const workOrderData = {
       ...formData,
       id: orderId,
       folio: folio || generateFolio(),
       status: finalStatus,
       createdBy: user.uid,
-      supervisorId: user.uid, // Unificación de propiedad
+      supervisorId: user.uid,
       creatorEmail: user.email || "",
       startDate: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -322,7 +339,7 @@ export default function NewWorkOrder() {
   };
 
   const hasSavedSignature = techProfiles && techProfiles.length > 0 && !!techProfiles[0].signatureUrl;
-  const availablePersonnel = allPersonnel?.filter(p => !formData.team.includes(p.nombre_t)) || [];
+  const availablePersonnel = allPersonnel?.filter(p => !formData.teamIds.includes(p.id)) || [];
 
   if (isUserLoading || isProfileLoading) return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-background text-primary gap-4">
@@ -353,7 +370,6 @@ export default function NewWorkOrder() {
 
       <main className="container mx-auto px-4 mt-6 max-w-3xl space-y-6">
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* CLIENTE */}
           <Card className="shadow-md border-none bg-white overflow-hidden">
             <CardHeader className="bg-primary/5 p-4 border-b">
               <CardTitle className="text-primary text-xl flex items-center gap-2 uppercase font-black tracking-tighter">
@@ -448,7 +464,6 @@ export default function NewWorkOrder() {
             </CardContent>
           </Card>
 
-          {/* EQUIPO */}
           <Card className="shadow-md border-none bg-white">
             <CardHeader className="p-4 md:p-6 border-b bg-muted/5">
               <CardTitle className="text-lg flex items-center gap-2 uppercase font-bold tracking-tight">
@@ -460,8 +475,8 @@ export default function NewWorkOrder() {
                 {formData.team.map((name, index) => (
                   <Badge key={index} variant="secondary" className="text-sm py-1.5 px-4 rounded-xl bg-primary/10 text-primary gap-2 font-bold border-none">
                     {name}
-                    {name !== userProfile?.nombre_t && (
-                      <button type="button" onClick={() => handleTeamRemove(name)} className="rounded-full hover:bg-primary/20 p-0.5 transition-colors">
+                    {formData.teamIds[index] !== user?.uid && (
+                      <button type="button" onClick={() => handleTeamRemove(name, formData.teamIds[index])} className="rounded-full hover:bg-primary/20 p-0.5 transition-colors">
                         <X className="h-3 w-3" />
                       </button>
                     )}
@@ -497,7 +512,6 @@ export default function NewWorkOrder() {
             </CardContent>
           </Card>
 
-          {/* TÉCNICO Y FIRMA */}
           <div className="grid grid-cols-1 gap-6 pb-6">
             <Card className="shadow-md border-none bg-white overflow-hidden">
               <CardHeader className="border-b bg-muted/20 p-4">

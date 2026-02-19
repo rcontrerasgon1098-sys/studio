@@ -94,7 +94,10 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
     sketchImageUrl: "",
     status: "Pending",
     team: [] as string[],
+    teamIds: [] as string[],
     createdBy: "",
+    supervisorId: "",
+    technicianId: "",
   });
 
   useEffect(() => {
@@ -132,7 +135,10 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
         sketchImageUrl: order.sketchImageUrl || "",
         status: order.status || "Pending",
         team: order.team || [],
+        teamIds: order.teamIds || [],
         createdBy: order.createdBy || "",
+        supervisorId: order.supervisorId || order.createdBy || "",
+        technicianId: order.technicianId || order.createdBy || "",
       });
       setIsInitialized(true);
     }
@@ -184,8 +190,12 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
     setShowSaveSignatureDialog(false);
   };
 
-  const handleTeamRemove = (memberName: string) => {
-    setFormData(prev => ({ ...prev, team: prev.team.filter(t => t !== memberName) }));
+  const handleTeamRemove = (memberName: string, memberId: string) => {
+    setFormData(prev => ({ 
+      ...prev, 
+      team: prev.team.filter(t => t !== memberName),
+      teamIds: prev.teamIds.filter(id => id !== memberId)
+    }));
   };
 
   const handleSendRemoteSignature = async () => {
@@ -244,6 +254,7 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
     const updateData = {
       ...formData,
       createdBy: formData.createdBy || user.uid,
+      supervisorId: formData.supervisorId || formData.createdBy || user.uid,
       status: finalStatus,
       updatedAt: new Date().toISOString(),
       updatedBy: user.email || ""
@@ -386,8 +397,8 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
                 {formData.team.map((name, index) => (
                   <Badge key={index} variant="secondary" className="text-sm py-1.5 px-4 rounded-xl bg-primary/10 text-primary gap-2 font-bold border-none">
                     {name}
-                    {name !== userProfile?.nombre_t && (
-                      <button type="button" onClick={() => handleTeamRemove(name)} className="rounded-full hover:bg-primary/20 p-0.5 transition-colors">
+                    {formData.teamIds[index] !== user?.uid && (
+                      <button type="button" onClick={() => handleTeamRemove(name, formData.teamIds[index])} className="rounded-full hover:bg-primary/20 p-0.5 transition-colors">
                         <X className="h-3 w-3" />
                       </button>
                     )}
@@ -564,9 +575,6 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
                         <X className="h-4 w-4 mr-1" /> Cambiar
                       </Button>
                     </div>
-                    <p className="text-[10px] text-center text-muted-foreground italic">
-                      Firma cargada automáticamente. Presione "Cambiar" para firmar nuevamente.
-                    </p>
                   </div>
                 ) : (
                   <SignaturePad label="Firma del Técnico" onSave={handleTechSignatureConfirm} />
