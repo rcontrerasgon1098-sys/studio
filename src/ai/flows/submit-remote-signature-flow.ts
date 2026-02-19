@@ -70,8 +70,7 @@ const submitRemoteSignatureFlow = ai.defineFlow(
         signatureDate: new Date().toISOString(),
         status: 'Completed',
         updatedAt: new Date().toISOString(),
-        // Refuerzo explícito de propiedad para el historial si faltaban en el original
-        supervisorId: orderData.supervisorId || orderData.createdBy,
+        // Refuerzo explícito de propiedad para el historial
         createdBy: orderData.createdBy
       };
 

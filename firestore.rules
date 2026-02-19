@@ -8,7 +8,6 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    // Obtiene el documento de personal del usuario actual
     function getPersonnelDoc() {
       return get(/databases/$(database)/documents/personnel/$(request.auth.uid));
     }
@@ -17,11 +16,9 @@ service cloud.firestore {
       return isLoggedIn() && (getPersonnelDoc().data.rol_t == "admin" || getPersonnelDoc().data.rol_t == "Administrador");
     }
 
-    // Valida si el usuario es el dueño de la orden mediante createdBy o supervisorId
     function isOrderOwner(resourceData) {
       return isLoggedIn() && (
         resourceData.createdBy == request.auth.uid || 
-        resourceData.supervisorId == request.auth.uid ||
         (resourceData.teamIds != null && request.auth.uid in resourceData.teamIds)
       );
     }

@@ -18,18 +18,8 @@ import { useUser, useFirestore, useCollection, useMemoFirebase, useUserProfile }
 import { collection, doc, query, orderBy, where } from "firebase/firestore";
 import { setDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandList, CommandItem } from "@/components/ui/command";
 import { validateRut } from "@/lib/rut-utils";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { sendWorkOrderEmail } from "@/ai/flows/send-work-order-email-flow";
@@ -68,6 +58,8 @@ export default function NewWorkOrder() {
     return query(collection(db, "personnel"), orderBy("nombre_t", "asc"));
   }, [db, userProfile]);
   const { data: allPersonnel } = useCollection(personnelQuery);
+
+  const availablePersonnel = allPersonnel || [];
 
   const [formData, setFormData] = useState({
     clientName: "",
@@ -193,7 +185,7 @@ export default function NewWorkOrder() {
   const saveSignatureToProfile = () => {
     if (db && techProfiles && techProfiles.length > 0) {
       const techRef = doc(db, "personnel", techProfiles[0].id);
-      updateDocumentNonBlocking(techRef, { signatureUrl: tempSignature });
+      setDocumentNonBlocking(techRef, { signatureUrl: tempSignature }, { merge: true });
       toast({ title: "Firma Guardada", description: "Su firma se cargará automáticamente en el futuro." });
     }
     setFormData({...formData, techSignatureUrl: tempSignature});
@@ -220,17 +212,9 @@ export default function NewWorkOrder() {
   };
 
   const handleSendRemoteSignature = async () => {
-    if (!user || !db) {
-      toast({ variant: "destructive", title: "Error de Sesión", description: "No hay un usuario autenticado." });
-      return;
-    }
-    
+    if (!user || !db) return;
     if (!formData.clientReceiverEmail) {
-      toast({ 
-        variant: "destructive", 
-        title: "Falta Email", 
-        description: "Por favor ingrese el email del receptor." 
-      });
+      toast({ variant: "destructive", title: "Falta Email", description: "Ingrese el email del receptor." });
       return;
     }
 
@@ -261,7 +245,7 @@ export default function NewWorkOrder() {
       });
 
       if (result.success) {
-        toast({ title: "Solicitud Enviada", description: "Se ha enviado el enlace de firma remota al cliente." });
+        toast({ title: "Solicitud Enviada", description: "Se ha enviado el enlace de firma remota." });
         router.push("/dashboard");
       } else {
         toast({ variant: "destructive", title: "Error", description: result.error });
@@ -275,10 +259,7 @@ export default function NewWorkOrder() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user || !db) {
-      toast({ variant: "destructive", title: "Error de Sesión", description: "Sesión expirada." });
-      return;
-    }
+    if (!user || !db) return;
     
     setLoading(true);
 
@@ -317,10 +298,7 @@ export default function NewWorkOrder() {
         }).catch(err => console.error("Error enviando email:", err));
       }
 
-      toast({ 
-        title: finalStatus === "Completed" ? "Orden Finalizada" : "Orden Guardada", 
-        description: "Operación realizada con éxito."
-      });
+      toast({ title: "Orden Guardada", description: "Operación realizada con éxito." });
       router.push("/dashboard");
     } catch (error) {
       setLoading(false);
@@ -347,11 +325,9 @@ export default function NewWorkOrder() {
             </Link>
             <h1 className="font-bold text-lg text-primary uppercase tracking-tighter">Nueva OT #{folio || '...'}</h1>
           </div>
-          <div className="flex gap-2">
-            <Button onClick={handleSendRemoteSignature} disabled={isSendingSignature || loading} variant="outline" className="h-10 px-4 font-bold uppercase text-xs border-primary text-primary hover:bg-primary/5">
-              <Send className="h-4 w-4 mr-2" /> {isSendingSignature ? "Enviando..." : "Firma Remota"}
-            </Button>
-          </div>
+          <Button onClick={handleSendRemoteSignature} disabled={isSendingSignature || loading} variant="outline" className="h-10 px-4 font-bold uppercase text-xs border-primary text-primary">
+            <Send className="h-4 w-4 mr-2" /> {isSendingSignature ? "Enviando..." : "Firma Remota"}
+          </Button>
         </div>
       </header>
 
@@ -552,17 +528,13 @@ export default function NewWorkOrder() {
                   <CheckSquare className="h-4 w-4" /> Checklist
                 </Label>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="flex flex-col gap-4 p-5 bg-muted/30 rounded-2xl border border-dashed">
-                    <div className="flex items-center justify-between">
-                      <Label className="font-bold text-sm">¿Certificación Realizada?</Label>
-                      <Switch checked={formData.isCert} onCheckedChange={(v) => setFormData({...formData, isCert: v})} />
-                    </div>
+                  <div className="flex items-center justify-between p-5 bg-muted/30 rounded-2xl border border-dashed">
+                    <Label className="font-bold text-sm">¿Certificación Realizada?</Label>
+                    <Switch checked={formData.isCert} onCheckedChange={(v) => setFormData({...formData, isCert: v})} />
                   </div>
-                  <div className="flex flex-col gap-4 p-5 bg-muted/30 rounded-2xl border border-dashed">
-                    <div className="flex items-center justify-between">
-                      <Label className="font-bold text-sm">¿Rotulación Realizada?</Label>
-                      <Switch checked={formData.isLabeled} onCheckedChange={(v) => setFormData({...formData, isLabeled: v})} />
-                    </div>
+                  <div className="flex items-center justify-between p-5 bg-muted/30 rounded-2xl border border-dashed">
+                    <Label className="font-bold text-sm">¿Rotulación Realizada?</Label>
+                    <Switch checked={formData.isLabeled} onCheckedChange={(v) => setFormData({...formData, isLabeled: v})} />
                   </div>
                   <div className="flex items-center justify-between p-5 bg-muted/30 rounded-2xl border border-dashed">
                     <Label className="font-bold text-sm">¿Canalización?</Label>
@@ -667,25 +639,12 @@ export default function NewWorkOrder() {
           </div>
 
           <div className="fixed bottom-0 left-0 right-0 p-4 bg-white/95 backdrop-blur-xl border-t md:relative md:bg-transparent md:border-none md:p-0 z-50">
-            <Button type="submit" size="lg" className="bg-primary hover:bg-primary/90 w-full h-16 text-xl font-black gap-3 shadow-xl active:scale-95 transition-all rounded-2xl uppercase tracking-tighter" disabled={loading}>
+            <Button type="submit" size="lg" className="bg-primary hover:bg-primary/90 w-full h-16 text-xl font-black gap-3 shadow-xl rounded-2xl uppercase tracking-tighter" disabled={loading}>
               <CheckCircle2 size={28} /> Finalizar y Guardar OT
             </Button>
           </div>
         </form>
       </main>
-
-      <AlertDialog open={showSaveSignatureDialog} onOpenChange={setShowSaveSignatureDialog}>
-        <AlertDialogContent className="rounded-3xl max-w-[400px]">
-          <AlertDialogHeader>
-            <AlertDialogTitle className="text-primary font-black uppercase tracking-tighter text-2xl">¿Guardar Firma?</AlertDialogTitle>
-            <AlertDialogDescription className="text-base">¿Desea guardar esta firma para aplicarla automáticamente?</AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter className="gap-3 sm:gap-3 pt-6">
-            <AlertDialogCancel className="h-14 font-black uppercase tracking-widest rounded-2xl" onClick={() => { setFormData({...formData, techSignatureUrl: tempSignature}); setShowSaveSignatureDialog(false); }}>Solo hoy</AlertDialogCancel>
-            <AlertDialogAction className="h-14 bg-primary font-black uppercase tracking-widest rounded-2xl" onClick={saveSignatureToProfile}>Guardar Firma</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 }

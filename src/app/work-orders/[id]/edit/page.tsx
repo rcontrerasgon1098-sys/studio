@@ -18,17 +18,8 @@ import Image from "next/image";
 import { useUser, useFirestore, useDoc, useMemoFirebase, useCollection, useUserProfile } from "@/firebase";
 import { doc, collection, query, where, orderBy, setDoc } from "firebase/firestore";
 import { updateDocumentNonBlocking, deleteDocumentNonBlocking } from "@/firebase/non-blocking-updates";
-import { validateRut } from "@/lib/rut-utils";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandList, CommandItem } from "@/components/ui/command";
 import { Switch } from "@/components/ui/switch";
 import { sendWorkOrderEmail } from "@/ai/flows/send-work-order-email-flow";
 import { sendSignatureRequest } from "@/ai/flows/send-signature-request-flow";
@@ -64,6 +55,7 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
   const [loading, setLoading] = useState(false);
   const [isSendingSignature, setIsSendingSignature] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
+  const [openTeamSearch, setOpenTeamSearch] = useState(false);
   const [showSaveSignatureDialog, setShowSaveSignatureDialog] = useState(false);
   const [tempSignature, setTempSignature] = useState("");
   
@@ -96,7 +88,6 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
     team: [] as string[],
     teamIds: [] as string[],
     createdBy: "",
-    supervisorId: "",
     technicianId: "",
   });
 
@@ -137,7 +128,6 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
         team: order.team || [],
         teamIds: order.teamIds || [],
         createdBy: order.createdBy || "",
-        supervisorId: order.supervisorId || order.createdBy || "",
         technicianId: order.technicianId || order.createdBy || "",
       });
       setIsInitialized(true);
@@ -170,24 +160,15 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
-  const handleTechSignatureConfirm = (dataUrl: string) => {
-    const hasSavedSignature = techProfiles && techProfiles.length > 0 && !!techProfiles[0].signatureUrl;
-    if (!hasSavedSignature) {
-      setTempSignature(dataUrl);
-      setShowSaveSignatureDialog(true);
-    } else {
-      setFormData({...formData, techSignatureUrl: dataUrl});
+  const handleTeamSelect = (person: any) => {
+    if (!formData.teamIds.includes(person.id)) {
+      setFormData(prev => ({ 
+        ...prev, 
+        team: [...prev.team, person.nombre_t],
+        teamIds: [...prev.teamIds, person.id]
+      }));
     }
-  };
-
-  const saveSignatureToProfile = () => {
-    if (db && techProfiles && techProfiles.length > 0) {
-      const techRef = doc(db, "personnel", techProfiles[0].id);
-      updateDocumentNonBlocking(techRef, { signatureUrl: tempSignature });
-      toast({ title: "Firma Guardada", description: "Su firma se cargará automáticamente en el futuro." });
-    }
-    setFormData({...formData, techSignatureUrl: tempSignature});
-    setShowSaveSignatureDialog(false);
+    setOpenTeamSearch(false);
   };
 
   const handleTeamRemove = (memberName: string, memberId: string) => {
@@ -199,17 +180,9 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
   };
 
   const handleSendRemoteSignature = async () => {
-    if (!user || !db) {
-      toast({ variant: "destructive", title: "Error de Sesión", description: "No se encontró un usuario autenticado." });
-      return;
-    }
-
+    if (!user || !db) return;
     if (!formData.clientReceiverEmail) {
-      toast({ 
-        variant: "destructive", 
-        title: "Falta Email", 
-        description: "Por favor ingrese el email del receptor en la sección de Recepción Terreno." 
-      });
+      toast({ variant: "destructive", title: "Falta Email", description: "Ingrese el email del receptor." });
       return;
     }
 
@@ -224,7 +197,7 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
       });
 
       if (result.success) {
-        toast({ title: "Solicitud Enviada", description: "Se ha enviado el enlace de firma remota al cliente." });
+        toast({ title: "Solicitud Enviada", description: "Se ha enviado el enlace de firma remota." });
         router.push("/dashboard");
       } else {
         toast({ variant: "destructive", title: "Error", description: result.error });
@@ -238,10 +211,7 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user || !db || !id) {
-       toast({ variant: "destructive", title: "Error Crítico", description: "No se pudo identificar la sesión de usuario." });
-       return;
-    }
+    if (!user || !db || !id) return;
     
     setLoading(true);
 
@@ -254,7 +224,6 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
     const updateData = {
       ...formData,
       createdBy: formData.createdBy || user.uid,
-      supervisorId: formData.supervisorId || formData.createdBy || user.uid,
       status: finalStatus,
       updatedAt: new Date().toISOString(),
       updatedBy: user.email || ""
@@ -275,10 +244,10 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
             orderDate: updateData.updatedAt,
             summary: formData.description,
             pdfLink: `${window.location.origin}/work-orders/${id}`
-          }).catch(err => console.error("Email flow error:", err));
+          }).catch(err => console.error("Email error:", err));
         }
 
-        toast({ title: "Orden Finalizada", description: "La orden se ha movido al historial y se enviará el correo." });
+        toast({ title: "Orden Finalizada", description: "La orden se ha movido al historial." });
         router.push("/dashboard");
       } catch (error) {
         setLoading(false);
@@ -318,11 +287,9 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
             </Link>
             <h1 className="font-bold text-lg text-primary uppercase tracking-tighter">Editar OT #{order?.folio}</h1>
           </div>
-          <div className="flex gap-2">
-            <Button onClick={handleSendRemoteSignature} disabled={isSendingSignature || loading} variant="outline" className="h-10 px-4 font-bold uppercase text-xs border-primary text-primary hover:bg-primary/5">
-              <Send className="h-4 w-4 mr-2" /> {isSendingSignature ? "Enviando..." : "Firma Remota"}
-            </Button>
-          </div>
+          <Button onClick={handleSendRemoteSignature} disabled={isSendingSignature || loading} variant="outline" className="h-10 px-4 font-bold uppercase text-xs border-primary text-primary">
+            <Send className="h-4 w-4 mr-2" /> {isSendingSignature ? "Enviando..." : "Firma Remota"}
+          </Button>
         </div>
       </header>
 
@@ -359,27 +326,12 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label className="font-bold uppercase text-xs tracking-widest text-muted-foreground">Número de Teléfono</Label>
-                    <div className="relative">
-                      <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <Input 
-                        value={formData.clientPhone}
-                        onChange={e => setFormData({...formData, clientPhone: e.target.value})}
-                        className="h-12 pl-10"
-                      />
-                    </div>
+                    <Label className="font-bold uppercase text-xs tracking-widest text-muted-foreground">Teléfono</Label>
+                    <Input value={formData.clientPhone} onChange={e => setFormData({...formData, clientPhone: e.target.value})} className="h-12" />
                   </div>
                   <div className="space-y-2">
-                    <Label className="font-bold uppercase text-xs tracking-widest text-muted-foreground">Correo Electrónico</Label>
-                    <div className="relative">
-                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <Input 
-                        type="email"
-                        value={formData.clientEmail}
-                        onChange={e => setFormData({...formData, clientEmail: e.target.value})}
-                        className="h-12 pl-10"
-                      />
-                    </div>
+                    <Label className="font-bold uppercase text-xs tracking-widest text-muted-foreground">Email</Label>
+                    <Input value={formData.clientEmail} onChange={e => setFormData({...formData, clientEmail: e.target.value})} className="h-12" />
                   </div>
                 </div>
               </div>
@@ -405,6 +357,32 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
                   </Badge>
                 ))}
               </div>
+              <Popover open={openTeamSearch} onOpenChange={setOpenTeamSearch}>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className="w-full h-12 text-sm font-black border-dashed border-2 uppercase tracking-widest">
+                    <PlusCircle className="h-4 w-4 mr-2" /> Añadir Personal
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[320px] md:w-[450px] p-0 shadow-2xl" align="start">
+                  <Command>
+                    <CommandInput placeholder="Buscar colaborador..." className="h-12"/>
+                    <CommandList>
+                      <CommandEmpty className="p-4 text-sm text-center">Sin resultados.</CommandEmpty>
+                      <CommandGroup heading="Personal ICSA" className="p-2">
+                        {(allPersonnel || []).map(person => (
+                          <CommandItem key={person.id} onSelect={() => handleTeamSelect(person)} className="p-3 cursor-pointer rounded-lg">
+                            <User className="mr-3 h-5 w-5 text-primary" />
+                            <div className="flex flex-col">
+                              <span className="font-bold text-primary">{person.nombre_t}</span>
+                              <span className="text-[10px] uppercase font-bold text-muted-foreground">{person.rol_t}</span>
+                            </div>
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
             </CardContent>
           </Card>
 
@@ -420,19 +398,11 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label className="font-bold uppercase text-xs tracking-widest text-muted-foreground">Edificio</Label>
-                    <Input 
-                      value={formData.building}
-                      onChange={e => setFormData({...formData, building: e.target.value})}
-                      className="h-12"
-                    />
+                    <Input value={formData.building} onChange={e => setFormData({...formData, building: e.target.value})} className="h-12" />
                   </div>
                   <div className="space-y-2">
                     <Label className="font-bold uppercase text-xs tracking-widest text-muted-foreground">Piso</Label>
-                    <Input 
-                      value={formData.floor}
-                      onChange={e => setFormData({...formData, floor: e.target.value})}
-                      className="h-12"
-                    />
+                    <Input value={formData.floor} onChange={e => setFormData({...formData, floor: e.target.value})} className="h-12" />
                   </div>
                 </div>
               </div>
@@ -459,13 +429,7 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
                   </div>
                   <div className="space-y-2">
                     <Label className="font-bold uppercase text-xs tracking-widest text-muted-foreground">Cantidad</Label>
-                    <Input 
-                      type="number"
-                      min="1"
-                      value={formData.signalCount}
-                      onChange={e => setFormData({...formData, signalCount: parseInt(e.target.value) || 0})}
-                      className="h-12"
-                    />
+                    <Input type="number" value={formData.signalCount} onChange={e => setFormData({...formData, signalCount: parseInt(e.target.value) || 0})} className="h-12" />
                   </div>
                 </div>
               </div>
@@ -474,37 +438,22 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
                 <Label className="font-black uppercase text-xs tracking-[0.2em] text-primary flex items-center gap-2">
                   <CheckSquare className="h-4 w-4" /> Checklist
                 </Label>
-                
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="flex flex-col gap-4 p-5 bg-muted/30 rounded-2xl border border-dashed">
-                    <div className="flex items-center justify-between">
-                      <Label className="font-bold text-sm">¿Certificación Realizada?</Label>
-                      <Switch checked={formData.isCert} onCheckedChange={(v) => setFormData({...formData, isCert: v})} />
-                    </div>
-                    {formData.isCert && (
-                      <div className="space-y-2 animate-in fade-in">
-                        <Label className="text-[10px] font-bold uppercase text-muted-foreground">Puntos Certificados</Label>
-                        <Input type="number" value={formData.certifiedPointsCount} onChange={e => setFormData({...formData, certifiedPointsCount: parseInt(e.target.value) || 0})} className="h-10 bg-white" />
-                      </div>
-                    )}
+                  <div className="flex items-center justify-between p-5 bg-muted/30 rounded-2xl border border-dashed">
+                    <Label className="font-bold text-sm">¿Certificación?</Label>
+                    <Switch checked={formData.isCert} onCheckedChange={(v) => setFormData({...formData, isCert: v})} />
                   </div>
-
-                  <div className="flex flex-col gap-4 p-5 bg-muted/30 rounded-2xl border border-dashed">
-                    <div className="flex items-center justify-between">
-                      <Label className="font-bold text-sm">¿Rotulación Realizada?</Label>
-                      <Switch checked={formData.isLabeled} onCheckedChange={(v) => setFormData({...formData, isLabeled: v})} />
-                    </div>
-                    {formData.isLabeled && (
-                      <div className="space-y-2 animate-in fade-in">
-                        <Label className="text-[10px] font-bold uppercase text-muted-foreground">Detalle de Rótulos</Label>
-                        <Input value={formData.labelDetails} onChange={e => setFormData({...formData, labelDetails: e.target.value})} className="h-10 bg-white" />
-                      </div>
-                    )}
+                  <div className="flex items-center justify-between p-5 bg-muted/30 rounded-2xl border border-dashed">
+                    <Label className="font-bold text-sm">¿Rotulación?</Label>
+                    <Switch checked={formData.isLabeled} onCheckedChange={(v) => setFormData({...formData, isLabeled: v})} />
                   </div>
-
                   <div className="flex items-center justify-between p-5 bg-muted/30 rounded-2xl border border-dashed">
                     <Label className="font-bold text-sm">¿Canalización?</Label>
                     <Switch checked={formData.isCanalized} onCheckedChange={(v) => setFormData({...formData, isCanalized: v})} />
+                  </div>
+                  <div className="flex items-center justify-between p-5 bg-muted/30 rounded-2xl border border-dashed">
+                    <Label className="font-bold text-sm">¿Planos?</Label>
+                    <Switch checked={formData.isPlan} onCheckedChange={(v) => setFormData({...formData, isPlan: v})} />
                   </div>
                 </div>
               </div>
@@ -537,9 +486,6 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
                       <X className="h-6 w-6" />
                     </Button>
                   </div>
-                  <Button type="button" variant="outline" className="w-full h-14 font-black uppercase tracking-widest rounded-2xl" onClick={() => fileInputRef.current?.click()}>
-                    Reemplazar Imagen
-                  </Button>
                 </div>
               )}
             </CardContent>
@@ -548,36 +494,25 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
           <div className="grid grid-cols-1 gap-6 pb-6">
             <Card className="shadow-md border-none bg-white overflow-hidden">
               <CardHeader className="border-b bg-muted/20 p-4">
-                <CardTitle className="text-xs font-black uppercase tracking-widest text-primary flex items-center justify-between">Técnico Responsable</CardTitle>
+                <CardTitle className="text-xs font-black uppercase tracking-widest text-primary">Técnico Responsable</CardTitle>
               </CardHeader>
               <CardContent className="p-5 space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label className="text-[10px] font-bold uppercase text-muted-foreground">Nombre Técnico</Label>
+                    <Label className="text-[10px] font-bold uppercase text-muted-foreground">Nombre</Label>
                     <Input value={formData.techName} onChange={e => setFormData({...formData, techName: e.target.value})} />
                   </div>
                   <div className="space-y-2">
-                    <Label className="text-[10px] font-bold uppercase text-muted-foreground">RUT Técnico</Label>
+                    <Label className="text-[10px] font-bold uppercase text-muted-foreground">RUT</Label>
                     <Input value={formData.techRut} onChange={e => setFormData({...formData, techRut: e.target.value})} />
                   </div>
                 </div>
                 {formData.techSignatureUrl ? (
-                  <div className="space-y-4">
-                    <div className="relative h-40 w-full bg-muted/20 rounded-2xl border-2 border-dashed flex items-center justify-center overflow-hidden group">
-                      <Image src={formData.techSignatureUrl} alt="Firma Técnico" fill className="object-contain" />
-                      <Button 
-                        type="button" 
-                        variant="destructive" 
-                        size="sm" 
-                        className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity"
-                        onClick={() => setFormData({...formData, techSignatureUrl: ""})}
-                      >
-                        <X className="h-4 w-4 mr-1" /> Cambiar
-                      </Button>
-                    </div>
+                  <div className="relative h-40 w-full bg-muted/20 rounded-2xl border-2 border-dashed flex items-center justify-center overflow-hidden">
+                    <Image src={formData.techSignatureUrl} alt="Firma Técnico" fill className="object-contain" />
                   </div>
                 ) : (
-                  <SignaturePad label="Firma del Técnico" onSave={handleTechSignatureConfirm} />
+                  <SignaturePad label="Firma del Técnico" onSave={(url) => setFormData({...formData, techSignatureUrl: url})} />
                 )}
               </CardContent>
             </Card>
@@ -589,21 +524,16 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
               <CardContent className="p-5 space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label className="text-[10px] font-bold uppercase text-muted-foreground">Nombre Receptor</Label>
+                    <Label className="text-[10px] font-bold uppercase text-muted-foreground">Nombre</Label>
                     <Input value={formData.clientReceiverName} onChange={e => setFormData({...formData, clientReceiverName: e.target.value})} />
                   </div>
                   <div className="space-y-2">
-                    <Label className="text-[10px] font-bold uppercase text-muted-foreground">RUT Receptor</Label>
+                    <Label className="text-[10px] font-bold uppercase text-muted-foreground">RUT</Label>
                     <Input value={formData.clientReceiverRut} onChange={e => setFormData({...formData, clientReceiverRut: e.target.value})} />
                   </div>
                   <div className="md:col-span-2 space-y-2">
-                    <Label className="text-[10px] font-bold uppercase text-muted-foreground">Email Receptor (para envío de PDF)</Label>
-                    <Input 
-                      type="email" 
-                      placeholder="ejemplo@gmail.com" 
-                      value={formData.clientReceiverEmail} 
-                      onChange={e => setFormData({...formData, clientReceiverEmail: e.target.value})} 
-                    />
+                    <Label className="text-[10px] font-bold uppercase text-muted-foreground">Email (para PDF)</Label>
+                    <Input type="email" value={formData.clientReceiverEmail} onChange={e => setFormData({...formData, clientReceiverEmail: e.target.value})} />
                   </div>
                 </div>
                 {formData.clientSignatureUrl ? (
@@ -611,32 +541,19 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
                     <Image src={formData.clientSignatureUrl} alt="Firma Cliente" fill className="object-contain" />
                   </div>
                 ) : (
-                  <SignaturePad label="Firma de Recepción" onSave={(dataUrl) => setFormData({...formData, clientSignatureUrl: dataUrl})} />
+                  <SignaturePad label="Firma de Recepción" onSave={(url) => setFormData({...formData, clientSignatureUrl: url})} />
                 )}
               </CardContent>
             </Card>
           </div>
 
           <div className="fixed bottom-0 left-0 right-0 p-4 bg-white/95 backdrop-blur-xl border-t md:relative md:bg-transparent md:border-none md:p-0 z-50">
-            <Button type="submit" size="lg" className="bg-primary hover:bg-primary/90 w-full h-16 text-xl font-black gap-3 shadow-xl active:scale-95 transition-all rounded-2xl uppercase tracking-tighter" disabled={loading}>
-              <CheckCircle2 size={28} /> Finalizar y Cerrar OT
+            <Button type="submit" size="lg" className="bg-primary hover:bg-primary/90 w-full h-16 text-xl font-black gap-3 shadow-xl rounded-2xl uppercase tracking-tighter" disabled={loading}>
+              <CheckCircle2 size={28} /> Finalizar y Guardar OT
             </Button>
           </div>
         </form>
       </main>
-
-      <AlertDialog open={showSaveSignatureDialog} onOpenChange={setShowSaveSignatureDialog}>
-        <AlertDialogContent className="rounded-3xl max-w-[400px]">
-          <AlertDialogHeader>
-            <AlertDialogTitle className="text-primary font-black uppercase tracking-tighter text-2xl">¿Guardar Firma?</AlertDialogTitle>
-            <AlertDialogDescription className="text-base">¿Desea guardar esta firma para aplicarla automáticamente en sus futuras órdenes de trabajo?</AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter className="gap-3 sm:gap-3 pt-6">
-            <AlertDialogCancel className="h-14 font-black uppercase tracking-widest rounded-2xl" onClick={() => { setFormData({...formData, techSignatureUrl: tempSignature}); setShowSaveSignatureDialog(false); }}>Solo hoy</AlertDialogCancel>
-            <AlertDialogAction className="h-14 bg-primary font-black uppercase tracking-widest rounded-2xl" onClick={saveSignatureToProfile}>Guardar Firma</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 }
