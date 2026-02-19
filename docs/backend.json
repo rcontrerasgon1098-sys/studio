@@ -69,9 +69,12 @@
         "nombre_t": { "type": "string" },
         "rol_t": { "type": "string", "enum": ["admin", "supervisor", "tecnico"] },
         "email_t": { "type": "string" },
+        "rut_t": { "type": "string" },
+        "cel_t": { "type": "string" },
+        "estado_t": { "type": "string", "enum": ["Activo", "Inactivo"] },
         "signatureUrl": { "type": "string" }
       },
-      "required": ["id", "nombre_t", "rol_t"]
+      "required": ["id", "nombre_t", "rol_t", "estado_t"]
     }
   },
   "auth": {

@@ -33,33 +33,29 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      // 1. Authenticate user with email and password
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 
-      // 2. Special handling for the admin user to ensure their role is always correct.
       if (user.email === 'admin@icsa.com') {
           const personnelDocRef = doc(db, "personnel", user.uid);
-          // This ensures the admin document exists and has the correct role.
           await setDoc(personnelDocRef, {
               id: user.uid,
               email_t: user.email,
               nombre_t: "Admin ICSA",
-              rol_t: "admin", // Guarantees the 'admin' role
-              rut_t: "1-9"
-          }, { merge: true }); // Use merge: true to create or update without overwriting other fields.
+              rol_t: "admin",
+              rut_t: "1-9",
+              estado_t: "Activo"
+          }, { merge: true });
 
           toast({ title: "Bienvenido, Admin", description: "Acceso de administrador concedido." });
           router.push("/dashboard");
-          return; // Exit here for the admin user.
+          return;
       }
 
-      // 3. For all other users, fetch their profile from 'personnel'
       const personnelDocRef = doc(db, "personnel", user.uid);
       const personnelDoc = await getDoc(personnelDocRef);
 
       if (!personnelDoc.exists()) {
-        // If not the admin and no profile exists, deny access.
         toast({ 
           variant: "destructive", 
           title: "Acceso Denegado", 
@@ -70,12 +66,21 @@ export default function LoginPage() {
         return;
       }
       
-      // 4. Profile exists, get the role
       const personnelData = personnelDoc.data();
-      const userRole = personnelData.rol_t; // e.g., 'admin', 'supervisor', 'tecnico'
+      
+      // BLOQUEO POR ESTADO INACTIVO (Para permitir reingresos)
+      if (personnelData.estado_t === "Inactivo") {
+        toast({ 
+          variant: "destructive", 
+          title: "Acceso Revocado", 
+          description: "Tu perfil ha sido desactivado por el administrador." 
+        });
+        if(auth.currentUser) await signOut(auth);
+        setLoading(false);
+        return;
+      }
 
-      // 5. Check if the role is 'tecnico', which is not allowed to log in
-      if (userRole === 'tecnico') {
+      if (personnelData.rol_t === 'tecnico') {
         toast({ 
           variant: "destructive", 
           title: "Acceso Denegado", 
@@ -86,28 +91,15 @@ export default function LoginPage() {
         return;
       }
 
-      // Login successful for supervisor or admin
       toast({ title: "Bienvenido", description: `Acceso concedido como ${personnelData.nombre_t || user.email}.` });
       router.push("/dashboard");
 
     } catch (error: any) {
       let message = "Error de conexión. Verifique sus datos.";
+      if (error.code === 'auth/invalid-credential') message = "Credenciales incorrectas.";
+      else if (error.code === 'auth/too-many-requests') message = "Demasiados intentos. Intente más tarde.";
       
-      if (error.code === 'auth/invalid-credential' || error.code === 'auth/wrong-password' || error.code === 'auth/user-not-found') {
-        message = "Credenciales incorrectas. Verifique su correo y contraseña.";
-      } else if (error.code === 'auth/too-many-requests') {
-        message = "Acceso bloqueado temporalmente por demasiados intentos fallidos.";
-      } else if (error.code === 'auth/network-request-failed') {
-        message = "Error de red. Verifique su conexión a internet.";
-      } else {
-        console.error("Login error:", error);
-      }
-      
-      toast({ 
-        variant: "destructive", 
-        title: "Error de Acceso", 
-        description: message 
-      });
+      toast({ variant: "destructive", title: "Error de Acceso", description: message });
       setLoading(false);
     }
   };
@@ -131,13 +123,7 @@ export default function LoginPage() {
         <CardHeader className="text-center space-y-4 pt-16 pb-2">
           {logoImage && (
             <div className="mx-auto relative w-48 h-48 transition-transform hover:scale-105 duration-500 drop-shadow-2xl">
-              <Image
-                src={logoImage.imageUrl}
-                alt="ICSA Logo"
-                fill
-                className="object-contain"
-                priority
-              />
+              <Image src={logoImage.imageUrl} alt="ICSA Logo" fill className="object-contain" priority />
             </div>
           )}
           <div className="space-y-1">
@@ -145,9 +131,7 @@ export default function LoginPage() {
               ICSA
               <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-[0.3em] mt-2">ingeniería comunicaciones S.A.</span>
             </CardTitle>
-            <CardDescription className="text-base pt-2 font-medium">
-              Portal de Gestión Técnica
-            </CardDescription>
+            <CardDescription className="text-base pt-2 font-medium">Portal de Gestión Técnica</CardDescription>
           </div>
         </CardHeader>
         <CardContent className="pb-8 pt-4">
@@ -195,7 +179,7 @@ export default function LoginPage() {
           <div className="mt-6 p-4 bg-muted/30 rounded-xl text-center">
             <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest">Aviso Operativo</p>
             <p className="text-[10px] text-muted-foreground mt-1 leading-relaxed">
-              Solo el personal con rol de Supervisor o Administrador puede acceder a este portal.
+              Si su cuenta fue desactivada por reingreso, contacte al administrador para habilitar su acceso.
             </p>
           </div>
         </CardContent>

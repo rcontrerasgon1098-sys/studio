@@ -12,7 +12,8 @@ import {
   Plus, FileText, Search, LogOut, LayoutDashboard, 
   Eye, Download, Menu, Users, UserRound, 
   Pencil, Trash2, PieChart as PieChartIcon,
-  History, Activity, TrendingUp, Trophy, Building, ShieldCheck, Loader2
+  History, Activity, TrendingUp, Trophy, Building, ShieldCheck, Loader2,
+  UserX, UserCheck
 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
@@ -23,7 +24,7 @@ import { PlaceHolderImages } from "@/lib/placeholder-images";
 import { useFirebase, useCollection, useMemoFirebase, useUserProfile } from "@/firebase";
 import { collection, query, where, orderBy, doc } from "firebase/firestore";
 import { signOut } from "firebase/auth";
-import { deleteDocumentNonBlocking } from "@/firebase/non-blocking-updates";
+import { deleteDocumentNonBlocking, updateDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 import { cn } from "@/lib/utils";
 import {
   AlertDialog,
@@ -207,13 +208,28 @@ export default function Dashboard() {
 
   const handleDelete = () => {
     if (!deleteConfirm || !db) return;
-    // Eliminación definitiva de la base de datos y caché de Firebase
-    const docRef = doc(db, deleteConfirm.type, deleteConfirm.id);
-    deleteDocumentNonBlocking(docRef);
-    toast({ 
-      title: "Registro eliminado", 
-      description: "El elemento ha sido removido permanentemente del sistema y del caché local." 
-    });
+
+    // Si es personal, implementamos DESACTIVACIÓN en lugar de eliminación física
+    // para permitir reingresos con el mismo correo.
+    if (deleteConfirm.type === 'personnel') {
+      const docRef = doc(db, 'personnel', deleteConfirm.id);
+      updateDocumentNonBlocking(docRef, { 
+        estado_t: "Inactivo",
+        updatedAt: new Date().toISOString()
+      });
+      toast({ 
+        title: "Personal Desactivado", 
+        description: "El acceso ha sido revocado. El perfil permanece en el sistema para posibles reingresos." 
+      });
+    } else {
+      // Para clientes y órdenes, mantenemos eliminación definitiva
+      const docRef = doc(db, deleteConfirm.type, deleteConfirm.id);
+      deleteDocumentNonBlocking(docRef);
+      toast({ 
+        title: "Registro eliminado", 
+        description: "El elemento ha sido removido permanentemente del sistema." 
+      });
+    }
     setDeleteConfirm(null);
   };
 
@@ -284,8 +300,8 @@ export default function Dashboard() {
     </div>
   );
 
-  const isLoading = isUserLoading || !mounted || isProfileLoading;
-  if (isLoading) return <div className="min-h-screen flex items-center justify-center text-primary font-black animate-pulse bg-background">CARGANDO...</div>;
+  const isLoading = isOrdersLoading || isHistoryLoading || !mounted || isProfileLoading;
+  if (isUserLoading || !mounted || isProfileLoading) return <div className="min-h-screen flex items-center justify-center text-primary font-black animate-pulse bg-background">CARGANDO...</div>;
 
   const isAdmin = userProfile?.rol_t === 'admin' || userProfile?.rol_t === 'Administrador';
 
@@ -518,12 +534,20 @@ export default function Dashboard() {
       <AlertDialog open={!!deleteConfirm} onOpenChange={() => setDeleteConfirm(null)}>
         <AlertDialogContent className="rounded-2xl">
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-primary font-black uppercase">Confirmar eliminación definitiva</AlertDialogTitle>
-            <AlertDialogDescription>Esta acción eliminará el registro de forma permanente de la base de datos y del caché del sistema. Esta operación no se puede deshacer.</AlertDialogDescription>
+            <AlertDialogTitle className="text-primary font-black uppercase">
+              {deleteConfirm?.type === 'personnel' ? "Confirmar Desactivación" : "Confirmar Eliminación Definitiva"}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {deleteConfirm?.type === 'personnel' 
+                ? "Esta acción revocará el acceso del personal. Los datos se mantendrán en el sistema para permitir un futuro reingreso sin dramas."
+                : "Esta acción eliminará el registro de forma permanente. Esta operación no se puede deshacer."}
+            </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel className="font-bold">Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} className="bg-destructive hover:bg-destructive/90 font-black">Eliminar de todo el sistema</AlertDialogAction>
+            <AlertDialogAction onClick={handleDelete} className="bg-destructive hover:bg-destructive/90 font-black">
+              {deleteConfirm?.type === 'personnel' ? "Desactivar Acceso" : "Eliminar de todo el sistema"}
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -630,6 +654,7 @@ function PersonnelTable({ personnel, isLoading, setDeleteConfirm }: { personnel:
         <TableRow className="bg-muted/40">
           <TableHead className="font-bold">Nombre</TableHead>
           <TableHead className="font-bold">Rol</TableHead>
+          <TableHead className="font-bold">Estado</TableHead>
           <TableHead className="text-right font-bold">Acciones</TableHead>
         </TableRow>
       </TableHeader>
@@ -644,12 +669,40 @@ function PersonnelTable({ personnel, isLoading, setDeleteConfirm }: { personnel:
                 {person.rol_t}
               </Badge>
             </TableCell>
+            <TableCell>
+              <Badge variant={person.estado_t === "Activo" ? "default" : "destructive"} className="text-[10px] px-2 py-0">
+                {person.estado_t || "Inactivo"}
+              </Badge>
+            </TableCell>
             <TableCell className="text-right">
               <div className="flex justify-end gap-1">
                 <Link href={`/technicians/${person.id}/edit`}>
-                  <Button variant="ghost" size="icon" className="h-8 w-8"><Pencil className="h-4 w-4" /></Button>
+                  <Button variant="ghost" size="icon" className="h-8 w-8" title="Editar datos"><Pencil className="h-4 w-4" /></Button>
                 </Link>
-                <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => setDeleteConfirm({ id: person.id, type: "personnel" })}><Trash2 className="h-4 w-4" /></Button>
+                {person.estado_t === "Inactivo" ? (
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="h-8 w-8 text-accent"
+                    title="Re-activar Personal"
+                    onClick={() => {
+                      const docRef = doc(db as any, 'personnel', person.id);
+                      updateDocumentNonBlocking(docRef, { estado_t: "Activo" });
+                    }}
+                  >
+                    <UserCheck className="h-4 w-4" />
+                  </Button>
+                ) : (
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="h-8 w-8 text-destructive"
+                    title="Desactivar Acceso"
+                    onClick={() => setDeleteConfirm({ id: person.id, type: "personnel" })}
+                  >
+                    <UserX className="h-4 w-4" />
+                  </Button>
+                )}
               </div>
             </TableCell>
           </TableRow>

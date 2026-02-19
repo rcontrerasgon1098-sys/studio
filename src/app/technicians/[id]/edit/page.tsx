@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Save, User, Hash, Mail, Phone, ShieldCheck, UserCog } from "lucide-react";
+import { ArrowLeft, Save, User, Hash, Mail, Phone, ShieldCheck, UserCog, BadgeCheck } from "lucide-react";
 import Link from "next/link";
 import { useUser, useFirestore, useDoc, useMemoFirebase } from "@/firebase";
 import { doc } from "firebase/firestore";
@@ -36,6 +36,7 @@ export default function EditTechnician({ params }: { params: Promise<{ id: strin
     email_t: "",
     cel_t: "",
     rol_t: "tecnico",
+    estado_t: "Activo"
   });
 
   useEffect(() => {
@@ -46,6 +47,7 @@ export default function EditTechnician({ params }: { params: Promise<{ id: strin
         email_t: personnel.email_t || "",
         cel_t: personnel.cel_t || "",
         rol_t: personnel.rol_t || "tecnico",
+        estado_t: personnel.estado_t || "Activo"
       });
     }
   }, [personnel]);
@@ -63,21 +65,13 @@ export default function EditTechnician({ params }: { params: Promise<{ id: strin
     setLoading(true);
 
     if (!formData.nombre_t || !formData.rut_t || !formData.email_t || !formData.rol_t) {
-      toast({ 
-        variant: "destructive", 
-        title: "Campos Requeridos", 
-        description: "Nombre, RUT, Email y Rol son obligatorios." 
-      });
+      toast({ variant: "destructive", title: "Error", description: "Faltan campos requeridos." });
       setLoading(false);
       return;
     }
 
     if (!validateRut(formData.rut_t)) {
-      toast({ 
-        variant: "destructive", 
-        title: "RUT Inválido", 
-        description: "El RUT ingresado no es válido." 
-      });
+      toast({ variant: "destructive", title: "RUT Inválido", description: "Verifique el formato del RUT." });
       setLoading(false);
       return;
     }
@@ -85,14 +79,11 @@ export default function EditTechnician({ params }: { params: Promise<{ id: strin
     try {
       const docRef = doc(db, "personnel", id);
       updateDocumentNonBlocking(docRef, {
-        nombre_t: formData.nombre_t,
-        rut_t: formData.rut_t,
-        cel_t: formData.cel_t,
-        rol_t: formData.rol_t,
+        ...formData,
         updatedAt: new Date().toISOString(),
         updatedBy: user.email
       });
-      toast({ title: "Personal Actualizado", description: "Los cambios han sido guardados." });
+      toast({ title: "Cambios Guardados", description: "El perfil ha sido actualizado correctamente." });
       router.push("/dashboard");
     } catch (error) {
       setLoading(false);
@@ -100,8 +91,7 @@ export default function EditTechnician({ params }: { params: Promise<{ id: strin
     }
   };
 
-  if (isUserLoading || isPersonnelLoading) return <div className="min-h-screen flex items-center justify-center font-black animate-pulse bg-background text-primary">CARGANDO PERSONAL...</div>;
-  if (!personnel) return <div className="min-h-screen flex items-center justify-center font-bold bg-background">Personal no encontrado.</div>;
+  if (isUserLoading || isPersonnelLoading) return <div className="min-h-screen flex items-center justify-center font-black animate-pulse bg-background text-primary">CARGANDO...</div>;
 
   return (
     <div className="min-h-screen bg-background pb-20">
@@ -113,10 +103,10 @@ export default function EditTechnician({ params }: { params: Promise<{ id: strin
                 <ArrowLeft className="h-6 w-6" />
               </Button>
             </Link>
-            <h1 className="font-bold text-lg text-primary">Editar Personal</h1>
+            <h1 className="font-bold text-lg text-primary">Editar Perfil</h1>
           </div>
-          <Button onClick={handleSubmit} disabled={loading} className="bg-primary hover:bg-primary/90 h-10 px-6 font-bold">
-            <Save className="h-4 w-4 mr-2" /> {loading ? "Guardando..." : "Guardar Cambios"}
+          <Button onClick={handleSubmit} disabled={loading} className="bg-primary hover:bg-primary/90 h-10 px-6 font-bold uppercase text-xs">
+            <Save className="h-4 w-4 mr-2" /> Guardar Cambios
           </Button>
         </div>
       </header>
@@ -128,48 +118,24 @@ export default function EditTechnician({ params }: { params: Promise<{ id: strin
               <CardTitle className="text-primary flex items-center gap-2">
                 <ShieldCheck className="h-5 w-5" /> Datos del Colaborador
               </CardTitle>
-              <CardDescription>Actualice la información profesional del integrante del equipo.</CardDescription>
             </CardHeader>
             <CardContent className="p-6 space-y-6">
               <div className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="nombre_t" className="font-bold flex items-center gap-2">
-                    <User className="h-4 w-4 text-primary" /> Nombre Completo
-                  </Label>
-                  <Input 
-                    id="nombre_t"
-                    placeholder="Ej: Rodrigo Tapia" 
-                    value={formData.nombre_t}
-                    onChange={e => setFormData({...formData, nombre_t: e.target.value})}
-                    className="h-12"
-                    required
-                  />
+                  <Label className="font-bold">Nombre Completo</Label>
+                  <Input value={formData.nombre_t} onChange={e => setFormData({...formData, nombre_t: e.target.value})} className="h-12" required />
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="rut_t" className="font-bold flex items-center gap-2">
-                      <Hash className="h-4 w-4 text-primary" /> RUT
-                    </Label>
-                    <Input 
-                      id="rut_t"
-                      placeholder="Ej: 15.678.123-K" 
-                      value={formData.rut_t}
-                      onChange={e => setFormData({...formData, rut_t: e.target.value})}
-                      className="h-12"
-                      required
-                    />
+                    <Label className="font-bold">RUT</Label>
+                    <Input value={formData.rut_t} onChange={e => setFormData({...formData, rut_t: e.target.value})} className="h-12" required />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="rol_t" className="font-bold flex items-center gap-2">
-                      <UserCog className="h-4 w-4 text-primary" /> Rol en la Empresa
-                    </Label>
-                    <Select 
-                      value={formData.rol_t} 
-                      onValueChange={v => setFormData({...formData, rol_t: v})}
-                    >
+                    <Label className="font-bold">Rol</Label>
+                    <Select value={formData.rol_t} onValueChange={v => setFormData({...formData, rol_t: v})}>
                       <SelectTrigger className="h-12">
-                        <SelectValue placeholder="Seleccionar rol" />
+                        <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="admin">Administrador</SelectItem>
@@ -182,57 +148,25 @@ export default function EditTechnician({ params }: { params: Promise<{ id: strin
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="email_t" className="font-bold flex items-center gap-2">
-                      <Mail className="h-4 w-4 text-primary" /> Correo Corporativo
-                    </Label>
-                    <Input 
-                      id="email_t"
-                      type="email"
-                      placeholder="tecnico@icsa.com" 
-                      value={formData.email_t}
-                      className="h-12 bg-muted/50"
-                      required
-                      disabled
-                    />
-                    <p className="text-[10px] text-muted-foreground">El correo no se puede modificar ya que está asociado al inicio de sesión.</p>
+                    <Label className="font-bold">Estado del Perfil</Label>
+                    <Select value={formData.estado_t} onValueChange={v => setFormData({...formData, estado_t: v})}>
+                      <SelectTrigger className="h-12 border-primary/20">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Activo">Activo (Habilitado)</SelectItem>
+                        <SelectItem value="Inactivo">Inactivo (Deshabilitado)</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="cel_t" className="font-bold flex items-center gap-2">
-                      <Phone className="h-4 w-4 text-primary" /> Celular de Contacto
-                    </Label>
-                    <Input 
-                      id="cel_t"
-                      placeholder="+56 9 8765 4321" 
-                      value={formData.cel_t}
-                      onChange={e => setFormData({...formData, cel_t: e.target.value})}
-                      className="h-12"
-                    />
+                    <Label className="font-bold">Celular</Label>
+                    <Input value={formData.cel_t} onChange={e => setFormData({...formData, cel_t: e.target.value})} className="h-12" />
                   </div>
-                </div>
-              </div>
-
-              <div className="p-4 bg-muted/40 rounded-xl border border-dashed flex items-start gap-3">
-                <div className="bg-primary/10 p-2 rounded-full">
-                  <Hash className="h-4 w-4 text-primary" />
-                </div>
-                <div className="space-y-1">
-                  <p className="text-xs font-bold text-primary">ID de Documento (UID)</p>
-                  <p className="text-[10px] text-muted-foreground font-mono break-all">
-                    {personnel.id}
-                  </p>
                 </div>
               </div>
             </CardContent>
           </Card>
-
-          <div className="flex justify-end gap-3 pt-4 pb-10">
-            <Link href="/dashboard">
-              <Button variant="outline" type="button" className="h-12 px-8 font-bold">Cancelar</Button>
-            </Link>
-            <Button type="submit" disabled={loading} className="bg-primary h-12 px-12 font-black shadow-lg">
-              Confirmar Cambios
-            </Button>
-          </div>
         </form>
       </main>
     </div>
