@@ -82,7 +82,7 @@ export default function Dashboard() {
   const ordersQuery = useMemoFirebase(() => {
     if (!db || !user?.uid || !userProfile) return null;
     const baseCollection = collection(db, "ordenes");
-    if (userProfile.rol_t === 'supervisor') {
+    if (userProfile.rol_t === 'supervisor' || userProfile.rol_t === 'Supervisor') {
       return query(baseCollection, where("createdBy", "==", user.uid));
     }
     if (userProfile.rol_t === 'admin' || userProfile.rol_t === 'Administrador') {
@@ -95,7 +95,7 @@ export default function Dashboard() {
   const historyQuery = useMemoFirebase(() => {
     if (!db || !user?.uid || !userProfile) return null;
     const baseCollection = collection(db, "historial");
-    if (userProfile.rol_t === 'supervisor') {
+    if (userProfile.rol_t === 'supervisor' || userProfile.rol_t === 'Supervisor') {
       return query(baseCollection, where("createdBy", "==", user.uid));
     }
     if (userProfile.rol_t === 'admin' || userProfile.rol_t === 'Administrador') {
@@ -367,7 +367,7 @@ export default function Dashboard() {
 
         {activeTab === "dashboard" && (
           <div className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 gap-6">
               <Card className="shadow-lg border-none bg-white rounded-2xl overflow-hidden group">
                 <CardContent className="p-6 flex items-center gap-6">
                   <div className="p-4 bg-primary/10 rounded-2xl group-hover:scale-110 transition-transform">
@@ -377,19 +377,6 @@ export default function Dashboard() {
                     <p className="text-xs font-black text-muted-foreground uppercase tracking-widest">Órdenes Activas</p>
                     <h3 className="text-4xl font-black text-primary leading-none mt-1">
                       {isOrdersLoading ? <Loader2 className="h-6 w-6 animate-spin" /> : (orders?.length || 0)}
-                    </h3>
-                  </div>
-                </CardContent>
-              </Card>
-              <Card className="shadow-lg border-none bg-white rounded-2xl overflow-hidden group">
-                <CardContent className="p-6 flex items-center gap-6">
-                  <div className="p-4 bg-accent/10 rounded-2xl group-hover:scale-110 transition-transform">
-                    <History className="h-8 w-8 text-accent" />
-                  </div>
-                  <div>
-                    <p className="text-xs font-black text-muted-foreground uppercase tracking-widest">Historial Total</p>
-                    <h3 className="text-4xl font-black text-accent leading-none mt-1">
-                      {isHistoryLoading ? <Loader2 className="h-6 w-6 animate-spin" /> : (history?.length || 0)}
                     </h3>
                   </div>
                 </CardContent>
