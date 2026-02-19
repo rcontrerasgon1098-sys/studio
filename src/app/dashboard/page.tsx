@@ -17,7 +17,7 @@ import {
   Eye, Download, Menu, Users, UserRound, 
   Pencil, Trash2, PieChart as PieChartIcon, BarChart as BarChartIcon,
   Calendar as CalendarIcon, FilterX, Loader2, History,
-  Activity
+  Activity, TrendingUp, Trophy
 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
@@ -51,7 +51,8 @@ import {
   CartesianGrid,
   Tooltip as RechartsTooltip,
   ResponsiveContainer,
-  Legend
+  Legend,
+  Cell as RechartsCell
 } from "recharts";
 
 export default function Dashboard() {
@@ -78,44 +79,28 @@ export default function Dashboard() {
     }
   }, [user, isUserLoading, router]);
 
-  // Query for active orders - Filtrado por createdBy para supervisores (illojuan)
   const ordersQuery = useMemoFirebase(() => {
     if (!db || !user?.uid || !userProfile) return null;
     const baseCollection = collection(db, "ordenes");
-    
-    // Si es supervisor, solo ve lo que ÉL creó (createdBy)
     if (userProfile.rol_t === 'supervisor') {
-      return query(
-        baseCollection, 
-        where("createdBy", "==", user.uid)
-      );
+      return query(baseCollection, where("createdBy", "==", user.uid));
     }
-    
-    // Si es admin, ve todo
     if (userProfile.rol_t === 'admin') {
       return query(baseCollection, orderBy("startDate", "desc"));
     }
-    
     return null;
   }, [db, user?.uid, userProfile]);
   const { data: orders, isLoading: isOrdersLoading } = useCollection(ordersQuery);
 
-  // Query for historical orders - Filtrado por createdBy para supervisores
   const historyQuery = useMemoFirebase(() => {
     if (!db || !user?.uid || !userProfile) return null;
     const baseCollection = collection(db, "historial");
-    
     if (userProfile.rol_t === 'supervisor') {
-      return query(
-        baseCollection, 
-        where("createdBy", "==", user.uid)
-      );
+      return query(baseCollection, where("createdBy", "==", user.uid));
     }
-    
     if (userProfile.rol_t === 'admin') {
       return query(baseCollection, orderBy("startDate", "desc"));
     }
-    
     return null;
   }, [db, user?.uid, userProfile]);
   const { data: history, isLoading: isHistoryLoading } = useCollection(historyQuery);
@@ -135,7 +120,6 @@ export default function Dashboard() {
   const statsData = useMemo(() => {
     const pendingCount = orders?.filter(o => o.status === "Pending" || o.status === "Pending Signature" || o.status === "Active").length || 0;
     const completedCount = history?.length || 0;
-    
     return [
       { name: "Pendientes", value: pendingCount, color: "hsl(var(--primary))" },
       { name: "Completadas", value: completedCount, color: "hsl(var(--accent))" }
@@ -144,33 +128,64 @@ export default function Dashboard() {
 
   const activityData = useMemo(() => {
     if (!history) return [];
-    
     const activityMap = new Map<string, number>();
     const sevenDaysAgo = startOfDay(subDays(new Date(), 6));
-
     history.forEach(order => {
       if (order.startDate) {
         const orderDate = startOfDay(new Date(order.startDate));
-        
         if (orderDate >= sevenDaysAgo) {
           const dayKey = format(orderDate, 'yyyy-MM-dd');
           activityMap.set(dayKey, (activityMap.get(dayKey) || 0) + 1);
         }
       }
     });
-
-    const result = Array.from({ length: 7 }, (_, i) => {
+    return Array.from({ length: 7 }, (_, i) => {
       const d = subDays(startOfDay(new Date()), 6 - i);
       const dayKey = format(d, 'yyyy-MM-dd');
-      
       return {
         date: format(d, "dd/MM", { locale: es }),
         count: activityMap.get(dayKey) || 0,
       };
     });
-
-    return result;
   }, [history]);
+
+  const supervisorPerformanceData = useMemo(() => {
+    if (!orders || !history || !personnel) return [];
+    const allWorkOrders = [...orders, ...history];
+    const countMap = new Map<string, number>();
+    allWorkOrders.forEach(order => {
+      const creatorId = order.createdBy;
+      if (creatorId) {
+        countMap.set(creatorId, (countMap.get(creatorId) || 0) + 1);
+      }
+    });
+    return Array.from(countMap.entries())
+      .map(([uid, count]) => {
+        const person = personnel.find(p => p.id === uid);
+        return {
+          name: person?.nombre_t || uid.substring(0, 5),
+          count
+        };
+      })
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 5);
+  }, [orders, history, personnel]);
+
+  const clientRankingData = useMemo(() => {
+    if (!orders || !history) return [];
+    const allWorkOrders = [...orders, ...history];
+    const countMap = new Map<string, number>();
+    allWorkOrders.forEach(order => {
+      const client = order.clientName;
+      if (client) {
+        countMap.set(client, (countMap.get(client) || 0) + 1);
+      }
+    });
+    return Array.from(countMap.entries())
+      .map(([name, count]) => ({ name, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 5);
+  }, [orders, history]);
   
   const filteredOrders = useMemo(() => {
     if (!orders) return [];
@@ -291,7 +306,6 @@ export default function Dashboard() {
   );
 
   const isLoading = isUserLoading || !mounted || isProfileLoading;
-
   if (isLoading) return <div className="min-h-screen flex items-center justify-center text-primary font-black animate-pulse bg-background">CARGANDO...</div>;
 
   return (
@@ -328,7 +342,7 @@ export default function Dashboard() {
             </h1>
              <p className="text-muted-foreground mt-1">
                 {activeTab === "dashboard" ? "Resumen de actividad y acceso a sus órdenes creadas." :
-                 activeTab === "stats" ? "Visualización de datos y rendimiento." :
+                 activeTab === "stats" ? "Visualización de datos y rendimiento de equipo." :
                  activeTab === "orders" ? "Seguimiento de sus trabajos en curso." :
                  activeTab === "history" ? "Archivo de sus órdenes de trabajo completadas." :
                  activeTab === "clients" ? "Gestión de la cartera de clientes." : "Gestión de la plantilla de ICSA."}
@@ -389,32 +403,31 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* ... Rest of components stay the same ... */}
         {activeTab === "stats" && userProfile?.rol_t === 'admin' && (
-          <div className="space-y-6">
+          <div className="space-y-8">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <Card className="bg-white border-none shadow-md overflow-hidden">
+              <Card className="bg-white border-none shadow-md overflow-hidden rounded-2xl">
                 <CardHeader className="border-b bg-muted/5">
                   <CardTitle className="text-sm font-bold flex items-center gap-2">
-                    <PieChartIcon className="h-4 w-4 text-primary" /> Distribución de Carga
+                    <PieChartIcon className="h-4 w-4 text-primary" /> Carga Global de Trabajo
                   </CardTitle>
                   <CardDescription>Proporción entre órdenes activas y completadas.</CardDescription>
                 </CardHeader>
                 <CardContent className="p-6">
-                  <div className="h-[350px] w-full">
+                  <div className="h-[300px] w-full">
                     <ResponsiveContainer width="100%" height="100%">
                       <PieChart>
                         <Pie
                           data={statsData}
                           cx="50%"
                           cy="50%"
-                          innerRadius={80}
-                          outerRadius={120}
+                          innerRadius={60}
+                          outerRadius={100}
                           paddingAngle={5}
                           dataKey="value"
                         >
                           {statsData.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={entry.color} />
+                            <RechartsCell key={`cell-${index}`} fill={entry.color} />
                           ))}
                         </Pie>
                         <RechartsTooltip />
@@ -425,36 +438,68 @@ export default function Dashboard() {
                 </CardContent>
               </Card>
 
-              <Card className="bg-white border-none shadow-md overflow-hidden">
+              <Card className="bg-white border-none shadow-md overflow-hidden rounded-2xl">
                 <CardHeader className="border-b bg-muted/5">
                   <CardTitle className="text-sm font-bold flex items-center gap-2">
-                    <BarChartIcon className="h-4 w-4 text-primary" /> Volumen de Finalización (7 días)
+                    <BarChartIcon className="h-4 w-4 text-primary" /> Rendimiento Semanal
                   </CardTitle>
                   <CardDescription>Órdenes completadas por día en la última semana.</CardDescription>
                 </CardHeader>
                 <CardContent className="p-6">
-                  <div className="h-[350px] w-full">
+                  <div className="h-[300px] w-full">
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart data={activityData}>
                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--muted))" />
-                        <XAxis 
-                          dataKey="date" 
-                          axisLine={false} 
-                          tickLine={false} 
-                          tick={{ fontSize: 12, fontWeight: 'bold' }} 
-                          interval={0}
-                        />
-                        <YAxis 
-                          axisLine={false} 
-                          tickLine={false} 
-                          tick={{ fontSize: 12, fontWeight: 'bold' }} 
-                          allowDecimals={false}
-                        />
-                        <RechartsTooltip 
-                          cursor={{ fill: 'hsl(var(--muted)/0.3)' }}
-                          contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
-                        />
-                        <Bar dataKey="count" fill="hsl(var(--accent))" radius={[6, 6, 0, 0]} barSize={40} />
+                        <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 11, fontWeight: 'bold' }} />
+                        <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fontWeight: 'bold' }} />
+                        <RechartsTooltip cursor={{ fill: 'hsl(var(--muted)/0.3)' }} />
+                        <Bar dataKey="count" fill="hsl(var(--accent))" radius={[4, 4, 0, 0]} barSize={30} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* NUEVO GRÁFICO: SUPERVISORES CON MÁS OTs */}
+              <Card className="bg-white border-none shadow-md overflow-hidden rounded-2xl">
+                <CardHeader className="border-b bg-muted/5">
+                  <CardTitle className="text-sm font-bold flex items-center gap-2">
+                    <Trophy className="h-4 w-4 text-primary" /> Top 5 Supervisores
+                  </CardTitle>
+                  <CardDescription>Supervisores con mayor número de OTs gestionadas.</CardDescription>
+                </CardHeader>
+                <CardContent className="p-6">
+                  <div className="h-[300px] w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={supervisorPerformanceData} layout="vertical">
+                        <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="hsl(var(--muted))" />
+                        <XAxis type="number" hide />
+                        <YAxis dataKey="name" type="category" axisLine={false} tickLine={false} tick={{ fontSize: 11, fontWeight: 'bold' }} width={120} />
+                        <RechartsTooltip />
+                        <Bar dataKey="count" fill="hsl(var(--primary))" radius={[0, 4, 4, 0]} barSize={20} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* NUEVO GRÁFICO: CLIENTES CON MÁS OTs */}
+              <Card className="bg-white border-none shadow-md overflow-hidden rounded-2xl">
+                <CardHeader className="border-b bg-muted/5">
+                  <CardTitle className="text-sm font-bold flex items-center gap-2">
+                    <TrendingUp className="h-4 w-4 text-primary" /> Ranking de Clientes
+                  </CardTitle>
+                  <CardDescription>Empresas que han solicitado mayor volumen de servicios.</CardDescription>
+                </CardHeader>
+                <CardContent className="p-6">
+                  <div className="h-[300px] w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={clientRankingData}>
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--muted))" />
+                        <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 'bold' }} />
+                        <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fontWeight: 'bold' }} />
+                        <RechartsTooltip />
+                        <Bar dataKey="count" fill="hsl(var(--accent))" radius={[4, 4, 0, 0]} barSize={30} />
                       </BarChart>
                     </ResponsiveContainer>
                   </div>
