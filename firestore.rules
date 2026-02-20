@@ -4,6 +4,8 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
+    // --- FUNCIONES DE AYUDA ---
+
     function isLoggedIn() {
       return request.auth != null;
     }
@@ -13,44 +15,68 @@ service cloud.firestore {
     }
 
     function isAdmin() {
-      return isLoggedIn() && (getPersonnelDoc().data.rol_t == "admin" || getPersonnelDoc().data.rol_t == "Administrador");
+      let role = getPersonnelDoc().data.rol_t;
+      return isLoggedIn() && (role == "admin" || role == "Administrador");
     }
 
-    function isOrderOwner(resourceData) {
+    function isSupervisor() {
+      let role = getPersonnelDoc().data.rol_t;
+      return isLoggedIn() && role == "Supervisor";
+    }
+
+    function isTechnician() {
+      let role = getPersonnelDoc().data.rol_t;
+      return isLoggedIn() && role == "Técnico";
+    }
+
+    function isOrderOwner(data) {
       return isLoggedIn() && (
-        resourceData.createdBy == request.auth.uid || 
-        (resourceData.teamIds != null && request.auth.uid in resourceData.teamIds)
+        data.createdBy == request.auth.uid || 
+        data.supervisorId == request.auth.uid
       );
     }
 
+    // --- REGLAS POR COLECCIÓN ---
+
+    // Órdenes de Trabajo (Activas)
+    match /ordenes/{docId} {
+      allow read: if isAdmin() || isOrderOwner(resource.data);
+      
+      allow create: if isAdmin() || isSupervisor();
+      
+      allow update: if isAdmin() || (isSupervisor() && isOrderOwner(resource.data));
+      
+      allow delete: if isAdmin();
+    }
+
+    // Historial (Completadas)
     match /historial/{docId} {
       allow read: if isAdmin() || isOrderOwner(resource.data);
-      // Solo admin puede borrar del historial definitivamente
-      allow create, update: if isAdmin() || isLoggedIn();
+      
+      allow create: if isAdmin() || (isSupervisor() && isOrderOwner(request.resource.data));
+      
+      allow update: if isAdmin() || (isSupervisor() && isOrderOwner(resource.data));
+      
       allow delete: if isAdmin();
     }
 
-    match /ordenes/{docId} {
-      allow read: if isAdmin()
-        || isOrderOwner(resource.data)
-        || (resource.data.status == "Pending Signature");
-
-      allow create: if isLoggedIn(); 
-      allow update: if isAdmin() || isOrderOwner(resource.data);
-      // Solo admin puede borrar órdenes activas (los técnicos/supervisores solo editan)
-      allow delete: if isAdmin();
-    }
-
+    // Clientes
     match /clients/{docId} {
-      allow read: if isLoggedIn();
-      allow create, update: if isLoggedIn();
+      allow read, create, update: if isAdmin() || isSupervisor();
+      
       allow delete: if isAdmin();
     }
 
+    // Personal
     match /personnel/{userId} {
-      allow read: if isLoggedIn();
-      allow create, update: if isAdmin();
-      allow delete: if isAdmin();
+      allow read: if isAdmin() || isSupervisor();
+      
+      allow create, update, delete: if isAdmin();
+    }
+    
+    // Denegar todo lo demás por defecto (incluye técnicos explícitamente)
+    match /{document=**} {
+      allow read, write: if false;
     }
   }
 }
