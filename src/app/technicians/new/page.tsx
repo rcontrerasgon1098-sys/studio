@@ -14,7 +14,7 @@ import Link from "next/link";
 import { useUser, useFirestore } from "@/firebase";
 import { doc, setDoc, collection } from "firebase/firestore";
 import { validateRut } from "@/lib/rut-utils";
-import { initializeApp, getApp, getApps, deleteApp } from "firebase/app";
+import { initializeApp, deleteApp } from "firebase/app";
 import { getAuth, createUserWithEmailAndPassword } from "firebase/auth";
 import { firebaseConfig } from "@/firebase/config";
 
@@ -55,19 +55,18 @@ export default function NewTechnician() {
     }
     
     if (formData.password !== formData.confirmPassword) {
-      toast({ variant: "destructive", title: "Error", description: "Contraseñas no coinciden." });
+      toast({ variant: "destructive", title: "Error", description: "Las contraseñas no coinciden." });
       setLoading(false);
       return;
     }
 
     if (!validateRut(formData.rut_t)) {
-      toast({ variant: "destructive", title: "RUT Inválido", description: "Verifique el RUT ingresado." });
+      toast({ variant: "destructive", title: "RUT Inválido", description: "Verifique el formato del RUT ingresado." });
       setLoading(false);
       return;
     }
 
-    // Para evitar que el administrador se desconecte al crear un usuario,
-    // creamos una instancia secundaria de Firebase Auth temporal.
+    // Instancia secundaria para evitar sesión interrumpida del Admin
     let secondaryApp;
     try {
       const secondaryAppName = `Secondary-${Date.now()}`;
@@ -79,13 +78,13 @@ export default function NewTechnician() {
       
       const personnelId = newAuthUser.uid;
       const personnelData = {
+        id: personnelId,
         nombre_t: formData.nombre_t,
         rut_t: formData.rut_t,
         email_t: formData.email_t,
         cel_t: formData.cel_t,
         rol_t: formData.rol_t,
         estado_t: "Activo",
-        id: personnelId,
         createdAt: new Date().toISOString(),
         registeredBy: user.email
       };
@@ -95,20 +94,18 @@ export default function NewTechnician() {
       
       toast({ title: "Personal Registrado", description: "El perfil ha sido creado con éxito." });
       
-      // Limpiar app secundaria
       if (secondaryApp) await deleteApp(secondaryApp);
-      
       router.push("/dashboard");
 
     } catch (error: any) {
       setLoading(false);
       if (secondaryApp) await deleteApp(secondaryApp);
       
-      let message = "No se pudo registrar el perfil.";
+      let message = "No se pudo registrar el perfil técnico.";
       if (error.code === 'auth/email-already-in-use') {
-        message = "El correo ya existe. Si es un reingreso, use el perfil previo.";
+        message = "El correo ya está en uso. Si es un reingreso, reactive el perfil previo.";
       } else if (error.code === 'auth/weak-password') {
-        message = "La contraseña es muy débil (mínimo 6 caracteres).";
+        message = "Contraseña débil (mínimo 6 caracteres).";
       }
       toast({ variant: "destructive", title: "Error", description: message });
     }
@@ -126,11 +123,11 @@ export default function NewTechnician() {
                 <ArrowLeft className="h-6 w-6" />
               </Button>
             </Link>
-            <h1 className="font-bold text-lg text-primary uppercase tracking-tighter">Agregar Personal</h1>
+            <h1 className="font-bold text-lg text-primary uppercase tracking-tighter">Registrar Personal</h1>
           </div>
           <Button onClick={handleSubmit} disabled={loading} className="bg-primary hover:bg-primary/90 h-10 px-6 font-bold uppercase text-xs">
             {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />} 
-            {loading ? "Guardando..." : "Guardar Personal"}
+            Guardar Registro
           </Button>
         </div>
       </header>
@@ -142,20 +139,13 @@ export default function NewTechnician() {
               <CardTitle className="text-primary flex items-center gap-2 uppercase tracking-tighter font-black">
                 <ShieldCheck className="h-5 w-5" /> Datos del Colaborador
               </CardTitle>
-              <CardDescription className="text-[10px] font-bold uppercase">Registro de nuevo personal administrativo o técnico.</CardDescription>
+              <CardDescription className="text-[10px] font-bold uppercase">Ingrese la información básica del nuevo integrante de ICSA.</CardDescription>
             </CardHeader>
             <CardContent className="p-6 space-y-6">
               <div className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="nombre_t" className="font-bold uppercase text-[10px] tracking-widest text-muted-foreground">Nombre Completo</Label>
-                  <Input 
-                    id="nombre_t"
-                    placeholder="Ej: Rodrigo Tapia" 
-                    value={formData.nombre_t}
-                    onChange={e => setFormData({...formData, nombre_t: e.target.value})}
-                    className="h-12 font-bold"
-                    required
-                  />
+                  <Input id="nombre_t" placeholder="Ej: Rodrigo Tapia" value={formData.nombre_t} onChange={e => setFormData({...formData, nombre_t: e.target.value})} className="h-12 font-bold" required />
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -180,11 +170,11 @@ export default function NewTechnician() {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="email_t" className="font-bold uppercase text-[10px] tracking-widest text-muted-foreground">Correo Corporativo</Label>
+                    <Label htmlFor="email_t" className="font-bold uppercase text-[10px] tracking-widest text-muted-foreground">Email Corporativo</Label>
                     <Input id="email_t" type="email" placeholder="usuario@icsa.com" value={formData.email_t} onChange={e => setFormData({...formData, email_t: e.target.value})} className="h-12 font-bold" required />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="cel_t" className="font-bold uppercase text-[10px] tracking-widest text-muted-foreground">Celular de Contacto</Label>
+                    <Label htmlFor="cel_t" className="font-bold uppercase text-[10px] tracking-widest text-muted-foreground">Celular</Label>
                     <Input id="cel_t" placeholder="+56 9..." value={formData.cel_t} onChange={e => setFormData({...formData, cel_t: e.target.value})} className="h-12 font-bold" />
                   </div>
                 </div>

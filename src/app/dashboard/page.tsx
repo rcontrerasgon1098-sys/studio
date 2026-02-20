@@ -72,43 +72,46 @@ export default function Dashboard() {
     }
   }, [user, isUserLoading, router]);
 
-  // Consultas unificadas por createdBy
+  const isAdmin = userProfile?.rol_t === 'admin' || userProfile?.rol_t === 'Administrador';
+  const isSupervisor = userProfile?.rol_t === 'supervisor' || userProfile?.rol_t === 'Supervisor';
+
+  // Consultas unificadas por createdBy/supervisorId
   const ordersQuery = useMemoFirebase(() => {
     if (!db || !user?.uid || !userProfile) return null;
     const baseCollection = collection(db, "ordenes");
-    if (userProfile.rol_t === 'supervisor' || userProfile.rol_t === 'Supervisor') {
+    if (isSupervisor) {
       return query(baseCollection, where("createdBy", "==", user.uid));
     }
-    if (userProfile.rol_t === 'admin' || userProfile.rol_t === 'Administrador') {
+    if (isAdmin) {
       return query(baseCollection, orderBy("startDate", "desc"));
     }
     return null;
-  }, [db, user?.uid, userProfile]);
+  }, [db, user?.uid, userProfile, isAdmin, isSupervisor]);
   const { data: orders, isLoading: isOrdersLoading } = useCollection(ordersQuery);
 
   const historyQuery = useMemoFirebase(() => {
     if (!db || !user?.uid || !userProfile) return null;
     const baseCollection = collection(db, "historial");
-    if (userProfile.rol_t === 'supervisor' || userProfile.rol_t === 'Supervisor') {
+    if (isSupervisor) {
       return query(baseCollection, where("createdBy", "==", user.uid));
     }
-    if (userProfile.rol_t === 'admin' || userProfile.rol_t === 'Administrador') {
+    if (isAdmin) {
       return query(baseCollection, orderBy("startDate", "desc"));
     }
     return null;
-  }, [db, user?.uid, userProfile]);
+  }, [db, user?.uid, userProfile, isAdmin, isSupervisor]);
   const { data: history, isLoading: isHistoryLoading } = useCollection(historyQuery);
 
   const clientsQuery = useMemoFirebase(() => {
-    if (!db || !userProfile || (userProfile.rol_t !== 'admin' && userProfile.rol_t !== 'Administrador')) return null;
+    if (!db || !userProfile || (!isAdmin && !isSupervisor)) return null;
     return query(collection(db, "clients"), orderBy("nombreCliente", "asc"));
-  }, [db, userProfile]);
+  }, [db, userProfile, isAdmin, isSupervisor]);
   const { data: clients, isLoading: isClientsLoading } = useCollection(clientsQuery);
 
   const personnelQuery = useMemoFirebase(() => {
-    if (!db || !userProfile || (userProfile.rol_t !== 'admin' && userProfile.rol_t !== 'Administrador')) return null;
+    if (!db || !userProfile || (!isAdmin && !isSupervisor)) return null;
     return query(collection(db, "personnel"), orderBy("nombre_t", "asc"));
-  }, [db, userProfile]);
+  }, [db, userProfile, isAdmin, isSupervisor]);
   const { data: personnel, isLoading: isPersonnelLoading } = useCollection(personnelQuery);
 
   // Stats
@@ -217,14 +220,14 @@ export default function Dashboard() {
       });
       toast({ 
         title: "Personal Desactivado", 
-        description: "El acceso ha sido revocado satisfactoriamente." 
+        description: "El acceso ha sido revocado. El perfil queda disponible para reingresos." 
       });
     } else {
       const docRef = doc(db, deleteConfirm.type, deleteConfirm.id);
       deleteDocumentNonBlocking(docRef);
       toast({ 
         title: "Registro eliminado", 
-        description: "El elemento ha sido removido de forma definitiva." 
+        description: "El elemento ha sido removido definitivamente de la base de datos." 
       });
     }
     setDeleteConfirm(null);
@@ -251,7 +254,7 @@ export default function Dashboard() {
         >
           <LayoutDashboard size={20} /> Inicio
         </Button>
-        {(userProfile?.rol_t === 'admin' || userProfile?.rol_t === 'Administrador') && <Button 
+        {isAdmin && <Button 
           variant={activeTab === "stats" ? "secondary" : "ghost"} 
           className={cn("w-full justify-start gap-3 h-12 font-semibold", activeTab === "stats" ? "bg-white/10 text-white" : "text-white/80 hover:bg-white/10")}
           onClick={() => { setActiveTab("stats"); setSearchTerm(""); }}
@@ -272,7 +275,7 @@ export default function Dashboard() {
         >
           <History size={20} /> Historial
         </Button>
-        {(userProfile?.rol_t === 'admin' || userProfile?.rol_t === 'Administrador') && <>
+        {(isAdmin || isSupervisor) && <>
           <Button 
             variant={activeTab === "clients" ? "secondary" : "ghost"} 
             className={cn("w-full justify-start gap-3 h-12 font-semibold", activeTab === "clients" ? "bg-white/10 text-white" : "text-white/80 hover:bg-white/10")}
@@ -296,8 +299,6 @@ export default function Dashboard() {
       </div>
     </div>
   );
-
-  const isAdmin = userProfile?.rol_t === 'admin' || userProfile?.rol_t === 'Administrador';
 
   if (isUserLoading || !mounted || isProfileLoading) return <div className="min-h-screen flex items-center justify-center text-primary font-black animate-pulse bg-background">CARGANDO...</div>;
 
@@ -345,7 +346,7 @@ export default function Dashboard() {
                 </Button>
               </Link>
             )}
-            {activeTab === "clients" && isAdmin && (
+            {activeTab === "clients" && (isAdmin || isSupervisor) && (
                 <Link href="/clients/new">
                 <Button className="bg-accent text-primary font-black h-12 px-6 shadow-lg rounded-xl">
                     <Plus size={20} className="mr-2" /> Nuevo Cliente
@@ -499,7 +500,7 @@ export default function Dashboard() {
           </Card>
         )}
 
-        {activeTab === "clients" && isAdmin && (
+        {activeTab === "clients" && (isAdmin || isSupervisor) && (
           <Card className="shadow-xl border-none bg-white rounded-2xl">
              <CardHeader className="border-b space-y-4">
                <CardTitle className="text-lg font-bold">Listado Maestro de Clientes</CardTitle>
@@ -509,12 +510,12 @@ export default function Dashboard() {
                </div>
              </CardHeader>
              <CardContent className="p-0">
-               <ClientTable clients={filteredClients} isLoading={isClientsLoading} setDeleteConfirm={setDeleteConfirm} />
+               <ClientTable clients={filteredClients} isLoading={isClientsLoading} setDeleteConfirm={setDeleteConfirm} isAdmin={isAdmin}/>
              </CardContent>
           </Card>
         )}
 
-        {activeTab === "personnel" && isAdmin && (
+        {activeTab === "personnel" && (isAdmin || isSupervisor) && (
           <Card className="shadow-xl border-none bg-white rounded-2xl">
              <CardHeader className="border-b space-y-4">
                <CardTitle className="text-lg font-bold">Gestión de Personal Interno</CardTitle>
@@ -524,7 +525,7 @@ export default function Dashboard() {
                </div>
              </CardHeader>
              <CardContent className="p-0">
-               <PersonnelTable personnel={filteredPersonnel} isLoading={isPersonnelLoading} setDeleteConfirm={setDeleteConfirm} />
+               <PersonnelTable personnel={filteredPersonnel} isLoading={isPersonnelLoading} setDeleteConfirm={setDeleteConfirm} isAdmin={isAdmin}/>
              </CardContent>
           </Card>
         )}
@@ -538,7 +539,7 @@ export default function Dashboard() {
             </AlertDialogTitle>
             <AlertDialogDescription className="text-xs font-medium">
               {deleteConfirm?.type === 'personnel' 
-                ? "Esta acción revocará el acceso del personal al sistema. Su perfil quedará en estado 'Inactivo' para permitir reingresos futuros sin duplicar correos."
+                ? "Esta acción revocará el acceso del personal. Su perfil quedará en estado 'Inactivo', permitiendo reingresos futuros con el mismo correo."
                 : "Esta acción eliminará el registro de forma permanente de la base de datos central. No se podrá revertir."}
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -604,7 +605,7 @@ function OrderTable({ orders, isLoading, type, setDeleteConfirm, isAdmin }: { or
   );
 }
 
-function ClientTable({ clients, isLoading, setDeleteConfirm }: { clients: any[], isLoading: boolean, setDeleteConfirm: any }) {
+function ClientTable({ clients, isLoading, setDeleteConfirm, isAdmin }: { clients: any[], isLoading: boolean, setDeleteConfirm: any, isAdmin: boolean }) {
   if (isLoading) return <div className="p-10 text-center font-bold text-muted-foreground animate-pulse">CARGANDO CLIENTES...</div>;
   if (clients.length === 0) return <div className="p-10 text-center text-muted-foreground italic font-medium">Sin clientes registrados.</div>;
 
@@ -635,7 +636,7 @@ function ClientTable({ clients, isLoading, setDeleteConfirm }: { clients: any[],
                 <Link href={`/clients/${client.id}/edit`}>
                   <Button variant="ghost" size="icon" className="h-9 w-9 text-primary hover:bg-primary/10"><Pencil className="h-4 w-4" /></Button>
                 </Link>
-                <Button variant="ghost" size="icon" className="h-9 w-9 text-destructive hover:bg-destructive/10" onClick={() => setDeleteConfirm({ id: client.id, type: "clients" })}><Trash2 className="h-4 w-4" /></Button>
+                {isAdmin && <Button variant="ghost" size="icon" className="h-9 w-9 text-destructive hover:bg-destructive/10" onClick={() => setDeleteConfirm({ id: client.id, type: "clients" })}><Trash2 className="h-4 w-4" /></Button>}
               </div>
             </TableCell>
           </TableRow>
@@ -645,7 +646,7 @@ function ClientTable({ clients, isLoading, setDeleteConfirm }: { clients: any[],
   );
 }
 
-function PersonnelTable({ personnel, isLoading, setDeleteConfirm }: { personnel: any[], isLoading: boolean, setDeleteConfirm: any }) {
+function PersonnelTable({ personnel, isLoading, setDeleteConfirm, isAdmin }: { personnel: any[], isLoading: boolean, setDeleteConfirm: any, isAdmin: boolean }) {
   const { firestore: db } = useFirebase();
   if (isLoading) return <div className="p-10 text-center font-bold text-muted-foreground animate-pulse">CARGANDO PERSONAL...</div>;
   if (personnel.length === 0) return <div className="p-10 text-center text-muted-foreground italic font-medium">Sin personal registrado.</div>;
@@ -678,10 +679,12 @@ function PersonnelTable({ personnel, isLoading, setDeleteConfirm }: { personnel:
             </TableCell>
             <TableCell className="text-right">
               <div className="flex justify-end gap-1">
-                <Link href={`/technicians/${person.id}/edit`}>
-                  <Button variant="ghost" size="icon" className="h-9 w-9 text-primary hover:bg-primary/10" title="Editar perfil"><Pencil className="h-4 w-4" /></Button>
-                </Link>
-                {person.estado_t === "Inactivo" ? (
+                {isAdmin && (
+                  <Link href={`/technicians/${person.id}/edit`}>
+                    <Button variant="ghost" size="icon" className="h-9 w-9 text-primary hover:bg-primary/10" title="Editar perfil"><Pencil className="h-4 w-4" /></Button>
+                  </Link>
+                )}
+                {isAdmin && person.estado_t === "Inactivo" ? (
                   <Button 
                     variant="ghost" 
                     size="icon" 
@@ -690,20 +693,23 @@ function PersonnelTable({ personnel, isLoading, setDeleteConfirm }: { personnel:
                     onClick={() => {
                       const docRef = doc(db as any, 'personnel', person.id);
                       updateDocumentNonBlocking(docRef, { estado_t: "Activo" });
+                      toast({ title: "Personal Reactivado", description: `El acceso de ${person.nombre_t} ha sido restaurado.` });
                     }}
                   >
                     <UserCheck className="h-4 w-4" />
                   </Button>
                 ) : (
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    className="h-9 w-9 text-destructive hover:bg-destructive/10"
-                    title="Desactivar Acceso"
-                    onClick={() => setDeleteConfirm({ id: person.id, type: "personnel" })}
-                  >
-                    <UserX className="h-4 w-4" />
-                  </Button>
+                  isAdmin && (
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="h-9 w-9 text-destructive hover:bg-destructive/10"
+                      title="Desactivar Acceso"
+                      onClick={() => setDeleteConfirm({ id: person.id, type: "personnel" })}
+                    >
+                      <UserX className="h-4 w-4" />
+                    </Button>
+                  )
                 )}
               </div>
             </TableCell>

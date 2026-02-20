@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Save, User, Hash, Mail, Phone, ShieldCheck, UserCog, BadgeCheck } from "lucide-react";
+import { ArrowLeft, Save, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 import { useUser, useFirestore, useDoc, useMemoFirebase } from "@/firebase";
 import { doc } from "firebase/firestore";
@@ -122,19 +122,19 @@ export default function EditTechnician({ params }: { params: Promise<{ id: strin
             <CardContent className="p-6 space-y-6">
               <div className="space-y-4">
                 <div className="space-y-2">
-                  <Label className="font-bold">Nombre Completo</Label>
-                  <Input value={formData.nombre_t} onChange={e => setFormData({...formData, nombre_t: e.target.value})} className="h-12" required />
+                  <Label className="font-bold uppercase text-[10px] text-muted-foreground">Nombre Completo</Label>
+                  <Input value={formData.nombre_t} onChange={e => setFormData({...formData, nombre_t: e.target.value})} className="h-12 font-bold" required />
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label className="font-bold">RUT</Label>
-                    <Input value={formData.rut_t} onChange={e => setFormData({...formData, rut_t: e.target.value})} className="h-12" required />
+                    <Label className="font-bold uppercase text-[10px] text-muted-foreground">RUT</Label>
+                    <Input value={formData.rut_t} onChange={e => setFormData({...formData, rut_t: e.target.value})} className="h-12 font-bold" required />
                   </div>
                   <div className="space-y-2">
-                    <Label className="font-bold">Rol</Label>
+                    <Label className="font-bold uppercase text-[10px] text-muted-foreground">Rol</Label>
                     <Select value={formData.rol_t} onValueChange={v => setFormData({...formData, rol_t: v})}>
-                      <SelectTrigger className="h-12">
+                      <SelectTrigger className="h-12 font-bold">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -148,9 +148,9 @@ export default function EditTechnician({ params }: { params: Promise<{ id: strin
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label className="font-bold">Estado del Perfil</Label>
+                    <Label className="font-bold uppercase text-[10px] text-muted-foreground">Estado del Perfil</Label>
                     <Select value={formData.estado_t} onValueChange={v => setFormData({...formData, estado_t: v})}>
-                      <SelectTrigger className="h-12 border-primary/20">
+                      <SelectTrigger className="h-12 border-primary/20 font-bold">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -160,8 +160,8 @@ export default function EditTechnician({ params }: { params: Promise<{ id: strin
                     </Select>
                   </div>
                   <div className="space-y-2">
-                    <Label className="font-bold">Celular</Label>
-                    <Input value={formData.cel_t} onChange={e => setFormData({...formData, cel_t: e.target.value})} className="h-12" />
+                    <Label className="font-bold uppercase text-[10px] text-muted-foreground">Celular</Label>
+                    <Input value={formData.cel_t} onChange={e => setFormData({...formData, cel_t: e.target.value})} className="h-12 font-bold" />
                   </div>
                 </div>
               </div>

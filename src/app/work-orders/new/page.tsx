@@ -38,8 +38,6 @@ export default function NewWorkOrder() {
   const [folio, setFolio] = useState(0);
   const [openClientSearch, setOpenClientSearch] = useState(false);
   const [openTeamSearch, setOpenTeamSearch] = useState(false);
-  const [showSaveSignatureDialog, setShowSaveSignatureDialog] = useState(false);
-  const [tempSignature, setTempSignature] = useState("");
 
   const clientsQuery = useMemoFirebase(() => {
     if (!db) return null;
@@ -90,6 +88,7 @@ export default function NewWorkOrder() {
     team: [] as string[],
     teamIds: [] as string[],
     technicianId: "",
+    supervisorId: "", // Mantener para compatibilidad con reglas
   });
 
   const generateFolio = () => {
@@ -120,6 +119,7 @@ export default function NewWorkOrder() {
           team: updatedTeam, 
           teamIds: updatedTeamIds,
           technicianId: prev.technicianId || user.uid,
+          supervisorId: prev.supervisorId || user.uid, // Asegurar ID supervisor
           techName: prev.techName || userProfile.nombre_t || "",
           techRut: prev.techRut || (userProfile as any).rut_t || ""
         };
@@ -135,7 +135,8 @@ export default function NewWorkOrder() {
         techName: prev.techName || tech.nombre_t || "",
         techRut: prev.techRut || tech.rut_t || "",
         techSignatureUrl: prev.techSignatureUrl || tech.signatureUrl || "",
-        technicianId: prev.technicianId || tech.id
+        technicianId: prev.technicianId || tech.id,
+        supervisorId: prev.supervisorId || tech.id
       }));
     }
   }, [techProfiles]);
@@ -155,10 +156,6 @@ export default function NewWorkOrder() {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      if (file.size > 5 * 1024 * 1024) {
-        toast({ variant: "destructive", title: "Archivo muy grande", description: "El tamaño máximo es de 5MB." });
-        return;
-      }
       const reader = new FileReader();
       reader.onloadend = () => {
         setFormData({ ...formData, sketchImageUrl: reader.result as string });
@@ -170,26 +167,6 @@ export default function NewWorkOrder() {
   const removeImage = () => {
     setFormData({ ...formData, sketchImageUrl: "" });
     if (fileInputRef.current) fileInputRef.current.value = "";
-  };
-
-  const handleTechSignatureConfirm = (dataUrl: string) => {
-    const hasSavedSignature = techProfiles && techProfiles.length > 0 && !!techProfiles[0].signatureUrl;
-    if (!hasSavedSignature) {
-      setTempSignature(dataUrl);
-      setShowSaveSignatureDialog(true);
-    } else {
-      setFormData({...formData, techSignatureUrl: dataUrl});
-    }
-  };
-
-  const saveSignatureToProfile = () => {
-    if (db && techProfiles && techProfiles.length > 0) {
-      const techRef = doc(db, "personnel", techProfiles[0].id);
-      setDocumentNonBlocking(techRef, { signatureUrl: tempSignature }, { merge: true });
-      toast({ title: "Firma Guardada", description: "Su firma se cargará automáticamente en el futuro." });
-    }
-    setFormData({...formData, techSignatureUrl: tempSignature});
-    setShowSaveSignatureDialog(false);
   };
 
   const handleTeamSelect = (person: any) => {
@@ -229,6 +206,7 @@ export default function NewWorkOrder() {
         folio: currentFolio,
         status: "Pending Signature",
         createdBy: user.uid,
+        supervisorId: user.uid,
         creatorEmail: user.email || "",
         startDate: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
@@ -276,6 +254,7 @@ export default function NewWorkOrder() {
       folio: folio || generateFolio(),
       status: finalStatus,
       createdBy: user.uid,
+      supervisorId: user.uid,
       creatorEmail: user.email || "",
       startDate: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -298,7 +277,7 @@ export default function NewWorkOrder() {
         }).catch(err => console.error("Error enviando email:", err));
       }
 
-      toast({ title: "Orden Guardada", description: "Operación realizada con éxito." });
+      toast({ title: "Orden Guardada", description: "La orden ha sido registrada correctamente." });
       router.push("/dashboard");
     } catch (error) {
       setLoading(false);
@@ -326,7 +305,7 @@ export default function NewWorkOrder() {
             <h1 className="font-bold text-lg text-primary uppercase tracking-tighter">Nueva OT #{folio || '...'}</h1>
           </div>
           <Button onClick={handleSendRemoteSignature} disabled={isSendingSignature || loading} variant="outline" className="h-10 px-4 font-bold uppercase text-xs border-primary text-primary">
-            <Send className="h-4 w-4 mr-2" /> {isSendingSignature ? "Enviando..." : "Firma Remota"}
+            <Send className="h-4 w-4 mr-2" /> Firma Remota
           </Button>
         </div>
       </header>
@@ -363,11 +342,7 @@ export default function NewWorkOrder() {
                             <CommandEmpty className="p-6 text-sm text-center">Sin resultados.</CommandEmpty>
                             <CommandGroup heading="Empresas Registradas" className="p-2">
                               {clients?.map((client) => (
-                                <CommandItem 
-                                  key={client.id} 
-                                  onSelect={() => handleSelectClient(client)}
-                                  className="flex items-center gap-3 p-3 cursor-pointer rounded-lg"
-                                >
+                                <CommandItem key={client.id} onSelect={() => handleSelectClient(client)} className="flex items-center gap-3 p-3 cursor-pointer rounded-lg">
                                   <User className="h-5 w-5 text-primary" />
                                   <div className="flex flex-col">
                                     <span className="font-bold text-primary">{client.nombreCliente}</span>
@@ -384,43 +359,21 @@ export default function NewWorkOrder() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label className="font-bold uppercase text-xs tracking-widest text-muted-foreground">Dirección del Cliente</Label>
+                  <Label className="font-bold uppercase text-xs tracking-widest text-muted-foreground">Dirección</Label>
                   <div className="relative">
                     <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input 
-                      placeholder="Calle, Número, Comuna" 
-                      value={formData.address}
-                      onChange={e => setFormData({...formData, address: e.target.value})}
-                      className="h-12 pl-10"
-                    />
+                    <Input placeholder="Calle, Número, Comuna" value={formData.address} onChange={e => setFormData({...formData, address: e.target.value})} className="h-12 pl-10" />
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label className="font-bold uppercase text-xs tracking-widest text-muted-foreground">Número de Teléfono</Label>
-                    <div className="relative">
-                      <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <Input 
-                        placeholder="+56 9..." 
-                        value={formData.clientPhone}
-                        onChange={e => setFormData({...formData, clientPhone: e.target.value})}
-                        className="h-12 pl-10"
-                      />
-                    </div>
+                    <Label className="font-bold uppercase text-xs tracking-widest text-muted-foreground">Teléfono</Label>
+                    <Input placeholder="+56 9..." value={formData.clientPhone} onChange={e => setFormData({...formData, clientPhone: e.target.value})} className="h-12" />
                   </div>
                   <div className="space-y-2">
-                    <Label className="font-bold uppercase text-xs tracking-widest text-muted-foreground">Correo Electrónico</Label>
-                    <div className="relative">
-                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                      <Input 
-                        type="email"
-                        placeholder="ejemplo@correo.com" 
-                        value={formData.clientEmail}
-                        onChange={e => setFormData({...formData, clientEmail: e.target.value})}
-                        className="h-12 pl-10"
-                      />
-                    </div>
+                    <Label className="font-bold uppercase text-xs tracking-widest text-muted-foreground">Email</Label>
+                    <Input type="email" placeholder="ejemplo@correo.com" value={formData.clientEmail} onChange={e => setFormData({...formData, clientEmail: e.target.value})} className="h-12" />
                   </div>
                 </div>
               </div>
@@ -477,142 +430,87 @@ export default function NewWorkOrder() {
 
           <Card className="shadow-md border-none bg-white overflow-hidden">
             <CardHeader className="p-4 md:p-6 border-b bg-primary/5">
-              <CardTitle className="text-lg uppercase font-black text-primary tracking-tighter">Detalles Técnicos y Red</CardTitle>
+              <CardTitle className="text-lg uppercase font-black text-primary tracking-tighter">Detalles Técnicos</CardTitle>
             </CardHeader>
             <CardContent className="p-4 md:p-6 space-y-8">
-              <div className="space-y-4 pt-2">
-                <Label className="font-black uppercase text-xs tracking-[0.2em] text-primary flex items-center gap-2">
-                  <Building2 className="h-4 w-4" /> Ubicación Técnica
-                </Label>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label className="font-bold uppercase text-xs tracking-widest text-muted-foreground">Edificio</Label>
-                    <Input value={formData.building} onChange={e => setFormData({...formData, building: e.target.value})} className="h-12" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="font-bold uppercase text-xs tracking-widest text-muted-foreground">Piso</Label>
-                    <Input value={formData.floor} onChange={e => setFormData({...formData, floor: e.target.value})} className="h-12" />
-                  </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label className="font-bold uppercase text-xs tracking-widest text-muted-foreground">Edificio</Label>
+                  <Input value={formData.building} onChange={e => setFormData({...formData, building: e.target.value})} className="h-12" />
+                </div>
+                <div className="space-y-2">
+                  <Label className="font-bold uppercase text-xs tracking-widest text-muted-foreground">Piso</Label>
+                  <Input value={formData.floor} onChange={e => setFormData({...formData, floor: e.target.value})} className="h-12" />
                 </div>
               </div>
 
-              <div className="space-y-4">
-                <Label className="font-black uppercase text-xs tracking-[0.2em] text-primary flex items-center gap-2">
-                  <Hash className="h-4 w-4" /> Configuración de Señal
-                </Label>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  <div className="md:col-span-2 space-y-2">
-                    <Label className="font-bold uppercase text-xs tracking-widest text-muted-foreground">Tipo de Señal</Label>
-                    <Select value={formData.signalType} onValueChange={v => setFormData({...formData, signalType: v})}>
-                      <SelectTrigger className="h-12">
-                        <SelectValue placeholder="Señal" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Simple">Simple</SelectItem>
-                        <SelectItem value="Doble">Doble</SelectItem>
-                        <SelectItem value="Triple">Triple</SelectItem>
-                        <SelectItem value="Cuádruple">Cuádruple</SelectItem>
-                        <SelectItem value="Fibra Óptica">Fibra Óptica</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="font-bold uppercase text-xs tracking-widest text-muted-foreground">Cantidad</Label>
-                    <Input type="number" value={formData.signalCount} onChange={e => setFormData({...formData, signalCount: parseInt(e.target.value) || 0})} className="h-12" />
-                  </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="md:col-span-2 space-y-2">
+                  <Label className="font-bold uppercase text-xs tracking-widest text-muted-foreground">Tipo de Señal</Label>
+                  <Select value={formData.signalType} onValueChange={v => setFormData({...formData, signalType: v})}>
+                    <SelectTrigger className="h-12">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Simple">Simple</SelectItem>
+                      <SelectItem value="Doble">Doble</SelectItem>
+                      <SelectItem value="Triple">Triple</SelectItem>
+                      <SelectItem value="Cuádruple">Cuádruple</SelectItem>
+                      <SelectItem value="Fibra Óptica">Fibra Óptica</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label className="font-bold uppercase text-xs tracking-widest text-muted-foreground">Cantidad</Label>
+                  <Input type="number" value={formData.signalCount} onChange={e => setFormData({...formData, signalCount: parseInt(e.target.value) || 0})} className="h-12" />
                 </div>
               </div>
 
-              <div className="space-y-6">
-                <Label className="font-black uppercase text-xs tracking-[0.2em] text-primary flex items-center gap-2">
-                  <CheckSquare className="h-4 w-4" /> Checklist
-                </Label>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="flex items-center justify-between p-5 bg-muted/30 rounded-2xl border border-dashed">
-                    <Label className="font-bold text-sm">¿Certificación Realizada?</Label>
-                    <Switch checked={formData.isCert} onCheckedChange={(v) => setFormData({...formData, isCert: v})} />
-                  </div>
-                  <div className="flex items-center justify-between p-5 bg-muted/30 rounded-2xl border border-dashed">
-                    <Label className="font-bold text-sm">¿Rotulación Realizada?</Label>
-                    <Switch checked={formData.isLabeled} onCheckedChange={(v) => setFormData({...formData, isLabeled: v})} />
-                  </div>
-                  <div className="flex items-center justify-between p-5 bg-muted/30 rounded-2xl border border-dashed">
-                    <Label className="font-bold text-sm">¿Canalización?</Label>
-                    <Switch checked={formData.isCanalized} onCheckedChange={(v) => setFormData({...formData, isCanalized: v})} />
-                  </div>
-                  <div className="flex items-center justify-between p-5 bg-muted/30 rounded-2xl border border-dashed">
-                    <Label className="font-bold text-sm">¿Planos?</Label>
-                    <Switch checked={formData.isPlan} onCheckedChange={(v) => setFormData({...formData, isPlan: v})} />
-                  </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="flex items-center justify-between p-4 bg-muted/20 rounded-xl border border-dashed">
+                  <Label className="font-bold text-sm">¿Certificación?</Label>
+                  <Switch checked={formData.isCert} onCheckedChange={(v) => setFormData({...formData, isCert: v})} />
+                </div>
+                <div className="flex items-center justify-between p-4 bg-muted/20 rounded-xl border border-dashed">
+                  <Label className="font-bold text-sm">¿Rotulación?</Label>
+                  <Switch checked={formData.isLabeled} onCheckedChange={(v) => setFormData({...formData, isLabeled: v})} />
                 </div>
               </div>
 
               <div className="space-y-2">
                 <Label className="font-bold uppercase text-xs tracking-widest text-muted-foreground">Descripción de Trabajos</Label>
-                <Textarea value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} className="min-h-[140px] rounded-xl" />
+                <Textarea value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} className="min-h-[120px] rounded-xl" />
               </div>
-            </CardContent>
-          </Card>
 
-          <Card className="shadow-md border-none bg-white overflow-hidden">
-            <CardHeader className="p-4 border-b bg-muted/5">
-              <CardTitle className="text-lg flex items-center gap-2 uppercase font-bold tracking-tight">
-                <ImageIcon className="h-5 w-5 text-primary" /> Multimedia
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-6">
-              <input type="file" ref={fileInputRef} onChange={handleFileChange} accept="image/*" capture="environment" className="hidden" />
-              {!formData.sketchImageUrl ? (
-                <div onClick={() => fileInputRef.current?.click()} className="border-4 border-dashed rounded-3xl p-12 flex flex-col items-center justify-center text-muted-foreground bg-muted/10 hover:bg-primary/5 transition-all cursor-pointer">
-                  <Camera className="h-16 w-16 mb-4 opacity-40" />
-                  <p className="text-sm font-black uppercase tracking-widest">Capturar Evidencia</p>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  <div className="relative aspect-video rounded-3xl overflow-hidden bg-muted group border shadow-xl">
+              <div className="space-y-4">
+                <input type="file" ref={fileInputRef} onChange={handleFileChange} accept="image/*" capture="environment" className="hidden" />
+                {!formData.sketchImageUrl ? (
+                  <div onClick={() => fileInputRef.current?.click()} className="border-4 border-dashed rounded-3xl p-10 flex flex-col items-center justify-center text-muted-foreground bg-muted/10 hover:bg-primary/5 transition-all cursor-pointer">
+                    <Camera className="h-12 w-12 mb-2 opacity-40" />
+                    <p className="text-sm font-black uppercase tracking-widest">Añadir Evidencia</p>
+                  </div>
+                ) : (
+                  <div className="relative aspect-video rounded-3xl overflow-hidden bg-muted border shadow-lg group">
                     <Image src={formData.sketchImageUrl} alt="Preview" fill className="object-contain" />
-                    <Button type="button" variant="destructive" size="icon" className="absolute top-4 right-4 h-12 w-12 rounded-full shadow-2xl" onClick={removeImage}>
-                      <X className="h-6 w-6" />
+                    <Button type="button" variant="destructive" size="icon" className="absolute top-2 right-2 h-10 w-10 rounded-full" onClick={removeImage}>
+                      <X className="h-5 w-5" />
                     </Button>
                   </div>
-                </div>
-              )}
+                )}
+              </div>
             </CardContent>
           </Card>
 
           <div className="grid grid-cols-1 gap-6 pb-6">
             <Card className="shadow-md border-none bg-white overflow-hidden">
               <CardHeader className="border-b bg-muted/20 p-4">
-                <CardTitle className="text-xs font-black uppercase tracking-widest flex items-center justify-between text-primary">
-                  Técnico Responsable
-                </CardTitle>
+                <CardTitle className="text-xs font-black uppercase tracking-widest text-primary">Firmas Responsables</CardTitle>
               </CardHeader>
-              <CardContent className="p-5 space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label className="text-[10px] font-bold uppercase text-muted-foreground">Nombre Técnico</Label>
-                    <Input value={formData.techName} onChange={e => setFormData({...formData, techName: e.target.value})} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-[10px] font-bold uppercase text-muted-foreground">RUT Técnico</Label>
-                    <Input value={formData.techRut} onChange={e => setFormData({...formData, techRut: e.target.value})} />
-                  </div>
+              <CardContent className="p-5 space-y-6">
+                <div className="space-y-4">
+                  <SignaturePad label="Firma del Técnico" onSave={(url) => setFormData({...formData, techSignatureUrl: url})} />
+                  <SignaturePad label="Firma de Recepción (Cliente)" onSave={(url) => setFormData({...formData, clientSignatureUrl: url})} />
                 </div>
-                {formData.techSignatureUrl ? (
-                  <div className="relative h-40 w-full bg-muted/20 rounded-2xl border-2 border-dashed flex items-center justify-center overflow-hidden group">
-                    <Image src={formData.techSignatureUrl} alt="Firma Técnico" fill className="object-contain" />
-                  </div>
-                ) : (
-                  <SignaturePad label="Firma del Técnico" onSave={handleTechSignatureConfirm} />
-                )}
-              </CardContent>
-            </Card>
-
-            <Card className="shadow-md border-none bg-white overflow-hidden">
-              <CardHeader className="border-b bg-muted/20 p-4">
-                <CardTitle className="text-xs font-black uppercase tracking-widest text-primary">Recepción Terreno</CardTitle>
-              </CardHeader>
-              <CardContent className="p-5 space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label className="text-[10px] font-bold uppercase text-muted-foreground">Nombre Receptor</Label>
@@ -623,17 +521,10 @@ export default function NewWorkOrder() {
                     <Input value={formData.clientReceiverRut} onChange={e => setFormData({...formData, clientReceiverRut: e.target.value})} />
                   </div>
                   <div className="md:col-span-2 space-y-2">
-                    <Label className="text-[10px] font-bold uppercase text-muted-foreground">Email Receptor</Label>
+                    <Label className="text-[10px] font-bold uppercase text-muted-foreground">Email Receptor (Envío de PDF)</Label>
                     <Input type="email" value={formData.clientReceiverEmail} onChange={e => setFormData({...formData, clientReceiverEmail: e.target.value})} />
                   </div>
                 </div>
-                {formData.clientSignatureUrl ? (
-                  <div className="relative h-40 w-full bg-muted/20 rounded-2xl border-2 border-dashed flex items-center justify-center overflow-hidden">
-                    <Image src={formData.clientSignatureUrl} alt="Firma Cliente" fill className="object-contain" />
-                  </div>
-                ) : (
-                  <SignaturePad label="Firma de Recepción" onSave={(dataUrl) => setFormData({...formData, clientSignatureUrl: dataUrl})} />
-                )}
               </CardContent>
             </Card>
           </div>
