@@ -1,52 +1,49 @@
 
-# Informe Técnico: Arquitectura de Datos y MER (ICSA)
+# Informe Técnico: Arquitectura de Datos Relacional (ICSA)
 
-Este documento define la arquitectura de datos para la gestión de Órdenes de Trabajo de ICSA, estructurada para ser representada en diagramas de Modelado Entidad-Relación (MER).
+Este documento detalla la estructura lógica de la base de datos para la gestión de Órdenes de Trabajo de ICSA, normalizada para su representación en diagramas MER.
 
 ---
 
 ## 1. Modelo Entidad-Relación (Lógico)
 
-Para un diagrama MER, la base de datos se comporta como un sistema relacional con tres ejes maestros y una entidad de transacción.
+Para un diagrama MER, la base de datos se estructura mediante la normalización de la relación entre técnicos y órdenes.
 
 ### A. Entidades Maestras
 1. **Personal (`personnel`)**
-   - **PK**: `id` (UID de Auth)
-   - **Atributos**: `nombre_t`, `rut_t`, `rol_t` (admin, supervisor, tecnico), `email_t`, `signatureUrl`.
-   - **Función**: Representa la identidad de los colaboradores.
+   - **PK**: `id` (TEXT)
+   - **Atributos**: `nombre_t`, `rut_t`, `email_t`, `rol_t`, `estado_t`, `signatureUrl`.
+   - **Propósito**: Define quién tiene acceso al sistema y sus capacidades.
 
 2. **Clientes (`clients`)**
-   - **PK**: `id`
+   - **PK**: `id` (TEXT)
    - **Atributos**: `nombreCliente`, `rutCliente`, `razonSocial`, `direccionCliente`, `emailClientes`.
-   - **Función**: Registro maestro de empresas atendidas.
+   - **Propósito**: Registro centralizado de empresas contratistas.
 
-### B. Entidad de Transacción
-3. **Órdenes de Trabajo (`ordenes` / `historial`)**
-   - **PK**: `id`
-   - **FK**: `clientId` (Referencia a la PK de Clientes)
-   - **FK**: `createdBy` (Referencia a la PK de Personal - Dueño de la OT)
-   - **Atributos**: `folio`, `status`, `startDate`, `description`, `techName`, `techRut`, `techSignatureUrl`, `clientSignatureUrl`, `teamIds` (Array para membresía rápida).
+### B. Entidad Transaccional
+3. **Órdenes de Trabajo (`work_orders`)**
+   - **PK**: `id` (TEXT)
+   - **FK**: `clientId` (Referencia a Clientes)
+   - **FK**: `createdBy` (Referencia a Personal/Supervisor)
+   - **Atributos**: `folio`, `status`, `description`, `techName`, `techSignatureUrl`, `clientSignatureUrl`, `sketchImageUrl`.
+   - **Propósito**: Documentar la intervención técnica y capturar las firmas de conformidad.
 
 ### C. Entidad de Relación (Muchos a Muchos)
-4. **Asignaciones de Equipo (`Assignments`)**
-   - Lógicamente, representa la tabla intermedia entre **Personal** y **Órdenes**.
-   - **FK**: `orderId` (Referencia a Órdenes)
-   - **FK**: `personnelId` (Referencia a Personal)
-   - **Función**: Permite que múltiples técnicos trabajen en una misma orden.
+4. **Asignaciones de Equipo (`work_order_team`)**
+   - **PK Compuesta**: (`orderId`, `personnelId`)
+   - **FK**: `orderId` -> `work_orders.id`
+   - **FK**: `personnelId` -> `personnel.id`
+   - **Propósito**: Permite que un equipo de múltiples técnicos trabaje en una misma OT, manteniendo la integridad referencial.
 
 ---
 
-## 2. Automatización de Notificaciones (Brevo SMTP)
+## 2. Implementación de Seguridad y Flujos
 
-La aplicación integra el servicio **Brevo** para la comunicación con los clientes:
-1. **Firma Remota**: Se envía un enlace único al cliente para que firme desde su dispositivo móvil. El sistema valida el token de seguridad antes de permitir la firma.
-2. **Entrega de OT**: Una vez completada la orden, se envía automáticamente un correo electrónico con el resumen de los trabajos y un enlace directo al reporte PDF.
-3. **Configuración**: El sistema utiliza el puerto 587 (STARTTLS) con autenticación mediante claves SMTP específicas de Brevo.
+1. **Integridad Referencial**: Al eliminar un registro de `personnel`, las reglas de negocio prefieren el **"Soft Delete"** (Estado Inactivo) para preservar el historial de `work_orders`.
+2. **Historial de Propiedad**: El campo `createdBy` es inmutable una vez finalizada la OT, asegurando que el supervisor original siempre sea el dueño del registro.
+3. **Automatización Brevo**: El sistema utiliza el campo `clientReceiverEmail` de la tabla `work_orders` para disparar la entrega del reporte PDF final.
 
 ---
 
-## 3. Implementación en Firestore (NoSQL)
-
-Aunque el modelo lógico es relacional, Firestore optimiza la lectura:
-- **Desnormalización**: El campo `createdBy` es la clave oficial para la visibilidad del supervisor.
-- **Integridad**: Al finalizar una orden, se realiza una copia profunda de todos los metadatos desde `ordenes` hacia `historial`, preservando la autoría y los IDs originales.
+## 3. Esquema SQL (SQLite)
+Para ver el código SQL completo de creación de tablas, consulte el archivo `docs/sqlite_schema.sql`.
