@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Save, User, Building, MapPin, Phone, Mail, BadgeCheck, Hash } from "lucide-react";
+import { ArrowLeft, Save, User, Building, MapPin, Phone, Mail, BadgeCheck, Hash, Loader2, AlertTriangle } from "lucide-react";
 import Link from "next/link";
 import { useUser, useFirestore, useDoc, useMemoFirebase } from "@/firebase";
 import { doc } from "firebase/firestore";
@@ -29,7 +29,10 @@ export default function EditClient({ params }: { params: Promise<{ id: string }>
   }, [db, id]);
 
   const { data: client, isLoading: isClientLoading } = useDoc(clientRef);
+  
   const [loading, setLoading] = useState(false);
+  const [isInitialized, setIsInitialized] = useState(false);
+  
   const [formData, setFormData] = useState({
     razonSocial: "",
     nombreCliente: "",
@@ -41,8 +44,9 @@ export default function EditClient({ params }: { params: Promise<{ id: string }>
     estadoCliente: "Activo"
   });
 
+  // Cargar datos iniciales una sola vez
   useEffect(() => {
-    if (client) {
+    if (client && !isInitialized) {
       setFormData({
         razonSocial: client.razonSocial || "",
         nombreCliente: client.nombreCliente || "",
@@ -53,8 +57,9 @@ export default function EditClient({ params }: { params: Promise<{ id: string }>
         emailClientes: client.emailClientes || "",
         estadoCliente: client.estadoCliente || "Activo"
       });
+      setIsInitialized(true);
     }
-  }, [client]);
+  }, [client, isInitialized]);
 
   useEffect(() => {
     if (!isUserLoading && !user) {
@@ -103,8 +108,29 @@ export default function EditClient({ params }: { params: Promise<{ id: string }>
     }
   };
 
-  if (isUserLoading || isClientLoading) return <div className="min-h-screen flex items-center justify-center font-black animate-pulse bg-background text-primary">CARGANDO CLIENTE...</div>;
-  if (!client) return <div className="min-h-screen flex items-center justify-center font-bold bg-background">Cliente no encontrado.</div>;
+  if (isUserLoading || isClientLoading) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-background text-primary gap-4">
+        <Loader2 className="h-10 w-10 animate-spin" />
+        <p className="font-black tracking-tighter text-xl uppercase">Cargando Cliente...</p>
+      </div>
+    );
+  }
+
+  if (!client && !isClientLoading) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-background p-6 text-center gap-6">
+        <AlertTriangle className="h-20 w-20 text-destructive" />
+        <div className="space-y-2">
+          <h1 className="text-2xl font-black text-primary uppercase">No Encontrado</h1>
+          <p className="text-muted-foreground font-medium">El cliente solicitado no existe.</p>
+        </div>
+        <Link href="/dashboard">
+          <Button variant="outline" className="font-bold">Volver al Dashboard</Button>
+        </Link>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background pb-20">

@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Save, ShieldCheck, KeyRound, Loader2, RefreshCw } from "lucide-react";
+import { ArrowLeft, Save, ShieldCheck, KeyRound, Loader2, RefreshCw, AlertTriangle } from "lucide-react";
 import Link from "next/link";
 import { useUser, useFirestore, useDoc, useMemoFirebase, useUserProfile } from "@/firebase";
 import { doc } from "firebase/firestore";
@@ -31,8 +31,10 @@ export default function EditTechnician({ params }: { params: Promise<{ id: strin
   }, [db, id]);
 
   const { data: personnel, isLoading: isPersonnelLoading } = useDoc(personnelRef);
+  
   const [loading, setLoading] = useState(false);
   const [passwordLoading, setPasswordLoading] = useState(false);
+  const [isInitialized, setIsInitialized] = useState(false);
   
   const [formData, setFormData] = useState({
     nombre_t: "",
@@ -48,18 +50,20 @@ export default function EditTechnician({ params }: { params: Promise<{ id: strin
     confirmPassword: ""
   });
 
+  // Efecto para cargar datos iniciales
   useEffect(() => {
-    if (personnel) {
+    if (personnel && !isInitialized) {
       setFormData({
         nombre_t: personnel.nombre_t || "",
         rut_t: personnel.rut_t || "",
         email_t: personnel.email_t || "",
         cel_t: personnel.cel_t || "",
-        rol_t: personnel.rol_t || "tecnico",
+        rol_t: personnel.rol_t === "Administrador" ? "admin" : (personnel.rol_t === "Supervisor" ? "supervisor" : (personnel.rol_t === "Técnico" ? "tecnico" : (personnel.rol_t || "tecnico"))),
         estado_t: personnel.estado_t || "Activo"
       });
+      setIsInitialized(true);
     }
-  }, [personnel]);
+  }, [personnel, isInitialized]);
 
   useEffect(() => {
     if (!isUserLoading && !user) {
@@ -131,7 +135,29 @@ export default function EditTechnician({ params }: { params: Promise<{ id: strin
     }
   };
 
-  if (isUserLoading || isPersonnelLoading || isProfileLoading) return <div className="min-h-screen flex items-center justify-center font-black animate-pulse bg-background text-primary">CARGANDO...</div>;
+  if (isUserLoading || isPersonnelLoading || isProfileLoading) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-background text-primary gap-4">
+        <Loader2 className="h-10 w-10 animate-spin" />
+        <p className="font-black tracking-tighter text-xl uppercase">Cargando Perfil...</p>
+      </div>
+    );
+  }
+
+  if (!personnel && !isPersonnelLoading) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-background p-6 text-center gap-6">
+        <AlertTriangle className="h-20 w-20 text-destructive" />
+        <div className="space-y-2">
+          <h1 className="text-2xl font-black text-primary uppercase">No Encontrado</h1>
+          <p className="text-muted-foreground font-medium">El perfil de personal solicitado no existe.</p>
+        </div>
+        <Link href="/dashboard">
+          <Button variant="outline" className="font-bold">Volver al Dashboard</Button>
+        </Link>
+      </div>
+    );
+  }
 
   const isAdmin = userProfile?.rol_t === "admin" || userProfile?.rol_t === "Administrador";
 
@@ -178,7 +204,7 @@ export default function EditTechnician({ params }: { params: Promise<{ id: strin
                     <Label className="font-bold uppercase text-[10px] text-muted-foreground">Rol</Label>
                     <Select value={formData.rol_t} onValueChange={v => setFormData({...formData, rol_t: v})}>
                       <SelectTrigger className="h-12 font-bold">
-                        <SelectValue />
+                        <SelectValue placeholder="Seleccionar rol" />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="admin">Administrador</SelectItem>
@@ -194,7 +220,7 @@ export default function EditTechnician({ params }: { params: Promise<{ id: strin
                     <Label className="font-bold uppercase text-[10px] text-muted-foreground">Estado del Perfil</Label>
                     <Select value={formData.estado_t} onValueChange={v => setFormData({...formData, estado_t: v})}>
                       <SelectTrigger className="h-12 border-primary/20 font-bold">
-                        <SelectValue />
+                        <SelectValue placeholder="Estado" />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="Activo">Activo (Habilitado)</SelectItem>
@@ -212,7 +238,6 @@ export default function EditTechnician({ params }: { params: Promise<{ id: strin
           </Card>
         </form>
 
-        {/* SECCIÓN DE CAMBIO DE CONTRASEÑA - SOLO PARA ADMIN */}
         {isAdmin && (
           <Card className="shadow-md border-none bg-white overflow-hidden">
             <CardHeader className="bg-destructive/5 p-6 border-b">

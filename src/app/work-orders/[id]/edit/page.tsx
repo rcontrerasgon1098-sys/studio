@@ -12,7 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SignaturePad } from "@/components/SignaturePad";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Save, CheckCircle2, Camera, X, Image as ImageIcon, Loader2, User, Phone, Mail, MapPin, Building2, Hash, Users, PlusCircle, CheckSquare, Send } from "lucide-react";
+import { ArrowLeft, Save, CheckCircle2, Camera, X, Image as ImageIcon, Loader2, User, Phone, Mail, MapPin, Building2, Hash, Users, PlusCircle, CheckSquare, Send, AlertTriangle } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import { useUser, useFirestore, useDoc, useMemoFirebase, useCollection, useUserProfile } from "@/firebase";
@@ -40,12 +40,6 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
 
   const { data: order, isLoading: isOrderLoading } = useDoc(orderRef);
 
-  const techProfileQuery = useMemoFirebase(() => {
-    if (!db || !user?.email) return null;
-    return query(collection(db, "personnel"), where("email_t", "==", user.email));
-  }, [db, user?.email]);
-  const { data: techProfiles } = useCollection(techProfileQuery);
-
   const personnelQuery = useMemoFirebase(() => {
     if (!db || !userProfile) return null;
     return query(collection(db, "personnel"), orderBy("nombre_t", "asc"));
@@ -56,8 +50,6 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
   const [isSendingSignature, setIsSendingSignature] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
   const [openTeamSearch, setOpenTeamSearch] = useState(false);
-  const [showSaveSignatureDialog, setShowSaveSignatureDialog] = useState(false);
-  const [tempSignature, setTempSignature] = useState("");
   
   const [formData, setFormData] = useState({
     clientName: "",
@@ -91,6 +83,7 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
     technicianId: "",
   });
 
+  // Cargar datos iniciales una sola vez al entrar
   useEffect(() => {
     if (order && !isInitialized) {
       if (order.status === "Completed") {
@@ -143,10 +136,6 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      if (file.size > 5 * 1024 * 1024) {
-        toast({ variant: "destructive", title: "Archivo muy grande", description: "El tamaño máximo es de 5MB." });
-        return;
-      }
       const reader = new FileReader();
       reader.onloadend = () => {
         setFormData({ ...formData, sketchImageUrl: reader.result as string });
@@ -266,11 +255,26 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
     }
   };
 
-  if (isUserLoading || isOrderLoading || !isInitialized || isProfileLoading) {
+  if (isUserLoading || isOrderLoading || isProfileLoading) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-background text-primary gap-4">
         <Loader2 className="h-10 w-10 animate-spin" />
-        <p className="font-black tracking-tighter text-xl uppercase">Cargando...</p>
+        <p className="font-black tracking-tighter text-xl uppercase">Cargando Orden...</p>
+      </div>
+    );
+  }
+
+  if (!order && !isOrderLoading) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-background p-6 text-center gap-6">
+        <AlertTriangle className="h-20 w-20 text-destructive" />
+        <div className="space-y-2">
+          <h1 className="text-2xl font-black text-primary uppercase">No Encontrada</h1>
+          <p className="text-muted-foreground font-medium">La orden de trabajo no existe o ya ha sido procesada.</p>
+        </div>
+        <Link href="/dashboard">
+          <Button variant="outline" className="font-bold">Volver al Dashboard</Button>
+        </Link>
       </div>
     );
   }
@@ -466,7 +470,7 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
           </Card>
 
           <Card className="shadow-md border-none bg-white overflow-hidden">
-            <CardHeader className="p-4 border-b bg-muted/5">
+            <CardHeader className="p-4 md:p-6 border-b bg-muted/5">
               <CardTitle className="text-lg flex items-center gap-2 uppercase font-bold tracking-tight">
                 <ImageIcon className="h-5 w-5 text-primary" /> Multimedia
               </CardTitle>
