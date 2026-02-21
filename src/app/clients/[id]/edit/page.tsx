@@ -44,7 +44,6 @@ export default function EditClient({ params }: { params: Promise<{ id: string }>
     estadoCliente: "Activo"
   });
 
-  // Cargar datos iniciales una sola vez
   useEffect(() => {
     if (client && !isInitialized) {
       setFormData({

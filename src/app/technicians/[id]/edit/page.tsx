@@ -50,15 +50,21 @@ export default function EditTechnician({ params }: { params: Promise<{ id: strin
     confirmPassword: ""
   });
 
-  // Efecto para cargar datos iniciales
   useEffect(() => {
     if (personnel && !isInitialized) {
+      // Normalizar el rol para que coincida con el Select
+      const rawRole = personnel.rol_t || "tecnico";
+      let normalizedRole = "tecnico";
+      if (rawRole.toLowerCase().includes("admin")) normalizedRole = "admin";
+      else if (rawRole.toLowerCase().includes("supervisor")) normalizedRole = "supervisor";
+      else if (rawRole.toLowerCase().includes("tecnico") || rawRole.toLowerCase().includes("técnico")) normalizedRole = "tecnico";
+
       setFormData({
         nombre_t: personnel.nombre_t || "",
         rut_t: personnel.rut_t || "",
         email_t: personnel.email_t || "",
         cel_t: personnel.cel_t || "",
-        rol_t: personnel.rol_t === "Administrador" ? "admin" : (personnel.rol_t === "Supervisor" ? "supervisor" : (personnel.rol_t === "Técnico" ? "tecnico" : (personnel.rol_t || "tecnico"))),
+        rol_t: normalizedRole,
         estado_t: personnel.estado_t || "Activo"
       });
       setIsInitialized(true);
@@ -77,7 +83,7 @@ export default function EditTechnician({ params }: { params: Promise<{ id: strin
     
     setLoading(true);
 
-    if (!formData.nombre_t || !formData.rut_t || !formData.email_t || !formData.rol_t) {
+    if (!formData.nombre_t || !formData.rut_t || !formData.email_t) {
       toast({ variant: "destructive", title: "Error", description: "Faltan campos requeridos." });
       setLoading(false);
       return;

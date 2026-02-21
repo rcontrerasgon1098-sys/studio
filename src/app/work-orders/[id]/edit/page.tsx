@@ -83,7 +83,6 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
     technicianId: "",
   });
 
-  // Cargar datos iniciales una sola vez al entrar
   useEffect(() => {
     if (order && !isInitialized) {
       if (order.status === "Completed") {
