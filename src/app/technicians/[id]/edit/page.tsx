@@ -9,18 +9,20 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Save, ShieldCheck } from "lucide-react";
+import { ArrowLeft, Save, ShieldCheck, KeyRound, Loader2, RefreshCw } from "lucide-react";
 import Link from "next/link";
-import { useUser, useFirestore, useDoc, useMemoFirebase } from "@/firebase";
+import { useUser, useFirestore, useDoc, useMemoFirebase, useUserProfile } from "@/firebase";
 import { doc } from "firebase/firestore";
 import { updateDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 import { validateRut } from "@/lib/rut-utils";
+import { updateUserPassword } from "@/ai/flows/update-user-password-flow";
 
 export default function EditTechnician({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
   const { id } = use(params);
   const { toast } = useToast();
   const { user, isUserLoading } = useUser();
+  const { userProfile, isProfileLoading } = useUserProfile();
   const db = useFirestore();
   
   const personnelRef = useMemoFirebase(() => {
@@ -30,6 +32,8 @@ export default function EditTechnician({ params }: { params: Promise<{ id: strin
 
   const { data: personnel, isLoading: isPersonnelLoading } = useDoc(personnelRef);
   const [loading, setLoading] = useState(false);
+  const [passwordLoading, setPasswordLoading] = useState(false);
+  
   const [formData, setFormData] = useState({
     nombre_t: "",
     rut_t: "",
@@ -37,6 +41,11 @@ export default function EditTechnician({ params }: { params: Promise<{ id: strin
     cel_t: "",
     rol_t: "tecnico",
     estado_t: "Activo"
+  });
+
+  const [passwordData, setPasswordData] = useState({
+    newPassword: "",
+    confirmPassword: ""
   });
 
   useEffect(() => {
@@ -91,7 +100,40 @@ export default function EditTechnician({ params }: { params: Promise<{ id: strin
     }
   };
 
-  if (isUserLoading || isPersonnelLoading) return <div className="min-h-screen flex items-center justify-center font-black animate-pulse bg-background text-primary">CARGANDO...</div>;
+  const handleUpdatePassword = async () => {
+    if (!passwordData.newPassword || passwordData.newPassword.length < 6) {
+      toast({ variant: "destructive", title: "Error", description: "La contraseña debe tener al menos 6 caracteres." });
+      return;
+    }
+
+    if (passwordData.newPassword !== passwordData.confirmPassword) {
+      toast({ variant: "destructive", title: "Error", description: "Las contraseñas no coinciden." });
+      return;
+    }
+
+    setPasswordLoading(true);
+    try {
+      const result = await updateUserPassword({
+        userId: id,
+        newPassword: passwordData.newPassword
+      });
+
+      if (result.success) {
+        toast({ title: "Contraseña Actualizada", description: "La clave de acceso ha sido cambiada con éxito." });
+        setPasswordData({ newPassword: "", confirmPassword: "" });
+      } else {
+        toast({ variant: "destructive", title: "Error", description: result.error });
+      }
+    } catch (error) {
+      toast({ variant: "destructive", title: "Error", description: "No se pudo actualizar la contraseña." });
+    } finally {
+      setPasswordLoading(false);
+    }
+  };
+
+  if (isUserLoading || isPersonnelLoading || isProfileLoading) return <div className="min-h-screen flex items-center justify-center font-black animate-pulse bg-background text-primary">CARGANDO...</div>;
+
+  const isAdmin = userProfile?.rol_t === "admin" || userProfile?.rol_t === "Administrador";
 
   return (
     <div className="min-h-screen bg-background pb-20">
@@ -106,12 +148,13 @@ export default function EditTechnician({ params }: { params: Promise<{ id: strin
             <h1 className="font-bold text-lg text-primary">Editar Perfil</h1>
           </div>
           <Button onClick={handleSubmit} disabled={loading} className="bg-primary hover:bg-primary/90 h-10 px-6 font-bold uppercase text-xs">
-            <Save className="h-4 w-4 mr-2" /> Guardar Cambios
+            {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />} 
+            Guardar Cambios
           </Button>
         </div>
       </header>
 
-      <main className="container mx-auto px-4 mt-6 max-w-2xl">
+      <main className="container mx-auto px-4 mt-6 max-w-2xl space-y-6">
         <form onSubmit={handleSubmit} className="space-y-6">
           <Card className="shadow-md border-none bg-white">
             <CardHeader className="bg-secondary/20 p-6 rounded-t-lg border-b">
@@ -168,6 +211,51 @@ export default function EditTechnician({ params }: { params: Promise<{ id: strin
             </CardContent>
           </Card>
         </form>
+
+        {/* SECCIÓN DE CAMBIO DE CONTRASEÑA - SOLO PARA ADMIN */}
+        {isAdmin && (
+          <Card className="shadow-md border-none bg-white overflow-hidden">
+            <CardHeader className="bg-destructive/5 p-6 border-b">
+              <CardTitle className="text-destructive flex items-center gap-2 uppercase tracking-tighter font-black text-base">
+                <KeyRound className="h-5 w-5" /> Seguridad y Acceso
+              </CardTitle>
+              <CardDescription className="text-[10px] font-bold uppercase">Como administrador, puede forzar el cambio de clave de este usuario.</CardDescription>
+            </CardHeader>
+            <CardContent className="p-6 space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label className="text-[10px] font-bold uppercase text-muted-foreground">Nueva Contraseña</Label>
+                  <Input 
+                    type="password" 
+                    placeholder="••••••••" 
+                    value={passwordData.newPassword}
+                    onChange={e => setPasswordData({...passwordData, newPassword: e.target.value})}
+                    className="h-12 font-bold" 
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-[10px] font-bold uppercase text-muted-foreground">Confirmar Contraseña</Label>
+                  <Input 
+                    type="password" 
+                    placeholder="••••••••" 
+                    value={passwordData.confirmPassword}
+                    onChange={e => setPasswordData({...passwordData, confirmPassword: e.target.value})}
+                    className="h-12 font-bold" 
+                  />
+                </div>
+              </div>
+              <Button 
+                onClick={handleUpdatePassword} 
+                disabled={passwordLoading} 
+                variant="outline"
+                className="w-full h-12 border-destructive text-destructive hover:bg-destructive hover:text-white font-black uppercase text-xs tracking-widest gap-2"
+              >
+                {passwordLoading ? <RefreshCw className="h-4 w-4 animate-spin" /> : <KeyRound className="h-4 w-4" />}
+                Actualizar Clave de Acceso
+              </Button>
+            </CardContent>
+          </Card>
+        )}
       </main>
     </div>
   );
