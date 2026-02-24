@@ -83,21 +83,10 @@ export default function Dashboard() {
   }, [db, user?.uid, userProfile, isAdmin]);
   const { data: history, isLoading: isHistoryLoading } = useCollection(historyQuery);
 
-  const clientsQuery = useMemoFirebase(() => {
-    if (!db || !userProfile) return null;
-    return query(collection(db, "clients"), orderBy("nombreCliente", "asc"));
-  }, [db, userProfile]);
-  const { data: clients } = useCollection(clientsQuery);
-
-  const personnelQuery = useMemoFirebase(() => {
-    if (!db || !userProfile || !isAdmin) return null;
-    return query(collection(db, "personnel"), orderBy("nombre_t", "asc"));
-  }, [db, userProfile, isAdmin]);
-  const { data: personnel } = useCollection(personnelQuery);
-
   // --- FILTERS ---
-  const activeProjects = useMemo(() => (projects || []).filter(p => p.status === 'Active'), [projects]);
-  const completedProjects = useMemo(() => (projects || []).filter(p => p.status === 'Completed'), [projects]);
+  // Incluimos tanto "Active" como "Pendiente" en la vista activa por seguridad
+  const activeProjects = useMemo(() => (projects || []).filter(p => p.status === 'Active' || p.status === 'Pendiente'), [projects]);
+  const completedProjects = useMemo(() => (projects || []).filter(p => p.status === 'Completed' || p.status === 'Completado'), [projects]);
 
   const filteredProjects = useMemo(() => {
     const list = activeTab === "project-history" ? completedProjects : activeProjects;
@@ -155,12 +144,8 @@ export default function Dashboard() {
           <History size={20} /> Historial OTs
         </Button>
         {isAdmin && <>
-          <Button variant={activeTab === "clients" ? "secondary" : "ghost"} className="w-full justify-start gap-3 h-12" onClick={() => setActiveTab("clients")}>
-            <Users size={20} /> Clientes
-          </Button>
-          <Button variant={activeTab === "personnel" ? "secondary" : "ghost"} className="w-full justify-start gap-3 h-12" onClick={() => setActiveTab("personnel")}>
-            <UserRound size={20} /> Personal
-          </Button>
+          <Link href="/clients/new" className="block"><Button variant="ghost" className="w-full justify-start gap-3 h-12"><Users size={20} /> Clientes</Button></Link>
+          <Link href="/technicians/new" className="block"><Button variant="ghost" className="w-full justify-start gap-3 h-12"><UserRound size={20} /> Personal</Button></Link>
         </>}
       </nav>
       <div className="px-4 mt-auto">
@@ -185,7 +170,7 @@ export default function Dashboard() {
             {activeTab === "dashboard" ? "Inicio" : activeTab === "projects" ? "Proyectos Activos" : activeTab === "project-history" ? "Historial Proyectos" : activeTab === "orders" ? "Órdenes de Trabajo" : "Archivo Histórico"}
           </h1>
           <div className="flex gap-2">
-            {activeTab === "projects" && (
+            {(activeTab === "dashboard" || activeTab === "projects") && (
               <Link href="/projects/new">
                 <Button className="bg-accent text-primary font-black h-12 px-6 rounded-xl shadow-lg">
                   <Plus size={20} className="mr-2" /> Nuevo Proyecto
@@ -209,6 +194,7 @@ export default function Dashboard() {
                 <CardTitle className="text-sm font-black uppercase flex items-center gap-2">
                   <FolderOpen className="h-4 w-4 text-primary" /> Proyectos en Obra
                 </CardTitle>
+                <CardDescription className="text-[10px] font-bold">Resumen de obras en ejecución.</CardDescription>
               </CardHeader>
               <CardContent className="p-0">
                 <ProjectTable projects={activeProjects.slice(0, 5)} isLoading={isProjectsLoading} />
@@ -219,6 +205,7 @@ export default function Dashboard() {
                 <CardTitle className="text-sm font-black uppercase flex items-center gap-2">
                   <ClipboardList className="h-4 w-4 text-primary" /> OTs Activas Recientes
                 </CardTitle>
+                <CardDescription className="text-[10px] font-bold">Últimas órdenes en curso.</CardDescription>
               </CardHeader>
               <CardContent className="p-0">
                 <OrderTable orders={(orders || []).slice(0, 5)} isLoading={isOrdersLoading} type="ordenes" setDeleteConfirm={setDeleteConfirm} isAdmin={isAdmin} />
@@ -306,8 +293,8 @@ function ProjectTable({ projects, isLoading }: { projects: any[], isLoading: boo
             <TableCell className="font-bold text-primary">{project.name}</TableCell>
             <TableCell className="text-xs font-medium">{project.clientName}</TableCell>
             <TableCell>
-              <Badge className={cn("text-[9px] uppercase font-black", project.status === 'Completed' ? 'bg-accent/20 text-primary' : 'bg-primary/10 text-primary')}>
-                {project.status === 'Active' ? 'ACTIVO' : project.status === 'Completed' ? 'FINALIZADO' : 'CANCELADO'}
+              <Badge className={cn("text-[9px] uppercase font-black", (project.status === 'Completed' || project.status === 'Completado') ? 'bg-accent/20 text-primary' : 'bg-primary/10 text-primary')}>
+                {(project.status === 'Active' || project.status === 'Pendiente') ? 'EN EJECUCIÓN' : 'FINALIZADO'}
               </Badge>
             </TableCell>
             <TableCell className="text-right">
@@ -343,7 +330,7 @@ function OrderTable({ orders, isLoading, type, setDeleteConfirm, isAdmin }: { or
             <TableCell className="font-bold text-xs">{order.clientName}</TableCell>
             <TableCell>
               <Badge className="text-[9px] uppercase font-black bg-primary/10 text-primary">
-                {order.status === 'Completed' ? 'FINALIZADO' : 'PENDIENTE'}
+                {order.status === 'Completed' || order.status === 'Completado' ? 'FINALIZADO' : 'PENDIENTE'}
               </Badge>
             </TableCell>
             <TableCell className="text-right">

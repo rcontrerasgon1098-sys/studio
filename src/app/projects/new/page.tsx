@@ -52,7 +52,7 @@ export default function NewProject() {
     const projectData = {
       ...formData,
       id: projectId,
-      status: "Pendiente",
+      status: "Active", // Cambiado a "Active" para visibilidad inmediata en Proyectos Activos
       createdBy: user.uid,
       creatorEmail: user.email || "",
       startDate: new Date().toISOString(),
@@ -61,7 +61,7 @@ export default function NewProject() {
 
     try {
       await setDoc(doc(db, "projects", projectId), projectData);
-      toast({ title: "Proyecto Creado" });
+      toast({ title: "Proyecto Creado", description: "La obra ha sido iniciada con éxito." });
       router.push("/dashboard");
     } catch (error) {
       setLoading(false);
@@ -85,14 +85,14 @@ export default function NewProject() {
                 <ArrowLeft className="h-5 w-5" />
               </Button>
             </Link>
-            <h1 className="text-xl font-black uppercase tracking-tighter text-primary">Nueva Obra</h1>
+            <h1 className="text-xl font-black uppercase tracking-tighter text-primary">Iniciar Obra</h1>
           </div>
           <Button 
             onClick={handleSubmit} 
             disabled={loading || !formData.name || !formData.clientId} 
             className="bg-primary hover:bg-primary/90 font-black h-11 px-8 rounded-xl shadow-lg transition-all active:scale-95"
           >
-            {loading ? "..." : "Crear"}
+            {loading ? "Iniciando..." : "Crear Proyecto"}
           </Button>
         </div>
       </header>
@@ -101,14 +101,14 @@ export default function NewProject() {
         <Card className="shadow-[0_20px_50px_rgba(0,0,0,0.05)] border-none overflow-hidden rounded-3xl">
           <CardHeader className="bg-primary/5 p-8 border-b border-primary/10">
             <CardTitle className="text-xs font-black uppercase flex items-center gap-3 text-primary tracking-[0.2em]">
-              <LayoutList className="h-4 w-4" /> Configuración Inicial
+              <LayoutList className="h-4 w-4" /> Configuración de Proyecto
             </CardTitle>
           </CardHeader>
           <CardContent className="p-8 space-y-10">
             {/* Nombre del Proyecto */}
             <div className="space-y-4">
               <Label htmlFor="projectName" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">
-                Identificador de Proyecto
+                Nombre o Identificador
               </Label>
               <div className="relative group">
                 <Briefcase className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground group-focus-within:text-primary transition-colors" />
@@ -125,76 +125,71 @@ export default function NewProject() {
             {/* Selección de Cliente */}
             <div className="space-y-4">
               <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">
-                Empresa Asociada
+                Empresa Contratante
               </Label>
-              <div className="flex flex-col md:flex-row gap-3">
+              <div className="flex flex-col gap-3">
                 <div className={cn(
-                  "flex-1 h-16 px-6 flex items-center rounded-2xl border-2 transition-all duration-300",
+                  "h-20 px-6 flex items-center justify-between rounded-2xl border-2 transition-all duration-300",
                   formData.clientId ? "border-primary bg-primary/5" : "border-dashed border-muted-foreground/20 bg-muted/10"
                 )}>
                   {formData.clientId ? (
                     <div className="flex items-center gap-3 w-full">
-                      <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center text-white">
-                        <CheckCircle2 className="h-5 w-5" />
+                      <div className="h-10 w-10 rounded-xl bg-primary flex items-center justify-center text-white shrink-0">
+                        <CheckCircle2 className="h-6 w-6" />
                       </div>
-                      <span className="font-black text-primary uppercase text-sm truncate">{formData.clientName}</span>
+                      <div className="flex flex-col truncate">
+                        <span className="font-black text-primary uppercase text-sm">{formData.clientName}</span>
+                        <span className="text-[10px] text-muted-foreground font-bold uppercase">Cliente Vinculado</span>
+                      </div>
                     </div>
                   ) : (
-                    <span className="text-muted-foreground font-bold text-sm opacity-40 uppercase tracking-tighter">Seleccione un cliente</span>
+                    <span className="text-muted-foreground font-bold text-sm opacity-40 uppercase tracking-tighter">No se ha seleccionado cliente</span>
                   )}
+
+                  <Popover open={openClientSearch} onOpenChange={setOpenClientSearch}>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" className="h-12 px-6 rounded-xl border-2 border-primary/20 shadow-sm hover:bg-primary hover:text-white group transition-all shrink-0 font-black uppercase text-[10px] tracking-widest">
+                        <Search className="h-4 w-4 mr-2" /> {formData.clientId ? "Cambiar" : "Buscar"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[320px] md:w-[400px] p-0 shadow-2xl rounded-2xl border-none overflow-hidden" align="end">
+                      <Command className="rounded-2xl">
+                        <CommandInput placeholder="Filtrar clientes registrados..." className="h-14 border-none focus:ring-0" />
+                        <CommandList className="max-h-[350px]">
+                          <CommandEmpty className="p-8 text-center">
+                            <p className="text-sm font-bold text-muted-foreground">No se encontraron clientes.</p>
+                          </CommandEmpty>
+                          <CommandGroup className="p-2">
+                            {clients?.map((client) => (
+                              <CommandItem 
+                                key={client.id} 
+                                onSelect={() => handleSelectClient(client)} 
+                                className="p-4 cursor-pointer rounded-xl aria-selected:bg-primary aria-selected:text-white transition-colors"
+                              >
+                                <div className="flex items-center gap-4">
+                                  <div className="h-10 w-10 rounded-xl bg-muted/20 flex items-center justify-center group-aria-selected:bg-white/20">
+                                    <Building2 className="h-5 w-5" />
+                                  </div>
+                                  <div className="flex flex-col">
+                                    <span className="font-black text-xs uppercase">{client.nombreCliente}</span>
+                                    <span className="text-[10px] opacity-60 font-bold">{client.rutCliente}</span>
+                                  </div>
+                                </div>
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
                 </div>
-                
-                <Popover open={openClientSearch} onOpenChange={setOpenClientSearch}>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" className="h-16 px-6 rounded-2xl border-2 border-primary/20 shadow-sm hover:bg-primary hover:text-white group transition-all shrink-0">
-                      <Search className="h-5 w-5" />
-                      <span className="ml-2 font-black uppercase text-xs tracking-widest">Buscar</span>
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-[320px] md:w-[400px] p-0 shadow-2xl rounded-2xl border-none overflow-hidden" align="end">
-                    <Command className="rounded-2xl">
-                      <CommandInput placeholder="Filtrar clientes..." className="h-14 border-none focus:ring-0" />
-                      <CommandList className="max-h-[350px]">
-                        <CommandEmpty className="p-8 text-center">
-                          <p className="text-sm font-bold text-muted-foreground">No hay resultados.</p>
-                        </CommandEmpty>
-                        <CommandGroup className="p-2">
-                          {clients?.map((client) => (
-                            <CommandItem 
-                              key={client.id} 
-                              onSelect={() => handleSelectClient(client)} 
-                              className="p-4 cursor-pointer rounded-xl aria-selected:bg-primary aria-selected:text-white transition-colors"
-                            >
-                              <div className="flex items-center gap-4">
-                                <div className="h-10 w-10 rounded-xl bg-muted/20 flex items-center justify-center group-aria-selected:bg-white/20">
-                                  <Building2 className="h-5 w-5" />
-                                </div>
-                                <div className="flex flex-col">
-                                  <span className="font-black text-xs uppercase">{client.nombreCliente}</span>
-                                  <span className="text-[10px] opacity-60 font-bold">{client.rutCliente}</span>
-                                </div>
-                              </div>
-                            </CommandItem>
-                          ))}
-                        </CommandGroup>
-                        <div className="p-3 border-t bg-muted/5 flex justify-center">
-                           <Link href="/clients/new">
-                            <Button variant="ghost" size="sm" className="text-[10px] font-black uppercase text-primary">
-                              <Plus className="h-3 w-3 mr-1" /> Nuevo Cliente
-                            </Button>
-                           </Link>
-                        </div>
-                      </CommandList>
-                    </Command>
-                  </PopoverContent>
-                </Popover>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <div className="mt-8 flex justify-center">
-           <div className="flex flex-col items-center gap-2 opacity-20 group hover:opacity-100 transition-opacity">
+        <div className="mt-12 flex justify-center">
+           <div className="flex flex-col items-center gap-2 opacity-20">
               <span className="font-black text-lg tracking-tighter text-primary">ICSA</span>
               <span className="text-[6px] font-bold uppercase tracking-[0.3em]">ingeniería comunicaciones S.A.</span>
            </div>
