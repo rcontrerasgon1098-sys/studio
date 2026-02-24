@@ -6,14 +6,11 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Input } from "@/components/ui/input";
 import { 
   Plus, FileText, Search, LogOut, LayoutDashboard, 
-  Eye, Download, Menu, Users, UserRound, 
-  Pencil, Trash2, PieChart as PieChartIcon,
-  History, Activity, Building, ShieldCheck, Loader2,
-  Briefcase, FolderOpen, ClipboardList
+  Eye, Download, Users, UserRound, 
+  Trash2, History, Briefcase, FolderOpen, ClipboardList, BookOpen
 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
@@ -66,7 +63,7 @@ export default function Dashboard() {
     if (!db || !user?.uid || !userProfile) return null;
     const colRef = collection(db, "projects");
     if (isAdmin) return query(colRef, orderBy("startDate", "desc"));
-    return query(colRef, where("createdBy", "==", user.uid), orderBy("startDate", "desc"));
+    return query(colRef, where("createdBy", "==", user.uid));
   }, [db, user?.uid, userProfile, isAdmin]);
   const { data: projects, isLoading: isProjectsLoading } = useCollection(projectsQuery);
 
@@ -99,10 +96,13 @@ export default function Dashboard() {
   const { data: personnel } = useCollection(personnelQuery);
 
   // --- FILTERS ---
+  const activeProjects = useMemo(() => (projects || []).filter(p => p.status === 'Active'), [projects]);
+  const completedProjects = useMemo(() => (projects || []).filter(p => p.status === 'Completed'), [projects]);
+
   const filteredProjects = useMemo(() => {
-    if (!projects) return [];
-    return projects.filter(p => p.name?.toLowerCase().includes(searchTerm.toLowerCase()) || p.clientName?.toLowerCase().includes(searchTerm.toLowerCase()));
-  }, [projects, searchTerm]);
+    const list = activeTab === "project-history" ? completedProjects : activeProjects;
+    return list.filter(p => p.name?.toLowerCase().includes(searchTerm.toLowerCase()) || p.clientName?.toLowerCase().includes(searchTerm.toLowerCase()));
+  }, [activeProjects, completedProjects, activeTab, searchTerm]);
 
   const filteredOrders = useMemo(() => {
     if (!orders) return [];
@@ -139,16 +139,19 @@ export default function Dashboard() {
         <span className="font-black text-xl tracking-tighter text-white">ICSA</span>
       </div>
       <nav className="flex-1 space-y-2 px-4">
-        <Button variant={activeTab === "dashboard" ? "secondary" : "ghost"} className="w-full justify-start gap-3 h-12" onClick={() => setActiveTab("dashboard")}>
+        <Button variant={activeTab === "dashboard" ? "secondary" : "ghost"} className="w-full justify-start gap-3 h-12" onClick={() => { setActiveTab("dashboard"); setSearchTerm(""); }}>
           <LayoutDashboard size={20} /> Inicio
         </Button>
-        <Button variant={activeTab === "projects" ? "secondary" : "ghost"} className="w-full justify-start gap-3 h-12" onClick={() => setActiveTab("projects")}>
-          <Briefcase size={20} /> Proyectos
+        <Button variant={activeTab === "projects" ? "secondary" : "ghost"} className="w-full justify-start gap-3 h-12" onClick={() => { setActiveTab("projects"); setSearchTerm(""); }}>
+          <Briefcase size={20} /> Proyectos Activos
         </Button>
-        <Button variant={activeTab === "orders" ? "secondary" : "ghost"} className="w-full justify-start gap-3 h-12" onClick={() => setActiveTab("orders")}>
+        <Button variant={activeTab === "project-history" ? "secondary" : "ghost"} className="w-full justify-start gap-3 h-12" onClick={() => { setActiveTab("project-history"); setSearchTerm(""); }}>
+          <BookOpen size={20} /> Historial Proyectos
+        </Button>
+        <Button variant={activeTab === "orders" ? "secondary" : "ghost"} className="w-full justify-start gap-3 h-12" onClick={() => { setActiveTab("orders"); setSearchTerm(""); }}>
           <FileText size={20} /> Órdenes Activas
         </Button>
-        <Button variant={activeTab === "history" ? "secondary" : "ghost"} className="w-full justify-start gap-3 h-12" onClick={() => setActiveTab("history")}>
+        <Button variant={activeTab === "history" ? "secondary" : "ghost"} className="w-full justify-start gap-3 h-12" onClick={() => { setActiveTab("history"); setSearchTerm(""); }}>
           <History size={20} /> Historial OTs
         </Button>
         {isAdmin && <>
@@ -179,7 +182,7 @@ export default function Dashboard() {
       <main className="flex-1 p-4 md:p-10 overflow-y-auto">
         <header className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
           <h1 className="text-3xl font-black text-primary uppercase tracking-tighter">
-            {activeTab === "dashboard" ? "Inicio" : activeTab === "projects" ? "Proyectos" : activeTab === "orders" ? "Órdenes de Trabajo" : "Archivo Histórico"}
+            {activeTab === "dashboard" ? "Inicio" : activeTab === "projects" ? "Proyectos Activos" : activeTab === "project-history" ? "Historial Proyectos" : activeTab === "orders" ? "Órdenes de Trabajo" : "Archivo Histórico"}
           </h1>
           <div className="flex gap-2">
             {activeTab === "projects" && (
@@ -204,17 +207,17 @@ export default function Dashboard() {
             <Card className="shadow-lg border-none bg-white rounded-2xl overflow-hidden">
               <CardHeader className="bg-primary/5">
                 <CardTitle className="text-sm font-black uppercase flex items-center gap-2">
-                  <FolderOpen className="h-4 w-4 text-primary" /> Proyectos Activos
+                  <FolderOpen className="h-4 w-4 text-primary" /> Proyectos en Obra
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-0">
-                <ProjectTable projects={(projects || []).filter(p => p.status === 'Active').slice(0, 5)} isLoading={isProjectsLoading} />
+                <ProjectTable projects={activeProjects.slice(0, 5)} isLoading={isProjectsLoading} />
               </CardContent>
             </Card>
             <Card className="shadow-lg border-none bg-white rounded-2xl overflow-hidden">
               <CardHeader className="bg-primary/5">
                 <CardTitle className="text-sm font-black uppercase flex items-center gap-2">
-                  <ClipboardList className="h-4 w-4 text-primary" /> OTs Recientes
+                  <ClipboardList className="h-4 w-4 text-primary" /> OTs Activas Recientes
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-0">
@@ -224,7 +227,7 @@ export default function Dashboard() {
           </div>
         )}
 
-        {activeTab === "projects" && (
+        {(activeTab === "projects" || activeTab === "project-history") && (
           <Card className="shadow-xl border-none bg-white rounded-2xl">
             <CardHeader className="border-b space-y-4">
               <div className="relative">
@@ -340,7 +343,7 @@ function OrderTable({ orders, isLoading, type, setDeleteConfirm, isAdmin }: { or
             <TableCell className="font-bold text-xs">{order.clientName}</TableCell>
             <TableCell>
               <Badge className="text-[9px] uppercase font-black bg-primary/10 text-primary">
-                {order.status === 'Completed' ? 'FINALIZADO' : 'EN CURSO'}
+                {order.status === 'Completed' ? 'FINALIZADO' : 'PENDIENTE'}
               </Badge>
             </TableCell>
             <TableCell className="text-right">

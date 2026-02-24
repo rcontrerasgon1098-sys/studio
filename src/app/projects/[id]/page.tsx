@@ -6,13 +6,15 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Loader2, Briefcase, Calendar, User, FileCheck, Plus, CheckCircle2, History as HistoryIcon, Clock } from "lucide-react";
+import { Label } from "@/components/ui/label";
+import { ArrowLeft, Loader2, Briefcase, Calendar, User, FileCheck, Plus, CheckCircle2, History as HistoryIcon, Clock, Eye } from "lucide-react";
 import Link from "next/link";
 import { useFirebase, useDoc, useCollection, useMemoFirebase } from "@/firebase";
-import { doc, collection, query, where, orderBy } from "firebase/firestore";
+import { doc, collection, query, where } from "firebase/firestore";
 import { closeProject } from "@/ai/flows/close-project-flow";
 import { useToast } from "@/hooks/use-toast";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { cn } from "@/lib/utils";
 
 export default function ProjectDetail({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -168,8 +170,8 @@ function OTTable({ orders, isLoading }: { orders: any[], isLoading: boolean }) {
             <TableCell className="font-black text-primary text-xs">
               #{ot.folio} {ot.isProjectSummary && <Badge className="bg-accent/20 text-primary text-[7px] ml-1">ACTA FINAL</Badge>}
             </TableCell>
-            <TableCell className="text-[10px] font-medium text-muted-foreground line-clamp-1 max-w-[200px]">
-              {ot.description || "N/A"}
+            <TableCell className="text-[10px] font-medium text-muted-foreground">
+              <p className="line-clamp-1 max-w-[250px]">{ot.description || "N/A"}</p>
             </TableCell>
             <TableCell className="text-right">
               <Link href={`/work-orders/${ot.id}`}>
