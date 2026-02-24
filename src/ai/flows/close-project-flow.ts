@@ -2,6 +2,7 @@
 'use server';
 /**
  * @fileOverview Flow to close a project and generate a final summary Work Order.
+ * The summary is created in 'ordenes' so it can follow the signature process.
  */
 
 import { ai } from '@/ai/genkit';
@@ -23,7 +24,7 @@ const closeProjectFlow = ai.defineFlow(
   {
     name: 'closeProjectFlow',
     inputSchema: CloseProjectInputSchema,
-    outputSchema: z.object({ success: z.boolean(), error: z.string().optional() }),
+    outputSchema: z.object({ success: z.boolean(), error: z.string().optional(), orderId: z.string().optional() }),
   },
   async (input) => {
     try {
@@ -47,12 +48,13 @@ const closeProjectFlow = ai.defineFlow(
 
       const allOts = [...activeSnap.docs, ...historySnap.docs].map(d => d.data());
       
-      // 3. Generate Summary Text
-      const summaryText = `Resumen Final Proyecto: ${projectData.name}. 
-Total de órdenes procesadas: ${allOts.length}.
-Empresa: ${projectData.clientName}.
-Detalles consolidados:
-${allOts.map((ot, i) => `${i+1}. Folio #${ot.folio}: ${ot.description || 'Sin descripción'}`).join('\n')}`;
+      // 3. Generate Summary Text (Consolidating all OT descriptions)
+      const summaryText = `ACTA DE CIERRE FINAL - PROYECTO: ${projectData.name.toUpperCase()}
+--------------------------------------------------
+Resumen consolidado de trabajos realizados:
+${allOts.map((ot, i) => `- Folio #${ot.folio}: ${ot.description || 'Sin descripción'}`).join('\n')}
+
+Este documento certifica la entrega total y recepción conforme de todas las etapas del proyecto mencionado.`;
 
       // 4. Update Project Status
       await updateDoc(projectRef, {
@@ -61,27 +63,32 @@ ${allOts.map((ot, i) => `${i+1}. Folio #${ot.folio}: ${ot.description || 'Sin de
         summary: summaryText
       });
 
-      // 5. Create special summary Work Order in Historial
-      const summaryOtId = `SUM-${input.projectId}`;
+      // 5. Create special summary Work Order in 'ordenes' (NOT history yet)
+      // This allows the client to sign the final consolidated report.
+      const summaryOtId = `ACTA-${input.projectId}`;
       const summaryOtData = {
         id: summaryOtId,
-        folio: Math.floor(100000 + Math.random() * 900000), // Folio único para el resumen
+        folio: Math.floor(100000 + Math.random() * 900000),
         projectId: input.projectId,
         isProjectSummary: true,
         clientName: projectData.clientName,
-        clientId: projectData.clientId,
+        clientId: projectData.clientId || "",
         createdBy: input.closedByUid,
-        status: 'Completed',
+        status: 'Pendiente', // Set to Pending so it can be edited/signed
         description: summaryText,
         startDate: projectData.startDate,
-        endDate: new Date().toISOString(),
+        address: allOts[0]?.address || 'Dirección de Proyecto',
+        building: allOts[0]?.building || '',
+        floor: allOts[0]?.floor || '',
         updatedAt: new Date().toISOString(),
-        address: allOts[0]?.address || 'N/A', // Usamos la dirección de la primera OT como referencia
+        team: projectData.teamNames || [projectData.creatorEmail],
+        teamIds: projectData.teamIds || [input.closedByUid]
       };
 
-      await setDoc(doc(db, 'historial', summaryOtId), summaryOtData);
+      // We use setDoc to ensure we have a predictable ID (ACTA-projectId)
+      await setDoc(doc(db, 'ordenes', summaryOtId), summaryOtData);
 
-      return { success: true };
+      return { success: true, orderId: summaryOtId };
     } catch (error: any) {
       console.error('Error closing project:', error);
       return { success: false, error: error.message };
