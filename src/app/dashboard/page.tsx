@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
@@ -60,26 +59,35 @@ export default function Dashboard() {
 
   const isAdmin = userProfile?.rol_t === 'admin' || userProfile?.rol_t === 'Administrador';
 
-  // --- QUERIES ---
+  // --- QUERIES FILTRADAS POR PROPIEDAD SI NO ES ADMIN ---
   const projectsQuery = useMemoFirebase(() => {
     if (!db || !user?.uid || !userProfile) return null;
     const colRef = collection(db, "projects");
-    return query(colRef, orderBy("startDate", "desc"));
-  }, [db, user?.uid, userProfile]);
+    if (isAdmin) {
+      return query(colRef, orderBy("startDate", "desc"));
+    }
+    return query(colRef, where("createdBy", "==", user.uid), orderBy("startDate", "desc"));
+  }, [db, user?.uid, userProfile, isAdmin]);
   const { data: projects, isLoading: isProjectsLoading } = useCollection(projectsQuery);
 
   const ordersQuery = useMemoFirebase(() => {
     if (!db || !user?.uid || !userProfile) return null;
     const colRef = collection(db, "ordenes");
-    return query(colRef, orderBy("startDate", "desc"));
-  }, [db, user?.uid, userProfile]);
+    if (isAdmin) {
+      return query(colRef, orderBy("startDate", "desc"));
+    }
+    return query(colRef, where("createdBy", "==", user.uid), orderBy("startDate", "desc"));
+  }, [db, user?.uid, userProfile, isAdmin]);
   const { data: orders, isLoading: isOrdersLoading } = useCollection(ordersQuery);
 
   const historyQuery = useMemoFirebase(() => {
     if (!db || !user?.uid || !userProfile) return null;
     const colRef = collection(db, "historial");
-    return query(colRef, orderBy("startDate", "desc"));
-  }, [db, user?.uid, userProfile]);
+    if (isAdmin) {
+      return query(colRef, orderBy("startDate", "desc"));
+    }
+    return query(colRef, where("createdBy", "==", user.uid), orderBy("startDate", "desc"));
+  }, [db, user?.uid, userProfile, isAdmin]);
   const { data: history, isLoading: isHistoryLoading } = useCollection(historyQuery);
 
   // --- FILTERS ---
@@ -174,12 +182,10 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-muted/20 flex flex-col md:flex-row">
-      {/* SIDEBAR DESKTOP */}
       <aside className="w-64 bg-primary text-white hidden md:flex flex-col shadow-2xl sticky top-0 h-screen">
         <SidebarContent />
       </aside>
 
-      {/* MOBILE HEADER - SWAPPED POSITIONS */}
       <header className="md:hidden bg-primary text-white p-4 flex items-center justify-between shadow-lg sticky top-0 z-50">
         <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
           <SheetTrigger asChild>
@@ -319,7 +325,6 @@ export default function Dashboard() {
         )}
       </main>
 
-      {/* MODALES */}
       <AlertDialog open={!!deleteConfirm} onOpenChange={() => setDeleteConfirm(null)}>
         <AlertDialogContent className="rounded-3xl border-none shadow-2xl p-8">
           <AlertDialogHeader>

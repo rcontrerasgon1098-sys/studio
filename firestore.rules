@@ -1,12 +1,61 @@
-
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
+    
+    // Funciones de ayuda para seguridad
+    function isLoggedIn() {
+      return request.auth != null;
+    }
+    
+    function getUserData() {
+      return get(/databases/$(database)/documents/personnel/$(request.auth.uid)).data;
+    }
+    
+    function isAdmin() {
+      return isLoggedIn() && (
+        getUserData().rol_t == 'admin' || 
+        getUserData().rol_t == 'Administrador' ||
+        request.auth.token.email == 'admin@icsa.com'
+      );
+    }
 
-    // ✅ REGLAS TOTALMENTE ABIERTAS (Solo para pruebas, como solicitaste)
+    // Reglas para Proyectos
+    match /projects/{projectId} {
+      allow read, update: if isAdmin() || (isLoggedIn() && (
+        resource.data.createdBy == request.auth.uid || 
+        (resource.data.teamIds != null && request.auth.uid in resource.data.teamIds)
+      ));
+      allow create: if isLoggedIn();
+      allow delete: if isAdmin();
+    }
+
+    // Reglas para Órdenes Activas
+    match /ordenes/{orderId} {
+      allow read, update, delete: if isAdmin() || (isLoggedIn() && resource.data.createdBy == request.auth.uid);
+      allow create: if isLoggedIn();
+    }
+
+    // Reglas para Historial
+    match /historial/{orderId} {
+      allow read: if isAdmin() || (isLoggedIn() && resource.data.createdBy == request.auth.uid);
+      allow write: if isAdmin() || (isLoggedIn() && resource.data.createdBy == request.auth.uid);
+    }
+
+    // Reglas para Personal y Clientes (Lectura para todos, escritura Admin)
+    match /personnel/{uid} {
+      allow read: if isLoggedIn();
+      allow write: if isAdmin();
+    }
+
+    match /clients/{clientId} {
+      allow read: if isLoggedIn();
+      allow write: if isAdmin();
+    }
+    
+    // Fallback de seguridad
     match /{document=**} {
-      allow read, write: if true;
+      allow read, write: if isAdmin();
     }
   }
 }

@@ -1,15 +1,14 @@
-
 "use client";
 
-import { use, useState } from "react";
+import { use, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, Loader2, Briefcase, Calendar, User, FileCheck, Plus, CheckCircle2, History as HistoryIcon, Clock, Eye, Pencil } from "lucide-react";
+import { ArrowLeft, Loader2, Briefcase, Calendar, User, FileCheck, Plus, CheckCircle2, History as HistoryIcon, Clock, Eye, Pencil, AlertTriangle } from "lucide-react";
 import Link from "next/link";
-import { useFirebase, useDoc, useCollection, useMemoFirebase } from "@/firebase";
+import { useFirebase, useDoc, useCollection, useMemoFirebase, useUserProfile } from "@/firebase";
 import { doc, collection, query, where } from "firebase/firestore";
 import { closeProject } from "@/ai/flows/close-project-flow";
 import { useToast } from "@/hooks/use-toast";
@@ -19,12 +18,15 @@ import { cn } from "@/lib/utils";
 export default function ProjectDetail({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const { firestore: db, user } = useFirebase();
+  const { userProfile, isProfileLoading } = useUserProfile();
   const router = useRouter();
   const { toast } = useToast();
   const [closing, setClosing] = useState(false);
 
   const projectRef = useMemoFirebase(() => (db ? doc(db, "projects", id) : null), [db, id]);
-  const { data: project, isLoading: isProjectLoading } = useDoc(projectRef);
+  const { data: project, isLoading: isProjectLoading, error: projectError } = useDoc(projectRef);
+
+  const isAdmin = userProfile?.rol_t === 'admin' || userProfile?.rol_t === 'Administrador';
 
   const activeOtsQuery = useMemoFirebase(() => (db ? query(collection(db, "ordenes"), where("projectId", "==", id)) : null), [db, id]);
   const { data: activeOts, isLoading: isActiveLoading } = useCollection(activeOtsQuery);
@@ -50,11 +52,20 @@ export default function ProjectDetail({ params }: { params: Promise<{ id: string
     }
   };
 
-  if (isProjectLoading) return <div className="min-h-screen flex items-center justify-center bg-background text-primary animate-pulse font-black uppercase tracking-tighter">Cargando Obra...</div>;
-  if (!project) return <div className="min-h-screen flex flex-col items-center justify-center p-10 text-center font-bold text-muted-foreground bg-background">
-    <Briefcase className="h-20 w-20 opacity-10 mb-4" />
-    El proyecto solicitado no existe.
-  </div>;
+  if (isProjectLoading || isProfileLoading) return <div className="min-h-screen flex items-center justify-center bg-background text-primary animate-pulse font-black uppercase tracking-tighter">Cargando Obra...</div>;
+  
+  if (projectError || !project) return (
+    <div className="min-h-screen flex flex-col items-center justify-center p-10 text-center font-bold text-muted-foreground bg-background gap-6">
+      <AlertTriangle className="h-20 w-20 text-destructive/20" />
+      <div className="space-y-2">
+        <h1 className="text-xl font-black text-primary uppercase">Acceso Denegado u Obra no encontrada</h1>
+        <p className="text-sm font-medium">No tienes permisos para visualizar este proyecto o el identificador no es válido.</p>
+      </div>
+      <Link href="/dashboard">
+        <Button variant="outline" className="font-black uppercase text-xs tracking-widest rounded-xl">Volver al Panel</Button>
+      </Link>
+    </div>
+  );
 
   const isCompleted = project.status === 'Completed' || project.status === 'Completado';
 

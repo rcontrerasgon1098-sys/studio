@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect, useRef } from "react";
@@ -37,10 +36,16 @@ export default function NewWorkOrder() {
   const clientsQuery = useMemoFirebase(() => (db ? query(collection(db, "clients"), orderBy("nombreCliente", "asc")) : null), [db]);
   const { data: clients } = useCollection(clientsQuery);
 
+  const isAdmin = userProfile?.rol_t === 'admin' || userProfile?.rol_t === 'Administrador';
+
   const projectsQuery = useMemoFirebase(() => {
-    if (!db) return null;
-    return query(collection(db, "projects"), where("status", "==", "Active"));
-  }, [db]);
+    if (!db || !user?.uid) return null;
+    const colRef = collection(db, "projects");
+    if (isAdmin) {
+      return query(colRef, where("status", "==", "Active"));
+    }
+    return query(colRef, where("status", "==", "Active"), where("createdBy", "==", user.uid));
+  }, [db, user?.uid, isAdmin]);
   const { data: allProjects } = useCollection(projectsQuery);
 
   const [formData, setFormData] = useState({
@@ -309,7 +314,6 @@ export default function NewWorkOrder() {
             </CardContent>
           </Card>
 
-          {/* BARRA DE ACCIÓN FIJA EN MÓVIL */}
           <div className="fixed bottom-0 left-0 right-0 p-4 bg-white/95 backdrop-blur-xl border-t md:relative md:bg-transparent md:border-none md:p-0 z-50 shadow-[0_-10px_40px_rgba(0,0,0,0.1)] md:shadow-none">
             <Button type="submit" size="lg" className="bg-primary hover:bg-primary/90 w-full h-16 text-xl font-black gap-4 shadow-2xl rounded-2xl uppercase tracking-tighter transition-all active:scale-95" disabled={loading}>
               <CheckCircle2 size={28} /> {loading ? "Procesando..." : "Finalizar y Guardar OT"}
