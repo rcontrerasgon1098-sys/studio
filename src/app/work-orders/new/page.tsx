@@ -11,7 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SignaturePad } from "@/components/SignaturePad";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Search, User, MapPin, Building2, Hash, PlusCircle, CheckCircle2, X, Users, Briefcase, Phone, Mail } from "lucide-react";
+import { ArrowLeft, Search, User, MapPin, Building2, Hash, PlusCircle, CheckCircle2, X, Users, Briefcase, Phone, Mail, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { useUser, useFirestore, useCollection, useMemoFirebase, useUserProfile } from "@/firebase";
 import { collection, doc, query, orderBy, where } from "firebase/firestore";
@@ -43,15 +43,16 @@ export default function NewWorkOrder() {
 
   const isAdmin = userProfile?.rol_t === 'admin' || userProfile?.rol_t === 'Administrador';
 
-  const projectsQuery = useMemoFirebase(() => {
-    if (!db || !user?.uid) return null;
+  // Sincronizar consulta con reglas de privacidad, esperando que el perfil cargue
+  const allProjectsQuery = useMemoFirebase(() => {
+    if (!db || !user?.uid || isProfileLoading) return null;
     const colRef = collection(db, "projects");
     if (isAdmin) {
       return query(colRef, where("status", "==", "Active"));
     }
     return query(colRef, where("status", "==", "Active"), where("createdBy", "==", user.uid));
-  }, [db, user?.uid, isAdmin]);
-  const { data: allProjects } = useCollection(projectsQuery);
+  }, [db, user?.uid, isAdmin, isProfileLoading]);
+  const { data: allProjects } = useCollection(allProjectsQuery);
 
   const [formData, setFormData] = useState({
     clientName: "",
