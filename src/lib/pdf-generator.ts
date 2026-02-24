@@ -54,7 +54,7 @@ export const generateWorkOrderPDF = async (data: any) => {
   doc.setTextColor(100, 100, 100);
   const formattedDate = data.startDate ? new Date(data.startDate).toLocaleString('es-ES') : new Date().toLocaleDateString();
   doc.text(`Fecha/Hora: ${formattedDate}`, 15, 62);
-  doc.text(`Estado: ${data.status === 'Completed' ? 'FINALIZADA' : 'PENDIENTE'}`, 15, 67);
+  doc.text(`Estado: ${data.status === 'Completed' || data.status === 'Completado' ? 'FINALIZADA' : 'PENDIENTE'}`, 15, 67);
 
   // Client Info Section
   doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
@@ -85,13 +85,11 @@ export const generateWorkOrderPDF = async (data: any) => {
   doc.setFont("helvetica", "normal");
   doc.text(`Señal: ${data.signalType || "Simple"} (${data.signalCount || 1} unidades)`, 15, 135);
   
-  const cert = data.isCert ? `SÍ (${data.certifiedPointsCount || 0} puntos)` : "NO";
-  const labeled = data.isLabeled ? `SÍ (${data.labelDetails || "N/A"})` : "NO";
-  const canalized = data.isCanalized ? "SÍ" : "NO";
+  const cert = data.isCert ? "SÍ" : "NO";
+  const labeled = data.isLabeled ? "SÍ" : "NO";
 
   doc.text(`Certificación: ${cert}`, 15, 142);
   doc.text(`Rotulación: ${labeled}`, 15, 148);
-  doc.text(`Canalización: ${canalized}`, 15, 154);
 
   // Description Section
   doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
@@ -128,16 +126,18 @@ export const generateWorkOrderPDF = async (data: any) => {
   doc.text(`${data.clientReceiverName || "N/A"}`, 130, sigY);
   doc.setFont("helvetica", "normal");
   doc.text(`RUT: ${data.clientReceiverRut || "N/A"}`, 130, sigY + 5);
-  if (data.clientReceiverEmail) {
-    doc.setFontSize(7);
-    doc.text(`Email: ${data.clientReceiverEmail}`, 130, sigY + 10);
-  }
+  
   if (data.clientSignatureUrl) {
     try { doc.addImage(data.clientSignatureUrl, "PNG", 130, sigY + 12, 50, 20); } catch(e) {}
   }
 
-  // Footer
+  // Footer & Legal
   doc.setFontSize(7);
+  doc.setTextColor(150, 150, 150);
+  const legalText = "La presente Orden de Trabajo y su firma electrónica se encuentran reguladas bajo la Ley 19.799, siendo plenamente válidas como Firma Electrónica Simple para todos los efectos legales.";
+  const splitLegal = doc.splitTextToSize(legalText, 180);
+  doc.text(splitLegal, 105, 282, { align: "center" });
+  
   doc.setTextColor(180, 180, 180);
   doc.text("Documento electrónico generado por el Portal Operativo ICSA.", 105, 290, { align: "center" });
 

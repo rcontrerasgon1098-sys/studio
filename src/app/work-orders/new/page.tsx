@@ -417,9 +417,14 @@ export default function NewWorkOrder() {
       </main>
 
       <footer className="mt-12 text-center pb-20 md:pb-12 px-6">
-        <div className="flex flex-col items-center opacity-30">
-          <span className="font-black text-xl tracking-tighter text-primary">ICSA</span>
-          <span className="text-[8px] font-bold uppercase tracking-[0.4em] mt-1">ingeniería comunicaciones S.A.</span>
+        <div className="max-w-xl mx-auto space-y-4">
+          <p className="text-[9px] text-muted-foreground leading-relaxed italic">
+            La presente Orden de Trabajo y su firma electrónica se encuentran reguladas bajo la Ley 19.799, siendo plenamente válidas como Firma Electrónica Simple para todos los efectos legales.
+          </p>
+          <div className="flex flex-col items-center opacity-30">
+            <span className="font-black text-xl tracking-tighter text-primary">ICSA</span>
+            <span className="text-[8px] font-bold uppercase tracking-[0.4em] mt-1">ingeniería comunicaciones S.A.</span>
+          </div>
         </div>
       </footer>
     </div>

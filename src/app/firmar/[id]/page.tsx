@@ -78,7 +78,7 @@ export default function RemoteSignaturePage({ params }: { params: Promise<{ id: 
 
       if (result.success) {
         toast({ title: "Firma Exitosa", description: "La orden de trabajo ha sido firmada y procesada." });
-        // Redirect to a success view or show success state
+        // Redirect to a success view handled in the UI
       } else {
         toast({ variant: "destructive", title: "Error", description: result.error });
       }
@@ -244,10 +244,15 @@ export default function RemoteSignaturePage({ params }: { params: Promise<{ id: 
         </Card>
       </main>
 
-      <footer className="mt-12 text-center pb-12">
-        <div className="flex flex-col items-center">
-          <span className="font-black text-lg tracking-tighter text-primary">ICSA</span>
-          <span className="text-[7px] font-bold opacity-40 uppercase tracking-[0.2em]">ingeniería comunicaciones S.A.</span>
+      <footer className="mt-12 text-center pb-12 px-6">
+        <div className="max-w-xl mx-auto space-y-4">
+          <p className="text-[9px] text-muted-foreground leading-relaxed italic">
+            La presente Orden de Trabajo y su firma electrónica se encuentran reguladas bajo la Ley 19.799, siendo plenamente válidas como Firma Electrónica Simple para todos los efectos legales.
+          </p>
+          <div className="flex flex-col items-center">
+            <span className="font-black text-lg tracking-tighter text-primary">ICSA</span>
+            <span className="text-[7px] font-bold opacity-40 uppercase tracking-[0.2em]">ingeniería comunicaciones S.A.</span>
+          </div>
         </div>
       </footer>
     </div>

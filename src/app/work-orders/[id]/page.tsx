@@ -250,6 +250,18 @@ export default function WorkOrderView({ params }: { params: Promise<{ id: string
            </Link>
         </div>
       </main>
+
+      <footer className="mt-12 text-center pb-12 px-6">
+        <div className="max-w-xl mx-auto space-y-4">
+          <p className="text-[9px] text-muted-foreground leading-relaxed italic">
+            La presente Orden de Trabajo y su firma electrónica se encuentran reguladas bajo la Ley 19.799, siendo plenamente válidas como Firma Electrónica Simple para todos los efectos legales.
+          </p>
+          <div className="flex flex-col items-center opacity-40">
+            <span className="font-black text-lg tracking-tighter text-primary">ICSA</span>
+            <span className="text-[7px] font-bold uppercase tracking-[0.2em]">ingeniería comunicaciones S.A.</span>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }
