@@ -4,82 +4,9 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    function isLoggedIn() {
-      return request.auth != null;
-    }
-
-    function hasPersonnelDoc() {
-      return exists(/databases/$(database)/documents/personnel/$(request.auth.uid));
-    }
-
-    function getPersonnelDoc() {
-      return get(/databases/$(database)/documents/personnel/$(request.auth.uid));
-    }
-
-    function isAdmin() {
-      return isLoggedIn() && (
-        request.auth.token.email == "admin@icsa.com" ||
-        (hasPersonnelDoc() && (
-          getPersonnelDoc().data.rol_t == "admin" || 
-          getPersonnelDoc().data.rol_t == "Administrador"
-        ))
-      );
-    }
-
-    function isOrderOwner(data) {
-      return isLoggedIn() && (
-        data.createdBy == request.auth.uid || 
-        (data.supervisorId != null && data.supervisorId == request.auth.uid) ||
-        (data.teamIds != null && request.auth.uid in data.teamIds)
-      );
-    }
-
-    // --- PROYECTOS ---
-    match /projects/{projectId} {
-      allow read: if isAdmin() 
-        || (isLoggedIn() && (
-             resource.data.createdBy == request.auth.uid || 
-             (resource.data.teamIds != null && request.auth.uid in resource.data.teamIds)
-           ));
-      
-      allow create: if isLoggedIn();
-      
-      allow update: if isAdmin() 
-        || (isLoggedIn() && resource.data.createdBy == request.auth.uid);
-      
-      allow delete: if isAdmin();
-    }
-
-    // --- ORDENES ---
-    match /ordenes/{docId} {
-      allow read: if isAdmin() || isOrderOwner(resource.data) || (resource.data.status == "Pending Signature");
-      allow create: if isLoggedIn();
-      allow update: if isAdmin() || isOrderOwner(resource.data);
-      allow delete: if isAdmin();
-    }
-
-    // --- HISTORIAL ---
-    match /historial/{docId} {
-      allow read: if isAdmin() || isOrderOwner(resource.data);
-      allow create, update: if isLoggedIn();
-      allow delete: if isAdmin();
-    }
-
-    // --- CLIENTES ---
-    match /clients/{docId} {
-      allow read: if isLoggedIn();
-      allow create, update: if isLoggedIn();
-      allow delete: if isAdmin();
-    }
-
-    // --- PERSONAL ---
-    match /personnel/{userId} {
-      allow read: if isLoggedIn() && (userId == request.auth.uid || isAdmin());
-      allow create, update, delete: if isAdmin();
-    }
-
+    // ✅ REGLAS TOTALMENTE ABIERTAS (Solo para pruebas, como solicitaste)
     match /{document=**} {
-      allow read, write: if false;
+      allow read, write: if true;
     }
   }
 }

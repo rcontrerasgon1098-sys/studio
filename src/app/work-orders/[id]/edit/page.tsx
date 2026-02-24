@@ -12,7 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SignaturePad } from "@/components/SignaturePad";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Save, CheckCircle2, Camera, X, Image as ImageIcon, Loader2, User, Phone, Mail, MapPin, Building2, Hash, Users, PlusCircle, CheckSquare, Send, AlertTriangle } from "lucide-react";
+import { ArrowLeft, Save, Camera, X, ImageIcon, Loader2, User, MapPin, Building2, Hash, Users, PlusCircle, CheckSquare, Send, AlertTriangle, Briefcase } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import { useUser, useFirestore, useDoc, useMemoFirebase, useCollection, useUserProfile } from "@/firebase";
@@ -41,10 +41,16 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
   const { data: order, isLoading: isOrderLoading } = useDoc(orderRef);
 
   const personnelQuery = useMemoFirebase(() => {
-    if (!db || !userProfile) return null;
+    if (!db) return null;
     return query(collection(db, "personnel"), orderBy("nombre_t", "asc"));
-  }, [db, userProfile]);
+  }, [db]);
   const { data: allPersonnel } = useCollection(personnelQuery);
+
+  const projectsQuery = useMemoFirebase(() => {
+    if (!db) return null;
+    return query(collection(db, "projects"), where("status", "==", "Active"));
+  }, [db]);
+  const { data: allProjects } = useCollection(projectsQuery);
 
   const [loading, setLoading] = useState(false);
   const [isSendingSignature, setIsSendingSignature] = useState(false);
@@ -56,6 +62,7 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
     clientPhone: "",
     clientEmail: "",
     clientId: "",
+    projectId: "",
     address: "",
     building: "",
     floor: "",
@@ -76,7 +83,7 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
     clientReceiverEmail: "",
     clientSignatureUrl: "",
     sketchImageUrl: "",
-    status: "Pending",
+    status: "Pendiente",
     team: [] as string[],
     teamIds: [] as string[],
     createdBy: "",
@@ -85,7 +92,7 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
 
   useEffect(() => {
     if (order && !isInitialized) {
-      if (order.status === "Completed") {
+      if (order.status === "Completado") {
         toast({ variant: "destructive", title: "Orden Bloqueada", description: "Las órdenes completadas no pueden ser modificadas." });
         router.push(`/work-orders/${id}`);
         return;
@@ -96,6 +103,7 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
         clientPhone: order.clientPhone || "",
         clientEmail: order.clientEmail || "",
         clientId: order.clientId || "",
+        projectId: order.projectId || "",
         address: order.address || "",
         building: order.building || "",
         floor: order.floor || "",
@@ -116,7 +124,7 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
         clientReceiverEmail: order.clientReceiverEmail || "",
         clientSignatureUrl: order.clientSignatureUrl || "",
         sketchImageUrl: order.sketchImageUrl || "",
-        status: order.status || "Pending",
+        status: order.status || "Pendiente",
         team: order.team || [],
         teamIds: order.teamIds || [],
         createdBy: order.createdBy || "",
@@ -207,7 +215,7 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
                                 !!formData.clientSignatureUrl && 
                                 !!formData.clientReceiverRut;
 
-    const finalStatus = isValidationComplete ? "Completed" : "Pending";
+    const finalStatus = isValidationComplete ? "Completado" : "Pendiente";
 
     const updateData = {
       ...formData,
@@ -217,7 +225,7 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
       updatedBy: user.email || ""
     };
 
-    if (finalStatus === "Completed") {
+    if (finalStatus === "Completado") {
       const historyRef = doc(db, "historial", id);
       const originalRef = doc(db, "ordenes", id);
       try {
@@ -263,21 +271,6 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
     );
   }
 
-  if (!order && !isOrderLoading) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-background p-6 text-center gap-6">
-        <AlertTriangle className="h-20 w-20 text-destructive" />
-        <div className="space-y-2">
-          <h1 className="text-2xl font-black text-primary uppercase">No Encontrada</h1>
-          <p className="text-muted-foreground font-medium">La orden de trabajo no existe o ya ha sido procesada.</p>
-        </div>
-        <Link href="/dashboard">
-          <Button variant="outline" className="font-bold">Volver al Dashboard</Button>
-        </Link>
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen bg-background pb-24 md:pb-12">
       <header className="bg-white border-b sticky top-0 z-40 shadow-sm">
@@ -298,6 +291,33 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
 
       <main className="container mx-auto px-4 mt-6 max-w-3xl space-y-6">
         <form onSubmit={handleSubmit} className="space-y-6">
+          <Card className="shadow-md border-none">
+            <CardHeader className="bg-primary/5 p-4 border-b">
+              <CardTitle className="text-primary text-sm flex items-center gap-2 uppercase font-black">
+                <Briefcase className="h-4 w-4" /> Vinculación de Proyecto
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-6">
+              <div className="space-y-2">
+                <Label className="font-bold uppercase text-[10px]">Proyecto Asociado (Opcional)</Label>
+                <Select 
+                  value={formData.projectId || "none"} 
+                  onValueChange={v => setFormData({...formData, projectId: v === "none" ? "" : v})}
+                >
+                  <SelectTrigger className="h-12">
+                    <SelectValue placeholder="Sin proyecto específico" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Ninguno (Orden Independiente)</SelectItem>
+                    {allProjects?.map(p => (
+                      <SelectItem key={p.id} value={p.id}>{p.name} - {p.clientName}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </CardContent>
+          </Card>
+
           <Card className="shadow-md border-none bg-white overflow-hidden">
             <CardHeader className="bg-primary/5 p-4 border-b">
               <CardTitle className="text-primary text-xl flex items-center gap-2 uppercase font-black tracking-tighter">
@@ -324,17 +344,6 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
                       onChange={e => setFormData({...formData, address: e.target.value})}
                       className="h-12 pl-10"
                     />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label className="font-bold uppercase text-xs tracking-widest text-muted-foreground">Teléfono</Label>
-                    <Input value={formData.clientPhone} onChange={e => setFormData({...formData, clientPhone: e.target.value})} className="h-12" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="font-bold uppercase text-xs tracking-widest text-muted-foreground">Email</Label>
-                    <Input value={formData.clientEmail} onChange={e => setFormData({...formData, clientEmail: e.target.value})} className="h-12" />
                   </div>
                 </div>
               </div>
@@ -394,73 +403,46 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
               <CardTitle className="text-lg uppercase font-black text-primary tracking-tighter">Detalles Técnicos y Red</CardTitle>
             </CardHeader>
             <CardContent className="p-4 md:p-6 space-y-8">
-              <div className="space-y-4 pt-2">
-                <Label className="font-black uppercase text-xs tracking-[0.2em] text-primary flex items-center gap-2">
-                  <Building2 className="h-4 w-4" /> Ubicación Técnica
-                </Label>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label className="font-bold uppercase text-xs tracking-widest text-muted-foreground">Edificio</Label>
-                    <Input value={formData.building} onChange={e => setFormData({...formData, building: e.target.value})} className="h-12" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="font-bold uppercase text-xs tracking-widest text-muted-foreground">Piso</Label>
-                    <Input value={formData.floor} onChange={e => setFormData({...formData, floor: e.target.value})} className="h-12" />
-                  </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label className="font-bold uppercase text-xs tracking-widest text-muted-foreground">Edificio</Label>
+                  <Input value={formData.building} onChange={e => setFormData({...formData, building: e.target.value})} className="h-12" />
+                </div>
+                <div className="space-y-2">
+                  <Label className="font-bold uppercase text-xs tracking-widest text-muted-foreground">Piso</Label>
+                  <Input value={formData.floor} onChange={e => setFormData({...formData, floor: e.target.value})} className="h-12" />
                 </div>
               </div>
-
-              <div className="space-y-4">
-                <Label className="font-black uppercase text-xs tracking-[0.2em] text-primary flex items-center gap-2">
-                  <Hash className="h-4 w-4" /> Configuración de Señal
-                </Label>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  <div className="md:col-span-2 space-y-2">
-                    <Label className="font-bold uppercase text-xs tracking-widest text-muted-foreground">Tipo de Señal</Label>
-                    <Select value={formData.signalType} onValueChange={v => setFormData({...formData, signalType: v})}>
-                      <SelectTrigger className="h-12">
-                        <SelectValue placeholder="Señal" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Simple">Simple</SelectItem>
-                        <SelectItem value="Doble">Doble</SelectItem>
-                        <SelectItem value="Triple">Triple</SelectItem>
-                        <SelectItem value="Cuádruple">Cuádruple</SelectItem>
-                        <SelectItem value="Fibra Óptica">Fibra Óptica</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="font-bold uppercase text-xs tracking-widest text-muted-foreground">Cantidad</Label>
-                    <Input type="number" value={formData.signalCount} onChange={e => setFormData({...formData, signalCount: parseInt(e.target.value) || 0})} className="h-12" />
-                  </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="md:col-span-2 space-y-2">
+                  <Label className="font-bold uppercase text-xs tracking-widest text-muted-foreground">Tipo de Señal</Label>
+                  <Select value={formData.signalType} onValueChange={v => setFormData({...formData, signalType: v})}>
+                    <SelectTrigger className="h-12">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Simple">Simple</SelectItem>
+                      <SelectItem value="Doble">Doble</SelectItem>
+                      <SelectItem value="Triple">Triple</SelectItem>
+                      <SelectItem value="Fibra Óptica">Fibra Óptica</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label className="font-bold uppercase text-xs tracking-widest text-muted-foreground">Cantidad</Label>
+                  <Input type="number" value={formData.signalCount} onChange={e => setFormData({...formData, signalCount: parseInt(e.target.value) || 0})} className="h-12" />
                 </div>
               </div>
-
-              <div className="space-y-6">
-                <Label className="font-black uppercase text-xs tracking-[0.2em] text-primary flex items-center gap-2">
-                  <CheckSquare className="h-4 w-4" /> Checklist
-                </Label>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="flex items-center justify-between p-5 bg-muted/30 rounded-2xl border border-dashed">
-                    <Label className="font-bold text-sm">¿Certificación?</Label>
-                    <Switch checked={formData.isCert} onCheckedChange={(v) => setFormData({...formData, isCert: v})} />
-                  </div>
-                  <div className="flex items-center justify-between p-5 bg-muted/30 rounded-2xl border border-dashed">
-                    <Label className="font-bold text-sm">¿Rotulación?</Label>
-                    <Switch checked={formData.isLabeled} onCheckedChange={(v) => setFormData({...formData, isLabeled: v})} />
-                  </div>
-                  <div className="flex items-center justify-between p-5 bg-muted/30 rounded-2xl border border-dashed">
-                    <Label className="font-bold text-sm">¿Canalización?</Label>
-                    <Switch checked={formData.isCanalized} onCheckedChange={(v) => setFormData({...formData, isCanalized: v})} />
-                  </div>
-                  <div className="flex items-center justify-between p-5 bg-muted/30 rounded-2xl border border-dashed">
-                    <Label className="font-bold text-sm">¿Planos?</Label>
-                    <Switch checked={formData.isPlan} onCheckedChange={(v) => setFormData({...formData, isPlan: v})} />
-                  </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="flex items-center justify-between p-4 bg-muted/20 rounded-xl border border-dashed">
+                  <Label className="font-bold text-xs uppercase">Certificación</Label>
+                  <Switch checked={formData.isCert} onCheckedChange={(v) => setFormData({...formData, isCert: v})} />
+                </div>
+                <div className="flex items-center justify-between p-4 bg-muted/20 rounded-xl border border-dashed">
+                  <Label className="font-bold text-xs uppercase">Rotulación</Label>
+                  <Switch checked={formData.isLabeled} onCheckedChange={(v) => setFormData({...formData, isLabeled: v})} />
                 </div>
               </div>
-
               <div className="space-y-2">
                 <Label className="font-bold uppercase text-xs tracking-widest text-muted-foreground">Descripción de Trabajos</Label>
                 <Textarea value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} className="min-h-[140px] rounded-xl" />
@@ -469,86 +451,26 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
           </Card>
 
           <Card className="shadow-md border-none bg-white overflow-hidden">
-            <CardHeader className="p-4 md:p-6 border-b bg-muted/5">
-              <CardTitle className="text-lg flex items-center gap-2 uppercase font-bold tracking-tight">
-                <ImageIcon className="h-5 w-5 text-primary" /> Multimedia
-              </CardTitle>
+            <CardHeader className="bg-muted/20 p-4 border-b">
+              <CardTitle className="text-xs font-black uppercase text-primary">Firmas Responsables</CardTitle>
             </CardHeader>
-            <CardContent className="p-6">
-              <input type="file" ref={fileInputRef} onChange={handleFileChange} accept="image/*" capture="environment" className="hidden" />
-              {!formData.sketchImageUrl ? (
-                <div onClick={() => fileInputRef.current?.click()} className="border-4 border-dashed rounded-3xl p-12 flex flex-col items-center justify-center text-muted-foreground bg-muted/10 hover:bg-primary/5 transition-all cursor-pointer">
-                  <Camera className="h-16 w-16 mb-4 opacity-40" />
-                  <p className="text-sm font-black uppercase tracking-widest">Capturar Evidencia</p>
+            <CardContent className="p-6 space-y-6">
+              <div className="space-y-4">
+                <SignaturePad label="Firma del Técnico" onSave={(url) => setFormData({...formData, techSignatureUrl: url})} />
+                <SignaturePad label="Firma de Recepción (Cliente)" onSave={(url) => setFormData({...formData, clientSignatureUrl: url})} />
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label className="text-[10px] font-bold uppercase">Nombre Receptor</Label>
+                  <Input value={formData.clientReceiverName} onChange={e => setFormData({...formData, clientReceiverName: e.target.value})} className="h-12" />
                 </div>
-              ) : (
-                <div className="space-y-4">
-                  <div className="relative aspect-video rounded-3xl overflow-hidden bg-muted group border shadow-xl">
-                    <Image src={formData.sketchImageUrl} alt="Preview" fill className="object-contain" />
-                    <Button type="button" variant="destructive" size="icon" className="absolute top-4 right-4 h-12 w-12 rounded-full shadow-2xl" onClick={removeImage}>
-                      <X className="h-6 w-6" />
-                    </Button>
-                  </div>
+                <div className="space-y-2">
+                  <Label className="text-[10px] font-bold uppercase">RUT Receptor</Label>
+                  <Input value={formData.clientReceiverRut} onChange={e => setFormData({...formData, clientReceiverRut: e.target.value})} className="h-12" />
                 </div>
-              )}
+              </div>
             </CardContent>
           </Card>
-
-          <div className="grid grid-cols-1 gap-6 pb-6">
-            <Card className="shadow-md border-none bg-white overflow-hidden">
-              <CardHeader className="border-b bg-muted/20 p-4">
-                <CardTitle className="text-xs font-black uppercase tracking-widest text-primary">Técnico Responsable</CardTitle>
-              </CardHeader>
-              <CardContent className="p-5 space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label className="text-[10px] font-bold uppercase text-muted-foreground">Nombre</Label>
-                    <Input value={formData.techName} onChange={e => setFormData({...formData, techName: e.target.value})} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-[10px] font-bold uppercase text-muted-foreground">RUT</Label>
-                    <Input value={formData.techRut} onChange={e => setFormData({...formData, techRut: e.target.value})} />
-                  </div>
-                </div>
-                {formData.techSignatureUrl ? (
-                  <div className="relative h-40 w-full bg-muted/20 rounded-2xl border-2 border-dashed flex items-center justify-center overflow-hidden">
-                    <Image src={formData.techSignatureUrl} alt="Firma Técnico" fill className="object-contain" />
-                  </div>
-                ) : (
-                  <SignaturePad label="Firma del Técnico" onSave={(url) => setFormData({...formData, techSignatureUrl: url})} />
-                )}
-              </CardContent>
-            </Card>
-
-            <Card className="shadow-md border-none bg-white overflow-hidden">
-              <CardHeader className="border-b bg-muted/20 p-4">
-                <CardTitle className="text-xs font-black uppercase tracking-widest text-primary">Recepción Terreno</CardTitle>
-              </CardHeader>
-              <CardContent className="p-5 space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label className="text-[10px] font-bold uppercase text-muted-foreground">Nombre</Label>
-                    <Input value={formData.clientReceiverName} onChange={e => setFormData({...formData, clientReceiverName: e.target.value})} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-[10px] font-bold uppercase text-muted-foreground">RUT</Label>
-                    <Input value={formData.clientReceiverRut} onChange={e => setFormData({...formData, clientReceiverRut: e.target.value})} />
-                  </div>
-                  <div className="md:col-span-2 space-y-2">
-                    <Label className="text-[10px] font-bold uppercase text-muted-foreground">Email (para PDF)</Label>
-                    <Input type="email" value={formData.clientReceiverEmail} onChange={e => setFormData({...formData, clientReceiverEmail: e.target.value})} />
-                  </div>
-                </div>
-                {formData.clientSignatureUrl ? (
-                  <div className="relative h-40 w-full bg-muted/20 rounded-2xl border-2 border-dashed flex items-center justify-center overflow-hidden">
-                    <Image src={formData.clientSignatureUrl} alt="Firma Cliente" fill className="object-contain" />
-                  </div>
-                ) : (
-                  <SignaturePad label="Firma de Recepción" onSave={(url) => setFormData({...formData, clientSignatureUrl: url})} />
-                )}
-              </CardContent>
-            </Card>
-          </div>
 
           <div className="fixed bottom-0 left-0 right-0 p-4 bg-white/95 backdrop-blur-xl border-t md:relative md:bg-transparent md:border-none md:p-0 z-50">
             <Button type="submit" size="lg" className="bg-primary hover:bg-primary/90 w-full h-16 text-xl font-black gap-3 shadow-xl rounded-2xl uppercase tracking-tighter" disabled={loading}>

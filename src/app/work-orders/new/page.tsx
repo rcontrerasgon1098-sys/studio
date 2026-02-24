@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect, useRef, use } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,16 +11,13 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SignaturePad } from "@/components/SignaturePad";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Save, Camera, CheckCircle2, Search, X, Image as ImageIcon, User, Phone, Mail, MapPin, Building2, Hash, Users, PlusCircle, Loader2, CheckSquare, Send, Briefcase } from "lucide-react";
+import { ArrowLeft, Save, Camera, CheckCircle2, Search, X, User, MapPin, Building2, Hash, PlusCircle, Loader2, CheckSquare, Briefcase } from "lucide-react";
 import Link from "next/link";
-import Image from "next/image";
 import { useUser, useFirestore, useCollection, useMemoFirebase, useUserProfile } from "@/firebase";
 import { collection, doc, query, orderBy, where } from "firebase/firestore";
 import { setDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandList, CommandItem } from "@/components/ui/command";
-import { validateRut } from "@/lib/rut-utils";
-import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 
 export default function NewWorkOrder() {
@@ -30,25 +27,20 @@ export default function NewWorkOrder() {
   const { user, isUserLoading } = useUser();
   const db = useFirestore();
   const { userProfile, isProfileLoading } = useUserProfile();
-  const fileInputRef = useRef<HTMLInputElement>(null);
   
   const [loading, setLoading] = useState(false);
   const [folio, setFolio] = useState(0);
   const [openClientSearch, setOpenClientSearch] = useState(false);
-  const [openTeamSearch, setOpenTeamSearch] = useState(false);
 
   // --- QUERIES ---
   const clientsQuery = useMemoFirebase(() => (db ? query(collection(db, "clients"), orderBy("nombreCliente", "asc")) : null), [db]);
   const { data: clients } = useCollection(clientsQuery);
 
   const projectsQuery = useMemoFirebase(() => {
-    if (!db || !user?.uid) return null;
+    if (!db) return null;
     return query(collection(db, "projects"), where("status", "==", "Active"));
-  }, [db, user?.uid]);
+  }, [db]);
   const { data: allProjects } = useCollection(projectsQuery);
-
-  const personnelQuery = useMemoFirebase(() => (db ? query(collection(db, "personnel"), orderBy("nombre_t", "asc")) : null), [db]);
-  const { data: allPersonnel } = useCollection(personnelQuery);
 
   const [formData, setFormData] = useState({
     clientName: "",
@@ -72,7 +64,7 @@ export default function NewWorkOrder() {
     clientReceiverEmail: "",
     clientSignatureUrl: "",
     sketchImageUrl: "",
-    status: "Pending",
+    status: "Pendiente",
     team: [] as string[],
     teamIds: [] as string[]
   });
@@ -97,7 +89,6 @@ export default function NewWorkOrder() {
     }
   }, [userProfile, user]);
 
-  // Si venimos de un proyecto, precargar cliente
   useEffect(() => {
     const pId = searchParams.get('projectId');
     if (pId && allProjects) {
@@ -118,22 +109,13 @@ export default function NewWorkOrder() {
     setOpenClientSearch(false);
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => setFormData({ ...formData, sketchImageUrl: reader.result as string });
-      reader.readAsDataURL(file);
-    }
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user || !db) return;
     setLoading(true);
 
     const isValidationComplete = !!formData.techSignatureUrl && !!formData.clientSignatureUrl && !!formData.clientReceiverRut;
-    const finalStatus = isValidationComplete ? "Completed" : "Pending";
+    const finalStatus = isValidationComplete ? "Completado" : "Pendiente";
     const orderId = doc(collection(db, "ordenes")).id;
     
     const workOrderData = {
@@ -146,7 +128,7 @@ export default function NewWorkOrder() {
       updatedAt: new Date().toISOString(),
     };
 
-    const targetCol = finalStatus === "Completed" ? "historial" : "ordenes";
+    const targetCol = finalStatus === "Completado" ? "historial" : "ordenes";
     try {
       setDocumentNonBlocking(doc(db, targetCol, orderId), workOrderData, { merge: true });
       toast({ title: "Orden Guardada" });
@@ -183,12 +165,15 @@ export default function NewWorkOrder() {
             <CardContent className="p-6">
               <div className="space-y-2">
                 <Label className="font-bold uppercase text-[10px]">Proyecto Asociado (Opcional)</Label>
-                <Select value={formData.projectId} onValueChange={v => setFormData({...formData, projectId: v})}>
+                <Select 
+                  value={formData.projectId || "none"} 
+                  onValueChange={v => setFormData({...formData, projectId: v === "none" ? "" : v})}
+                >
                   <SelectTrigger className="h-12">
                     <SelectValue placeholder="Sin proyecto específico" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Ninguno (Orden Independiente)</SelectItem>
+                    <SelectItem value="none">Ninguno (Orden Independiente)</SelectItem>
                     {allProjects?.map(p => (
                       <SelectItem key={p.id} value={p.id}>{p.name} - {p.clientName}</SelectItem>
                     ))}
@@ -244,7 +229,6 @@ export default function NewWorkOrder() {
             </CardContent>
           </Card>
 
-          {/* ... Resto de campos técnicos (Edificio, Piso, Señal, Checklists, Multimedia, Firmas) exactamente igual a tu versión anterior ... */}
           <Card className="shadow-md border-none overflow-hidden">
             <CardHeader className="p-4 bg-primary/5 border-b">
               <CardTitle className="text-sm uppercase font-black text-primary">Detalles Técnicos y Red</CardTitle>
