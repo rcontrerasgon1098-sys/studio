@@ -12,7 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SignaturePad } from "@/components/SignaturePad";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Save, Camera, X, ImageIcon, Loader2, User, MapPin, Building2, Hash, Users, PlusCircle, CheckSquare, Send, AlertTriangle, Briefcase } from "lucide-react";
+import { ArrowLeft, Save, Camera, X, ImageIcon, Loader2, User, MapPin, Building2, Hash, Users, PlusCircle, CheckSquare, Send, AlertTriangle, Briefcase, CheckCircle2 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import { useUser, useFirestore, useDoc, useMemoFirebase, useCollection, useUserProfile } from "@/firebase";
