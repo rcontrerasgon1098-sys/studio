@@ -1,80 +1,49 @@
 
 {
   "entities": {
+    "Project": {
+      "title": "Project",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "clientId": { "type": "string" },
+        "clientName": { "type": "string" },
+        "createdBy": { "type": "string" },
+        "creatorEmail": { "type": "string" },
+        "status": { "type": "string", "enum": ["Active", "Completed", "Cancelled"] },
+        "startDate": { "type": "string", "format": "date-time" },
+        "endDate": { "type": "string", "format": "date-time" },
+        "summary": { "type": "string" },
+        "teamIds": { "type": "array", "items": { "type": "string" } }
+      },
+      "required": ["id", "name", "clientId", "status", "createdBy"]
+    },
     "WorkOrder": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "WorkOrder",
       "type": "object",
-      "description": "Represents a work order in the Teleconnect Workflow application.",
       "properties": {
         "id": { "type": "string" },
         "folio": { "type": "number" },
+        "projectId": { "type": "string", "description": "Optional reference to a project" },
+        "isProjectSummary": { "type": "boolean", "default": false },
         "clientName": { "type": "string" },
         "clientId": { "type": "string" },
-        "clientPhone": { "type": "string" },
-        "clientEmail": { "type": "string" },
-        "createdBy": { "type": "string", "description": "UID of the supervisor who created the OT." },
-        "technicianId": { "type": "string", "description": "UID of the primary technician assigned." },
-        "teamIds": { 
-          "type": "array", 
-          "items": { "type": "string" },
-          "description": "UIDs of all technical staff involved."
-        },
-        "team": { 
-          "type": "array", 
-          "items": { "type": "string" },
-          "description": "Names of all technical staff involved."
-        },
+        "createdBy": { "type": "string" },
         "status": { "type": "string", "enum": ["Pending", "Active", "Pending Signature", "Completed"] },
-        "startDate": { "type": "string", "format": "date-time" },
         "address": { "type": "string" },
         "building": { "type": "string" },
         "floor": { "type": "string" },
         "signalType": { "type": "string" },
         "signalCount": { "type": "number" },
         "isCert": { "type": "boolean" },
-        "certifiedPointsCount": { "type": "number" },
-        "isPlan": { "type": "boolean" },
         "isLabeled": { "type": "boolean" },
-        "labelDetails": { "type": "string" },
-        "isCanalized": { "type": "boolean" },
         "description": { "type": "string" },
         "techName": { "type": "string" },
-        "techRut": { "type": "string" },
-        "techSignatureUrl": { "type": "string", "format": "uri" },
-        "clientReceiverName": { "type": "string" },
-        "clientReceiverRut": { "type": "string" },
-        "clientReceiverEmail": { "type": "string" },
-        "clientSignatureUrl": { "type": "string", "format": "uri" },
-        "sketchImageUrl": { "type": "string", "format": "uri" }
+        "techSignatureUrl": { "type": "string" },
+        "clientSignatureUrl": { "type": "string" }
       },
       "required": ["id", "folio", "clientName", "createdBy", "status"]
-    },
-    "Client": {
-      "title": "Client",
-      "type": "object",
-      "properties": {
-        "id": { "type": "string" },
-        "nombreCliente": { "type": "string" },
-        "rutCliente": { "type": "string" },
-        "emailClientes": { "type": "string" }
-      },
-      "required": ["nombreCliente", "rutCliente"]
-    },
-    "Personnel": {
-      "title": "Personnel",
-      "type": "object",
-      "properties": {
-        "id": { "type": "string" },
-        "nombre_t": { "type": "string" },
-        "rol_t": { "type": "string", "enum": ["admin", "supervisor", "tecnico"] },
-        "email_t": { "type": "string" },
-        "rut_t": { "type": "string" },
-        "cel_t": { "type": "string" },
-        "estado_t": { "type": "string", "enum": ["Activo", "Inactivo"] },
-        "signatureUrl": { "type": "string" }
-      },
-      "required": ["id", "nombre_t", "rol_t", "estado_t"]
     }
   },
   "auth": {
@@ -82,6 +51,14 @@
   },
   "firestore": {
     "structure": [
+      {
+        "path": "/projects/{projectId}",
+        "definition": {
+          "entityName": "Project",
+          "schema": { "$ref": "#/backend/entities/Project" },
+          "description": "Project groups for work orders."
+        }
+      },
       {
         "path": "/ordenes/{orderId}",
         "definition": {
@@ -96,22 +73,6 @@
           "entityName": "WorkOrder",
           "schema": { "$ref": "#/backend/entities/WorkOrder" },
           "description": "Completed work orders."
-        }
-      },
-      {
-        "path": "/clients/{clientId}",
-        "definition": {
-          "entityName": "Client",
-          "schema": { "$ref": "#/backend/entities/Client" },
-          "description": "Client registry."
-        }
-      },
-      {
-        "path": "/personnel/{userId}",
-        "definition": {
-          "entityName": "Personnel",
-          "schema": { "$ref": "#/backend/entities/Personnel" },
-          "description": "User profiles and roles."
         }
       }
     ]
