@@ -38,7 +38,7 @@ export default function ProjectDetail({ params }: { params: Promise<{ id: string
     try {
       const result = await closeProject({ projectId: id, closedByUid: user.uid });
       if (result.success) {
-        toast({ title: "Proyecto Finalizado", description: "Se ha generado el resumen en el historial." });
+        toast({ title: "Proyecto Finalizado", description: "Se ha generado el acta de cierre consolidada." });
         router.refresh();
       } else {
         toast({ variant: "destructive", title: "Error", description: result.error });
@@ -50,61 +50,80 @@ export default function ProjectDetail({ params }: { params: Promise<{ id: string
     }
   };
 
-  if (isProjectLoading) return <div className="min-h-screen flex items-center justify-center bg-background text-primary animate-pulse font-black">CARGANDO PROYECTO...</div>;
-  if (!project) return <div className="p-20 text-center font-bold text-muted-foreground">El proyecto no existe.</div>;
+  if (isProjectLoading) return <div className="min-h-screen flex items-center justify-center bg-background text-primary animate-pulse font-black uppercase tracking-tighter">Cargando Obra...</div>;
+  if (!project) return <div className="min-h-screen flex flex-col items-center justify-center p-10 text-center font-bold text-muted-foreground bg-background">
+    <Briefcase className="h-20 w-20 opacity-10 mb-4" />
+    El proyecto solicitado no existe.
+  </div>;
+
+  const isCompleted = project.status === 'Completed' || project.status === 'Completado';
 
   return (
-    <div className="min-h-screen bg-background p-6 md:p-10">
-      <header className="max-w-5xl mx-auto mb-8 flex flex-col md:flex-row md:items-center justify-between gap-6">
-        <div className="flex items-center gap-4">
-          <Link href="/dashboard">
-            <Button variant="ghost" size="icon"><ArrowLeft /></Button>
-          </Link>
-          <div>
-            <h1 className="text-3xl font-black text-primary uppercase tracking-tighter leading-none">{project.name}</h1>
-            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mt-2">Proyecto de Ingeniería ICSA</p>
+    <div className="min-h-screen bg-muted/20 pb-12">
+      <header className="bg-white border-b sticky top-0 z-40 shadow-sm">
+        <div className="container mx-auto px-4 h-16 flex items-center justify-between max-w-5xl">
+          <div className="flex items-center gap-4">
+            <Link href="/dashboard">
+              <Button variant="ghost" size="icon" className="h-10 w-10 rounded-xl hover:bg-muted"><ArrowLeft /></Button>
+            </Link>
+            <div className="flex flex-col">
+              <h1 className="text-sm md:text-xl font-black text-primary uppercase tracking-tighter leading-none">{project.name}</h1>
+              <p className="text-[8px] font-bold text-muted-foreground uppercase tracking-widest mt-1 hidden sm:block">Control de Obra ICSA</p>
+            </div>
           </div>
-        </div>
-        <div className="flex gap-2">
-          {(project.status === 'Active' || project.status === 'Pendiente') && (
-            <Button onClick={handleCloseProject} disabled={closing} className="bg-primary hover:bg-primary/90 font-black px-6 h-12 rounded-xl shadow-lg uppercase text-xs">
-              {closing ? <Loader2 className="animate-spin h-4 w-4 mr-2" /> : <CheckCircle2 className="h-4 w-4 mr-2" />}
-              Finalizar Obra y Generar Acta
+          {!isCompleted && (
+            <Button onClick={handleCloseProject} disabled={closing} className="bg-primary hover:bg-primary/90 text-white font-black h-10 px-4 rounded-xl shadow-lg uppercase text-[10px] tracking-widest">
+              {closing ? <Loader2 className="animate-spin h-4 w-4" /> : <CheckCircle2 className="h-4 w-4 mr-2" />}
+              <span className="hidden sm:inline">Finalizar Obra</span>
+              <span className="sm:hidden">Cerrar</span>
             </Button>
           )}
         </div>
       </header>
 
-      <main className="max-w-5xl mx-auto space-y-8">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          <Card className="lg:col-span-1 shadow-xl border-none h-fit">
-            <CardHeader className="bg-primary/5 border-b">
-              <CardTitle className="text-xs font-black uppercase tracking-widest text-primary flex items-center gap-2">
-                <Briefcase className="h-4 w-4" /> Detalle de Obra
+      <main className="container mx-auto px-4 mt-6 max-w-5xl space-y-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <Card className="lg:col-span-1 shadow-xl border-none rounded-3xl overflow-hidden h-fit">
+            <CardHeader className="bg-primary/5 border-b p-6">
+              <CardTitle className="text-[10px] font-black uppercase tracking-widest text-primary flex items-center gap-2">
+                <Briefcase className="h-4 w-4" /> Ficha de la Obra
               </CardTitle>
             </CardHeader>
             <CardContent className="p-6 space-y-6">
               <div className="space-y-4">
-                <div>
-                  <Label className="text-[9px] uppercase font-black text-muted-foreground">Cliente</Label>
-                  <p className="font-bold flex items-center gap-2 text-primary mt-1"><User size={14}/> {project.clientName}</p>
+                <div className="p-4 bg-muted/30 rounded-2xl">
+                  <Label className="text-[9px] uppercase font-black text-muted-foreground tracking-widest">Cliente</Label>
+                  <p className="font-black text-primary text-base mt-1 flex items-center gap-2">
+                    <User size={16} className="opacity-40" /> {project.clientName}
+                  </p>
                 </div>
-                <div>
-                  <Label className="text-[9px] uppercase font-black text-muted-foreground">Estado Actual</Label>
-                  <div className="mt-1">
-                    <Badge className={cn("font-black text-[9px] tracking-tighter", (project.status === 'Active' || project.status === 'Pendiente') ? 'bg-primary/10 text-primary' : 'bg-accent/20 text-primary')}>
-                      {(project.status === 'Active' || project.status === 'Pendiente') ? 'EN EJECUCIÓN' : 'PROYECTO CERRADO'}
-                    </Badge>
+                
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-4">
+                  <div>
+                    <Label className="text-[9px] uppercase font-black text-muted-foreground tracking-widest">Estado</Label>
+                    <div className="mt-1">
+                      <Badge className={cn(
+                        "font-black text-[10px] px-3 py-1 rounded-full uppercase tracking-tighter border-none", 
+                        isCompleted ? 'bg-accent/20 text-primary' : 'bg-primary/10 text-primary'
+                      )}>
+                        {!isCompleted ? 'EN EJECUCIÓN' : 'PROYECTO CERRADO'}
+                      </Badge>
+                    </div>
+                  </div>
+                  <div>
+                    <Label className="text-[9px] uppercase font-black text-muted-foreground tracking-widest">Fecha Inicio</Label>
+                    <p className="font-bold flex items-center gap-2 text-xs text-primary mt-1">
+                      <Calendar size={14} className="opacity-40" /> {new Date(project.startDate).toLocaleDateString()}
+                    </p>
                   </div>
                 </div>
-                <div>
-                  <Label className="text-[9px] uppercase font-black text-muted-foreground">Fecha Inicio</Label>
-                  <p className="font-bold flex items-center gap-2 text-xs mt-1"><Calendar size={14}/> {new Date(project.startDate).toLocaleDateString()}</p>
-                </div>
+
                 {project.endDate && (
-                  <div>
-                    <Label className="text-[9px] uppercase font-black text-muted-foreground">Fecha Cierre</Label>
-                    <p className="font-bold flex items-center gap-2 text-xs text-accent mt-1"><FileCheck size={14}/> {new Date(project.endDate).toLocaleDateString()}</p>
+                  <div className="p-4 bg-accent/10 rounded-2xl border border-accent/20">
+                    <Label className="text-[9px] uppercase font-black text-primary tracking-widest">Fecha de Cierre</Label>
+                    <p className="font-black flex items-center gap-2 text-xs text-primary mt-1">
+                      <FileCheck size={14} /> {new Date(project.endDate).toLocaleDateString()}
+                    </p>
                   </div>
                 )}
               </div>
@@ -112,31 +131,31 @@ export default function ProjectDetail({ params }: { params: Promise<{ id: string
           </Card>
 
           <div className="lg:col-span-2 space-y-6">
-            <Card className="shadow-lg border-none overflow-hidden">
-              <CardHeader className="flex flex-row items-center justify-between border-b bg-muted/5">
-                <CardTitle className="text-sm font-black uppercase flex items-center gap-2">
-                  <Clock className="h-4 w-4 text-primary" /> OTs Activas del Proyecto
+            <Card className="shadow-xl border-none rounded-3xl overflow-hidden">
+              <CardHeader className="flex flex-row items-center justify-between border-b bg-white p-6">
+                <CardTitle className="text-xs font-black uppercase flex items-center gap-2 text-primary tracking-widest">
+                  <Clock className="h-5 w-5" /> Órdenes en Curso
                 </CardTitle>
-                {(project.status === 'Active' || project.status === 'Pendiente') && (
+                {!isCompleted && (
                   <Link href={`/work-orders/new?projectId=${id}&clientId=${project.clientId}`}>
-                    <Button variant="outline" size="sm" className="h-8 font-black uppercase text-[9px] tracking-widest">
-                      <Plus size={14} className="mr-1"/> Añadir OT
+                    <Button variant="outline" size="sm" className="h-10 px-4 rounded-xl border-primary/20 text-primary font-black uppercase text-[10px] tracking-widest hover:bg-primary/5 transition-all">
+                      <Plus size={16} className="mr-2"/> Nueva OT
                     </Button>
                   </Link>
                 )}
               </CardHeader>
-              <CardContent className="p-0">
+              <CardContent className="p-0 overflow-x-auto">
                 <OTTable orders={activeOts || []} isLoading={isActiveLoading} />
               </CardContent>
             </Card>
 
-            <Card className="shadow-lg border-none overflow-hidden">
-              <CardHeader className="bg-muted/10 border-b">
-                <CardTitle className="text-sm font-black uppercase flex items-center gap-2">
-                  <HistoryIcon className="h-4 w-4 text-primary" /> Historial de la Obra
+            <Card className="shadow-xl border-none rounded-3xl overflow-hidden">
+              <CardHeader className="bg-muted/10 border-b p-6">
+                <CardTitle className="text-xs font-black uppercase flex items-center gap-2 text-primary tracking-widest">
+                  <HistoryIcon className="h-5 w-5" /> Histórico de Obra
                 </CardTitle>
               </CardHeader>
-              <CardContent className="p-0">
+              <CardContent className="p-0 overflow-x-auto">
                 <OTTable orders={historyOts || []} isLoading={isHistoryLoading} />
               </CardContent>
             </Card>
@@ -148,46 +167,51 @@ export default function ProjectDetail({ params }: { params: Promise<{ id: string
 }
 
 function OTTable({ orders, isLoading }: { orders: any[], isLoading: boolean }) {
-  if (isLoading) return <div className="p-10 text-center animate-pulse">CARGANDO...</div>;
-  if (orders.length === 0) return <div className="p-10 text-center text-muted-foreground italic text-xs">Sin registros asociados.</div>;
+  if (isLoading) return <div className="p-16 text-center animate-pulse text-primary font-black uppercase text-[10px] tracking-widest">Sincronizando...</div>;
+  if (orders.length === 0) return <div className="p-16 text-center text-muted-foreground italic text-xs font-medium flex flex-col items-center gap-3">
+    <Clock className="h-10 w-10 opacity-10" />
+    Sin registros asociados.
+  </div>;
 
   return (
-    <Table>
-      <TableHeader>
-        <TableRow className="bg-muted/40">
-          <TableHead className="font-bold text-[10px] uppercase">Folio</TableHead>
-          <TableHead className="font-bold text-[10px] uppercase">Descripción</TableHead>
-          <TableHead className="text-right font-bold text-[10px] uppercase">Acciones</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {orders.map((ot) => {
-          const isPending = ot.status === 'Pendiente' || ot.status === 'Pending';
-          return (
-            <TableRow key={ot.id}>
-              <TableCell className="font-black text-primary text-xs">
-                #{ot.folio} {ot.isProjectSummary && <Badge className="bg-accent/20 text-primary text-[7px] ml-1">ACTA FINAL</Badge>}
-              </TableCell>
-              <TableCell className="text-[10px] font-medium text-muted-foreground">
-                <p className="line-clamp-1 max-w-[250px]">{ot.description || "N/A"}</p>
-              </TableCell>
-              <TableCell className="text-right">
-                <div className="flex justify-end gap-1">
-                  {isPending ? (
-                    <Link href={`/work-orders/${ot.id}/edit`}>
-                      <Button variant="ghost" size="icon" className="h-8 w-8 text-primary"><Pencil className="h-4 w-4" /></Button>
-                    </Link>
-                  ) : (
-                    <Link href={`/work-orders/${ot.id}`}>
-                      <Button variant="ghost" size="icon" className="h-8 w-8 text-primary"><Eye className="h-4 w-4" /></Button>
-                    </Link>
-                  )}
-                </div>
-              </TableCell>
-            </TableRow>
-          );
-        })}
-      </TableBody>
-    </Table>
+    <div className="min-w-[450px]">
+      <Table>
+        <TableHeader>
+          <TableRow className="bg-muted/30 border-none hover:bg-muted/30">
+            <TableHead className="font-black text-[10px] uppercase tracking-widest py-4 pl-6 text-primary">Folio</TableHead>
+            <TableHead className="font-black text-[10px] uppercase tracking-widest py-4 text-primary">Descripción</TableHead>
+            <TableHead className="text-right font-black text-[10px] uppercase tracking-widest py-4 pr-6 text-primary">Gestión</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {orders.map((ot) => {
+            const isPending = ot.status === 'Pendiente' || ot.status === 'Pending';
+            return (
+              <TableRow key={ot.id} className="hover:bg-primary/5 transition-colors border-b border-muted/20">
+                <TableCell className="font-black text-primary text-xs pl-6 py-4">
+                  #{ot.folio} {ot.isProjectSummary && <Badge className="bg-primary text-white text-[7px] ml-2 px-1.5 uppercase font-black">ACTA</Badge>}
+                </TableCell>
+                <TableCell className="text-[10px] font-bold text-muted-foreground">
+                  <p className="line-clamp-1 max-w-[200px]">{ot.description || "N/A"}</p>
+                </TableCell>
+                <TableCell className="text-right pr-6 py-4">
+                  <div className="flex justify-end gap-1">
+                    {isPending ? (
+                      <Link href={`/work-orders/${ot.id}/edit`}>
+                        <Button variant="ghost" size="icon" className="h-10 w-10 text-primary hover:bg-primary hover:text-white rounded-xl"><Pencil className="h-5 w-5" /></Button>
+                      </Link>
+                    ) : (
+                      <Link href={`/work-orders/${ot.id}`}>
+                        <Button variant="ghost" size="icon" className="h-10 w-10 text-primary hover:bg-primary hover:text-white rounded-xl"><Eye className="h-5 w-5" /></Button>
+                      </Link>
+                    )}
+                  </div>
+                </TableCell>
+              </TableRow>
+            );
+          })}
+        </TableBody>
+      </Table>
+    </div>
   );
 }
