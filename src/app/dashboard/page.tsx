@@ -64,25 +64,22 @@ export default function Dashboard() {
   const projectsQuery = useMemoFirebase(() => {
     if (!db || !user?.uid || !userProfile) return null;
     const colRef = collection(db, "projects");
-    if (isAdmin) return query(colRef, orderBy("startDate", "desc"));
-    return query(colRef, where("createdBy", "==", user.uid));
-  }, [db, user?.uid, userProfile, isAdmin]);
+    return query(colRef, orderBy("startDate", "desc"));
+  }, [db, user?.uid, userProfile]);
   const { data: projects, isLoading: isProjectsLoading } = useCollection(projectsQuery);
 
   const ordersQuery = useMemoFirebase(() => {
     if (!db || !user?.uid || !userProfile) return null;
     const colRef = collection(db, "ordenes");
-    if (isAdmin) return query(colRef, orderBy("startDate", "desc"));
-    return query(colRef, where("createdBy", "==", user.uid));
-  }, [db, user?.uid, userProfile, isAdmin]);
+    return query(colRef, orderBy("startDate", "desc"));
+  }, [db, user?.uid, userProfile]);
   const { data: orders, isLoading: isOrdersLoading } = useCollection(ordersQuery);
 
   const historyQuery = useMemoFirebase(() => {
     if (!db || !user?.uid || !userProfile) return null;
     const colRef = collection(db, "historial");
-    if (isAdmin) return query(colRef, orderBy("startDate", "desc"));
-    return query(colRef, where("createdBy", "==", user.uid));
-  }, [db, user?.uid, userProfile, isAdmin]);
+    return query(colRef, orderBy("startDate", "desc"));
+  }, [db, user?.uid, userProfile]);
   const { data: history, isLoading: isHistoryLoading } = useCollection(historyQuery);
 
   // --- FILTERS ---
@@ -182,16 +179,8 @@ export default function Dashboard() {
         <SidebarContent />
       </aside>
 
-      {/* MOBILE HEADER */}
+      {/* MOBILE HEADER - SWAPPED POSITIONS */}
       <header className="md:hidden bg-primary text-white p-4 flex items-center justify-between shadow-lg sticky top-0 z-50">
-        <div className="flex items-center gap-2">
-          {logoImage && (
-            <div className="relative w-8 h-8 bg-white rounded-lg flex items-center justify-center overflow-hidden">
-              <Image src={logoImage.imageUrl} alt="Logo" fill className="object-contain p-1" />
-            </div>
-          )}
-          <span className="font-black tracking-tighter text-lg uppercase">ICSA</span>
-        </div>
         <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
           <SheetTrigger asChild>
             <Button variant="ghost" size="icon" className="text-white hover:bg-white/10">
@@ -203,6 +192,15 @@ export default function Dashboard() {
             <SidebarContent />
           </SheetContent>
         </Sheet>
+        
+        <div className="flex items-center gap-2">
+          <span className="font-black tracking-tighter text-lg uppercase">ICSA</span>
+          {logoImage && (
+            <div className="relative w-8 h-8 bg-white rounded-lg flex items-center justify-center overflow-hidden">
+              <Image src={logoImage.imageUrl} alt="Logo" fill className="object-contain p-1" />
+            </div>
+          )}
+        </div>
       </header>
 
       <main className="flex-1 p-4 md:p-8 lg:p-10 overflow-y-auto">
