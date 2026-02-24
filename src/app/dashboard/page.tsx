@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { 
   Plus, FileText, Search, LogOut, LayoutDashboard, 
   Eye, Download, Users, UserRound, 
-  Trash2, History, Briefcase, FolderOpen, ClipboardList, BookOpen
+  Trash2, History, Briefcase, FolderOpen, ClipboardList, BookOpen, Pencil
 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
@@ -84,7 +84,6 @@ export default function Dashboard() {
   const { data: history, isLoading: isHistoryLoading } = useCollection(historyQuery);
 
   // --- FILTERS ---
-  // Incluimos tanto "Active" como "Pendiente" en la vista activa por seguridad
   const activeProjects = useMemo(() => (projects || []).filter(p => p.status === 'Active' || p.status === 'Pendiente'), [projects]);
   const completedProjects = useMemo(() => (projects || []).filter(p => p.status === 'Completed' || p.status === 'Completado'), [projects]);
 
@@ -324,28 +323,37 @@ function OrderTable({ orders, isLoading, type, setDeleteConfirm, isAdmin }: { or
         </TableRow>
       </TableHeader>
       <TableBody>
-        {orders.map((order) => (
-          <TableRow key={order.id}>
-            <TableCell className="font-black text-primary">#{order.folio} {order.isProjectSummary && <Badge className="bg-accent/20 text-primary ml-2 text-[8px]">RESUMEN</Badge>}</TableCell>
-            <TableCell className="font-bold text-xs">{order.clientName}</TableCell>
-            <TableCell>
-              <Badge className="text-[9px] uppercase font-black bg-primary/10 text-primary">
-                {order.status === 'Completed' || order.status === 'Completado' ? 'FINALIZADO' : 'PENDIENTE'}
-              </Badge>
-            </TableCell>
-            <TableCell className="text-right">
-              <div className="flex justify-end gap-1">
-                <Link href={`/work-orders/${order.id}`}>
-                  <Button variant="ghost" size="icon" className="h-9 w-9 text-primary"><Eye className="h-4 w-4" /></Button>
-                </Link>
-                <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground" onClick={() => generateWorkOrderPDF(order)}>
-                  <Download className="h-4 w-4" />
-                </Button>
-                {isAdmin && <Button variant="ghost" size="icon" className="h-9 w-9 text-destructive" onClick={() => setDeleteConfirm({ id: order.id, type })}><Trash2 className="h-4 w-4" /></Button>}
-              </div>
-            </TableCell>
-          </TableRow>
-        ))}
+        {orders.map((order) => {
+          const isCompleted = order.status === 'Completed' || order.status === 'Completado';
+          return (
+            <TableRow key={order.id}>
+              <TableCell className="font-black text-primary">#{order.folio} {order.isProjectSummary && <Badge className="bg-accent/20 text-primary ml-2 text-[8px]">RESUMEN</Badge>}</TableCell>
+              <TableCell className="font-bold text-xs">{order.clientName}</TableCell>
+              <TableCell>
+                <Badge className={cn("text-[9px] uppercase font-black", isCompleted ? "bg-accent/20 text-primary" : "bg-primary/10 text-primary")}>
+                  {isCompleted ? 'FINALIZADO' : 'PENDIENTE'}
+                </Badge>
+              </TableCell>
+              <TableCell className="text-right">
+                <div className="flex justify-end gap-1">
+                  {!isCompleted ? (
+                    <Link href={`/work-orders/${order.id}/edit`}>
+                      <Button variant="ghost" size="icon" className="h-9 w-9 text-primary"><Pencil className="h-4 w-4" /></Button>
+                    </Link>
+                  ) : (
+                    <Link href={`/work-orders/${order.id}`}>
+                      <Button variant="ghost" size="icon" className="h-9 w-9 text-primary"><Eye className="h-4 w-4" /></Button>
+                    </Link>
+                  )}
+                  <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground" onClick={() => generateWorkOrderPDF(order)}>
+                    <Download className="h-4 w-4" />
+                  </Button>
+                  {isAdmin && <Button variant="ghost" size="icon" className="h-9 w-9 text-destructive" onClick={() => setDeleteConfirm({ id: order.id, type })}><Trash2 className="h-4 w-4" /></Button>}
+                </div>
+              </TableCell>
+            </TableRow>
+          );
+        })}
       </TableBody>
     </Table>
   );

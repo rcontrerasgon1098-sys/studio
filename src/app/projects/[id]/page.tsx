@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, Loader2, Briefcase, Calendar, User, FileCheck, Plus, CheckCircle2, History as HistoryIcon, Clock, Eye } from "lucide-react";
+import { ArrowLeft, Loader2, Briefcase, Calendar, User, FileCheck, Plus, CheckCircle2, History as HistoryIcon, Clock, Eye, Pencil } from "lucide-react";
 import Link from "next/link";
 import { useFirebase, useDoc, useCollection, useMemoFirebase } from "@/firebase";
 import { doc, collection, query, where } from "firebase/firestore";
@@ -66,7 +66,7 @@ export default function ProjectDetail({ params }: { params: Promise<{ id: string
           </div>
         </div>
         <div className="flex gap-2">
-          {project.status === 'Active' && (
+          {(project.status === 'Active' || project.status === 'Pendiente') && (
             <Button onClick={handleCloseProject} disabled={closing} className="bg-primary hover:bg-primary/90 font-black px-6 h-12 rounded-xl shadow-lg uppercase text-xs">
               {closing ? <Loader2 className="animate-spin h-4 w-4 mr-2" /> : <CheckCircle2 className="h-4 w-4 mr-2" />}
               Finalizar Obra y Generar Acta
@@ -77,7 +77,6 @@ export default function ProjectDetail({ params }: { params: Promise<{ id: string
 
       <main className="max-w-5xl mx-auto space-y-8">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Ficha del Proyecto */}
           <Card className="lg:col-span-1 shadow-xl border-none h-fit">
             <CardHeader className="bg-primary/5 border-b">
               <CardTitle className="text-xs font-black uppercase tracking-widest text-primary flex items-center gap-2">
@@ -93,8 +92,8 @@ export default function ProjectDetail({ params }: { params: Promise<{ id: string
                 <div>
                   <Label className="text-[9px] uppercase font-black text-muted-foreground">Estado Actual</Label>
                   <div className="mt-1">
-                    <Badge className={cn("font-black text-[9px] tracking-tighter", project.status === 'Active' ? 'bg-primary/10 text-primary' : 'bg-accent/20 text-primary')}>
-                      {project.status === 'Active' ? 'EN EJECUCIÓN' : 'PROYECTO CERRADO'}
+                    <Badge className={cn("font-black text-[9px] tracking-tighter", (project.status === 'Active' || project.status === 'Pendiente') ? 'bg-primary/10 text-primary' : 'bg-accent/20 text-primary')}>
+                      {(project.status === 'Active' || project.status === 'Pendiente') ? 'EN EJECUCIÓN' : 'PROYECTO CERRADO'}
                     </Badge>
                   </div>
                 </div>
@@ -112,15 +111,13 @@ export default function ProjectDetail({ params }: { params: Promise<{ id: string
             </CardContent>
           </Card>
 
-          {/* Listado de OTs */}
           <div className="lg:col-span-2 space-y-6">
-            {/* OTs Activas */}
             <Card className="shadow-lg border-none overflow-hidden">
               <CardHeader className="flex flex-row items-center justify-between border-b bg-muted/5">
                 <CardTitle className="text-sm font-black uppercase flex items-center gap-2">
                   <Clock className="h-4 w-4 text-primary" /> OTs Activas del Proyecto
                 </CardTitle>
-                {project.status === 'Active' && (
+                {(project.status === 'Active' || project.status === 'Pendiente') && (
                   <Link href={`/work-orders/new?projectId=${id}&clientId=${project.clientId}`}>
                     <Button variant="outline" size="sm" className="h-8 font-black uppercase text-[9px] tracking-widest">
                       <Plus size={14} className="mr-1"/> Añadir OT
@@ -133,7 +130,6 @@ export default function ProjectDetail({ params }: { params: Promise<{ id: string
               </CardContent>
             </Card>
 
-            {/* OTs Históricas */}
             <Card className="shadow-lg border-none overflow-hidden">
               <CardHeader className="bg-muted/10 border-b">
                 <CardTitle className="text-sm font-black uppercase flex items-center gap-2">
@@ -161,25 +157,36 @@ function OTTable({ orders, isLoading }: { orders: any[], isLoading: boolean }) {
         <TableRow className="bg-muted/40">
           <TableHead className="font-bold text-[10px] uppercase">Folio</TableHead>
           <TableHead className="font-bold text-[10px] uppercase">Descripción</TableHead>
-          <TableHead className="text-right font-bold text-[10px] uppercase">Ver</TableHead>
+          <TableHead className="text-right font-bold text-[10px] uppercase">Acciones</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
-        {orders.map((ot) => (
-          <TableRow key={ot.id}>
-            <TableCell className="font-black text-primary text-xs">
-              #{ot.folio} {ot.isProjectSummary && <Badge className="bg-accent/20 text-primary text-[7px] ml-1">ACTA FINAL</Badge>}
-            </TableCell>
-            <TableCell className="text-[10px] font-medium text-muted-foreground">
-              <p className="line-clamp-1 max-w-[250px]">{ot.description || "N/A"}</p>
-            </TableCell>
-            <TableCell className="text-right">
-              <Link href={`/work-orders/${ot.id}`}>
-                <Button variant="ghost" size="icon" className="h-8 w-8 text-primary"><Eye className="h-4 w-4" /></Button>
-              </Link>
-            </TableCell>
-          </TableRow>
-        ))}
+        {orders.map((ot) => {
+          const isPending = ot.status === 'Pendiente' || ot.status === 'Pending';
+          return (
+            <TableRow key={ot.id}>
+              <TableCell className="font-black text-primary text-xs">
+                #{ot.folio} {ot.isProjectSummary && <Badge className="bg-accent/20 text-primary text-[7px] ml-1">ACTA FINAL</Badge>}
+              </TableCell>
+              <TableCell className="text-[10px] font-medium text-muted-foreground">
+                <p className="line-clamp-1 max-w-[250px]">{ot.description || "N/A"}</p>
+              </TableCell>
+              <TableCell className="text-right">
+                <div className="flex justify-end gap-1">
+                  {isPending ? (
+                    <Link href={`/work-orders/${ot.id}/edit`}>
+                      <Button variant="ghost" size="icon" className="h-8 w-8 text-primary"><Pencil className="h-4 w-4" /></Button>
+                    </Link>
+                  ) : (
+                    <Link href={`/work-orders/${ot.id}`}>
+                      <Button variant="ghost" size="icon" className="h-8 w-8 text-primary"><Eye className="h-4 w-4" /></Button>
+                    </Link>
+                  )}
+                </div>
+              </TableCell>
+            </TableRow>
+          );
+        })}
       </TableBody>
     </Table>
   );

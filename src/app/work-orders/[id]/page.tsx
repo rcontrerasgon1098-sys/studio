@@ -40,13 +40,14 @@ export default function WorkOrderView({ params }: { params: Promise<{ id: string
     fetchOrder();
   }, [db, id]);
 
+  // REDIRECCIÓN AUTOMÁTICA AL EDITOR SI LA OT ESTÁ PENDIENTE
   useEffect(() => {
-    if (order && order.status === 'Pending') {
+    if (order && (order.status === 'Pendiente' || order.status === 'Pending')) {
       router.replace(`/work-orders/${id}/edit`);
     }
   }, [order, router, id]);
 
-  if (isLoading || (order && order.status === 'Pending')) return <div className="p-20 text-center text-primary font-black animate-pulse bg-background min-h-screen flex flex-col items-center justify-center gap-4"><Loader2 className="animate-spin h-10 w-10" /> CARGANDO...</div>;
+  if (isLoading || (order && (order.status === 'Pendiente' || order.status === 'Pending'))) return <div className="p-20 text-center text-primary font-black animate-pulse bg-background min-h-screen flex flex-col items-center justify-center gap-4"><Loader2 className="animate-spin h-10 w-10" /> CARGANDO...</div>;
   if (!order) return <div className="p-20 text-center text-muted-foreground font-bold bg-background min-h-screen">Orden no encontrada.</div>;
 
   return (
@@ -74,15 +75,14 @@ export default function WorkOrderView({ params }: { params: Promise<{ id: string
 
       <main className="container mx-auto px-4 mt-6 max-w-2xl space-y-6">
         <div className="flex items-center justify-between px-1">
-          <Badge className={cn("border-none text-[10px] px-4 py-1.5 font-black tracking-[0.1em] uppercase", order.status === 'Completed' ? 'bg-accent/20 text-primary' : 'bg-primary/20 text-primary')}>
-            {order.status === 'Completed' ? 'FINALIZADA' : 'PENDIENTE'}
+          <Badge className={cn("border-none text-[10px] px-4 py-1.5 font-black tracking-[0.1em] uppercase", (order.status === 'Completed' || order.status === 'Completado') ? 'bg-accent/20 text-primary' : 'bg-primary/20 text-primary')}>
+            {(order.status === 'Completed' || order.status === 'Completado') ? 'FINALIZADA' : 'PENDIENTE'}
           </Badge>
           <div className="text-[10px] text-muted-foreground flex items-center gap-1.5 font-black uppercase tracking-widest">
             <Calendar className="h-3 w-3" /> {order.startDate ? new Date(order.startDate).toLocaleDateString() : "N/A"}
           </div>
         </div>
 
-        {/* FICHA CLIENTE */}
         <Card className="shadow-md border-none bg-white overflow-hidden">
           <CardHeader className="bg-primary/5 p-4 border-b">
             <CardTitle className="text-xs font-black uppercase tracking-widest text-primary flex items-center gap-2">
@@ -110,18 +110,10 @@ export default function WorkOrderView({ params }: { params: Promise<{ id: string
                   <p className="text-sm font-bold">{order.clientPhone || "N/A"}</p>
                 </div>
               </div>
-              <div className="flex items-start gap-3 col-span-full">
-                <Mail className="h-4 w-4 text-primary mt-0.5" />
-                <div>
-                  <p className="text-[9px] uppercase font-black text-muted-foreground">Correo Electrónico</p>
-                  <p className="text-sm font-bold">{order.clientEmail || "N/A"}</p>
-                </div>
-              </div>
             </div>
           </CardContent>
         </Card>
 
-        {/* EQUIPO */}
         {order.team && order.team.length > 0 && (
           <Card className="shadow-md border-none bg-white">
             <CardHeader className="p-4 border-b bg-muted/5">
@@ -141,7 +133,6 @@ export default function WorkOrderView({ params }: { params: Promise<{ id: string
           </Card>
         )}
 
-        {/* DETALLES TÉCNICOS FUSIONADOS */}
         <Card className="shadow-md border-none bg-white">
           <CardHeader className="p-4 border-b bg-primary/5">
             <CardTitle className="text-xs font-black uppercase tracking-widest text-primary flex items-center gap-2">
@@ -149,7 +140,6 @@ export default function WorkOrderView({ params }: { params: Promise<{ id: string
             </CardTitle>
           </CardHeader>
           <CardContent className="p-4 space-y-6">
-            {/* Ubicación en grid */}
             <div className="grid grid-cols-2 gap-4">
               <div className="p-4 bg-muted/10 rounded-2xl flex flex-col items-center justify-center text-center border border-dashed border-primary/20">
                 <Building2 className="h-4 w-4 text-primary mb-1 opacity-60" />
@@ -168,23 +158,14 @@ export default function WorkOrderView({ params }: { params: Promise<{ id: string
                 <p className="text-[10px] text-muted-foreground uppercase font-black mb-1">Señal ({order.signalCount || 1} u.)</p>
                 <p className="font-black text-primary text-base">{order.signalType || "Simple"}</p>
               </div>
-              
-              {[
-                { label: "Certificación", value: order.isCert, extra: order.certifiedPointsCount ? `${order.certifiedPointsCount} Puntos` : null },
-                { label: "Rotulación", value: order.isLabeled, extra: order.labelDetails },
-                { label: "Canalización", value: order.isCanalized },
-                { label: "Planos", value: order.isPlan },
-              ].map((item, i) => (
-                <div key={i} className={cn("p-4 border rounded-2xl flex flex-col items-center justify-center text-center transition-all", item.value ? 'bg-accent/5 border-accent/20' : 'bg-background opacity-40')}>
-                  <p className="text-[10px] text-muted-foreground uppercase font-black mb-1">{item.label}</p>
-                  <p className={cn("font-black text-xs uppercase", item.value ? 'text-primary' : 'text-muted-foreground')}>
-                    {item.value ? "SÍ" : "NO"}
-                  </p>
-                  {item.value && item.extra && (
-                    <p className="text-[9px] font-bold text-accent mt-1 leading-none">{item.extra}</p>
-                  )}
-                </div>
-              ))}
+              <div className={cn("p-4 border rounded-2xl flex flex-col items-center justify-center text-center", order.isCert ? 'bg-accent/5 border-accent/20' : 'bg-background opacity-40')}>
+                <p className="text-[10px] text-muted-foreground uppercase font-black mb-1">Certificación</p>
+                <p className="font-black text-xs">{order.isCert ? "SÍ" : "NO"}</p>
+              </div>
+              <div className={cn("p-4 border rounded-2xl flex flex-col items-center justify-center text-center", order.isLabeled ? 'bg-accent/5 border-accent/20' : 'bg-background opacity-40')}>
+                <p className="text-[10px] text-muted-foreground uppercase font-black mb-1">Rotulación</p>
+                <p className="font-black text-xs">{order.isLabeled ? "SÍ" : "NO"}</p>
+              </div>
             </div>
             
             <div className="space-y-2 mt-4">
@@ -239,9 +220,6 @@ export default function WorkOrderView({ params }: { params: Promise<{ id: string
               <div className="text-[10px] space-y-1 p-3 bg-muted/20 rounded-xl font-bold">
                 <p className="uppercase flex items-center gap-2 text-primary"><User className="h-3 w-3" /> {order.clientReceiverName || "N/A"}</p>
                 <p className="text-muted-foreground flex items-center gap-2"><CreditCard className="h-3 w-3" /> {order.clientReceiverRut || "N/A"}</p>
-                {order.clientReceiverEmail && (
-                  <p className="text-muted-foreground flex items-center gap-2"><Mail className="h-3 w-3" /> {order.clientReceiverEmail}</p>
-                )}
               </div>
               <div className="relative h-32 w-full bg-muted/5 rounded-xl border border-dashed flex items-center justify-center overflow-hidden">
                 {order.clientSignatureUrl ? (
