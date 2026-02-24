@@ -1,16 +1,17 @@
+
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SignaturePad } from "@/components/SignaturePad";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Save, Camera, CheckCircle2, Search, X, User, MapPin, Building2, Hash, PlusCircle, Loader2, CheckSquare, Briefcase } from "lucide-react";
+import { ArrowLeft, Search, User, MapPin, Building2, Hash, PlusCircle, CheckCircle2, X, Users, Briefcase } from "lucide-react";
 import Link from "next/link";
 import { useUser, useFirestore, useCollection, useMemoFirebase, useUserProfile } from "@/firebase";
 import { collection, doc, query, orderBy, where } from "firebase/firestore";
@@ -18,6 +19,7 @@ import { setDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandList, CommandItem } from "@/components/ui/command";
 import { Switch } from "@/components/ui/switch";
+import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
 export default function NewWorkOrder() {
@@ -31,10 +33,14 @@ export default function NewWorkOrder() {
   const [loading, setLoading] = useState(false);
   const [folio, setFolio] = useState(0);
   const [openClientSearch, setOpenClientSearch] = useState(false);
+  const [openTeamSearch, setOpenTeamSearch] = useState(false);
 
   // --- QUERIES ---
   const clientsQuery = useMemoFirebase(() => (db ? query(collection(db, "clients"), orderBy("nombreCliente", "asc")) : null), [db]);
   const { data: clients } = useCollection(clientsQuery);
+
+  const personnelQuery = useMemoFirebase(() => (db ? query(collection(db, "personnel"), orderBy("nombre_t", "asc")) : null), [db]);
+  const { data: allPersonnel } = useCollection(personnelQuery);
 
   const isAdmin = userProfile?.rol_t === 'admin' || userProfile?.rol_t === 'Administrador';
 
@@ -95,24 +101,28 @@ export default function NewWorkOrder() {
     }
   }, [userProfile, user]);
 
-  useEffect(() => {
-    const pId = searchParams.get('projectId');
-    if (pId && allProjects) {
-      const proj = allProjects.find(p => p.id === pId);
-      if (proj) {
-        setFormData(prev => ({
-          ...prev,
-          clientId: proj.clientId,
-          clientName: proj.clientName,
-          projectId: pId
-        }));
-      }
-    }
-  }, [allProjects, searchParams]);
-
   const handleSelectClient = (client: any) => {
     setFormData({ ...formData, clientName: client.nombreCliente, clientPhone: client.telefonoCliente, clientEmail: client.emailClientes, clientId: client.id, address: client.direccionCliente || "" });
     setOpenClientSearch(false);
+  };
+
+  const handleTeamSelect = (person: any) => {
+    if (!formData.teamIds.includes(person.id)) {
+      setFormData(prev => ({
+        ...prev,
+        team: [...prev.team, person.nombre_t],
+        teamIds: [...prev.teamIds, person.id]
+      }));
+    }
+    setOpenTeamSearch(false);
+  };
+
+  const handleTeamRemove = (memberId: string) => {
+    setFormData(prev => ({
+      ...prev,
+      team: prev.team.filter((_, i) => prev.teamIds[i] !== memberId),
+      teamIds: prev.teamIds.filter(id => id !== memberId)
+    }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -164,6 +174,7 @@ export default function NewWorkOrder() {
 
       <main className="container mx-auto px-4 mt-6 max-w-3xl space-y-6">
         <form onSubmit={handleSubmit} className="space-y-6">
+          {/* PROYECTO */}
           <Card className="shadow-xl border-none rounded-3xl overflow-hidden">
             <CardHeader className="bg-primary/5 p-6 border-b">
               <CardTitle className="text-primary text-xs flex items-center gap-2 uppercase font-black tracking-widest">
@@ -191,6 +202,7 @@ export default function NewWorkOrder() {
             </CardContent>
           </Card>
 
+          {/* CLIENTE */}
           <Card className="shadow-xl border-none bg-white rounded-3xl overflow-hidden">
             <CardHeader className="bg-primary/5 p-6 border-b">
               <CardTitle className="text-primary text-sm flex items-center gap-3 uppercase font-black tracking-widest">
@@ -240,6 +252,56 @@ export default function NewWorkOrder() {
             </CardContent>
           </Card>
 
+          {/* EQUIPO TÉCNICO */}
+          <Card className="shadow-xl border-none bg-white rounded-3xl overflow-hidden">
+            <CardHeader className="p-6 border-b bg-muted/5">
+              <CardTitle className="text-lg flex items-center gap-3 uppercase font-black tracking-tighter">
+                <Users className="h-6 w-6 text-primary"/> Equipo de Trabajo
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-6 space-y-6">
+               <div className="flex flex-wrap gap-2">
+                {formData.team.map((name, index) => (
+                  <Badge key={index} className="text-xs py-2 px-5 rounded-xl bg-primary/10 text-primary gap-3 font-black border-none transition-all hover:bg-primary/20">
+                    {name}
+                    {formData.teamIds[index] !== user?.uid && (
+                      <button type="button" onClick={() => handleTeamRemove(formData.teamIds[index])} className="rounded-full bg-primary/20 hover:bg-primary/40 p-1">
+                        <X className="h-3 w-3" />
+                      </button>
+                    )}
+                  </Badge>
+                ))}
+              </div>
+              <Popover open={openTeamSearch} onOpenChange={setOpenTeamSearch}>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className="w-full h-16 text-sm font-black border-dashed border-2 rounded-2xl uppercase tracking-widest border-primary/20 text-primary hover:bg-primary/5 transition-all">
+                    <PlusCircle className="h-5 w-5 mr-3" /> Añadir Colaboradores
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[320px] md:w-[500px] p-0 shadow-2xl rounded-3xl border-none overflow-hidden" align="center">
+                  <Command>
+                    <CommandInput placeholder="Filtrar por nombre..." className="h-16 border-none focus:ring-0 font-bold"/>
+                    <CommandList className="max-h-[350px]">
+                      <CommandEmpty className="p-8 text-center text-muted-foreground font-bold">Sin resultados.</CommandEmpty>
+                      <CommandGroup heading="Personal Autorizado" className="p-2">
+                        {(allPersonnel || []).map(person => (
+                          <CommandItem key={person.id} onSelect={() => handleTeamSelect(person)} className="p-4 cursor-pointer rounded-2xl aria-selected:bg-primary aria-selected:text-white transition-all">
+                            <User className="mr-4 h-6 w-6" />
+                            <div className="flex flex-col">
+                              <span className="font-black uppercase text-xs">{person.nombre_t}</span>
+                              <span className="text-[10px] font-bold opacity-60">{person.rol_t}</span>
+                            </div>
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
+            </CardContent>
+          </Card>
+
+          {/* ESPECIFICACIONES TÉCNICAS */}
           <Card className="shadow-xl border-none bg-white rounded-3xl overflow-hidden">
             <CardHeader className="p-6 bg-primary/5 border-b">
               <CardTitle className="text-xl uppercase font-black text-primary tracking-tighter">Especificaciones Técnicas</CardTitle>
@@ -292,6 +354,7 @@ export default function NewWorkOrder() {
             </CardContent>
           </Card>
 
+          {/* FIRMAS */}
           <Card className="shadow-xl border-none bg-white rounded-3xl overflow-hidden">
             <CardHeader className="bg-muted/10 p-6 border-b">
               <CardTitle className="text-xs font-black uppercase text-primary tracking-widest">Protocolo de Cierre (Firmas)</CardTitle>

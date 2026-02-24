@@ -1,19 +1,19 @@
+
 "use client";
 
 import { use, useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SignaturePad } from "@/components/SignaturePad";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Save, Camera, X, ImageIcon, Loader2, User, MapPin, Building2, Hash, Users, PlusCircle, CheckSquare, Send, AlertTriangle, Briefcase, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, Send, Loader2, User, MapPin, Building2, Briefcase, Users, PlusCircle, X, CheckCircle2 } from "lucide-react";
 import Link from "next/link";
-import Image from "next/image";
 import { useUser, useFirestore, useDoc, useMemoFirebase, useCollection, useUserProfile } from "@/firebase";
 import { doc, collection, query, where, orderBy, setDoc } from "firebase/firestore";
 import { updateDocumentNonBlocking, deleteDocumentNonBlocking } from "@/firebase/non-blocking-updates";
@@ -31,7 +31,6 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
   const { user, isUserLoading } = useUser();
   const db = useFirestore();
   const { userProfile, isProfileLoading } = useUserProfile();
-  const fileInputRef = useRef<HTMLInputElement>(null);
   
   const orderRef = useMemoFirebase(() => {
     if (!db || !id) return null;
@@ -75,11 +74,7 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
     signalType: "Simple",
     signalCount: 1,
     isCert: false,
-    certifiedPointsCount: 0,
-    isPlan: false,
     isLabeled: false,
-    labelDetails: "",
-    isCanalized: false,
     description: "",
     techName: "",
     techRut: "",
@@ -116,11 +111,7 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
         signalType: order.signalType || "Simple",
         signalCount: order.signalCount || 1,
         isCert: !!order.isCert,
-        certifiedPointsCount: order.certifiedPointsCount || 0,
-        isPlan: !!order.isPlan,
         isLabeled: !!order.isLabeled,
-        labelDetails: order.labelDetails || "",
-        isCanalized: !!order.isCanalized,
         description: order.description || "",
         techName: order.techName || "",
         techRut: order.techRut || "",
@@ -146,22 +137,6 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
     }
   }, [user, isUserLoading, router]);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setFormData({ ...formData, sketchImageUrl: reader.result as string });
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const removeImage = () => {
-    setFormData({ ...formData, sketchImageUrl: "" });
-    if (fileInputRef.current) fileInputRef.current.value = "";
-  };
-
   const handleTeamSelect = (person: any) => {
     if (!formData.teamIds.includes(person.id)) {
       setFormData(prev => ({ 
@@ -173,10 +148,10 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
     setOpenTeamSearch(false);
   };
 
-  const handleTeamRemove = (memberName: string, memberId: string) => {
+  const handleTeamRemove = (memberId: string) => {
     setFormData(prev => ({ 
       ...prev, 
-      team: prev.team.filter(t => t !== memberName),
+      team: prev.team.filter((_, i) => prev.teamIds[i] !== memberId),
       teamIds: prev.teamIds.filter(id => id !== memberId)
     }));
   };
@@ -297,6 +272,7 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
 
       <main className="container mx-auto px-4 mt-6 max-w-3xl space-y-6">
         <form onSubmit={handleSubmit} className="space-y-6">
+          {/* PROYECTO */}
           <Card className="shadow-xl border-none rounded-3xl overflow-hidden">
             <CardHeader className="bg-primary/5 p-6 border-b">
               <CardTitle className="text-primary text-xs flex items-center gap-2 uppercase font-black tracking-widest">
@@ -324,6 +300,7 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
             </CardContent>
           </Card>
 
+          {/* CLIENTE */}
           <Card className="shadow-xl border-none bg-white rounded-3xl overflow-hidden">
             <CardHeader className="bg-primary/5 p-6 border-b">
               <CardTitle className="text-primary text-xl flex items-center gap-3 uppercase font-black tracking-tighter">
@@ -356,10 +333,11 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
             </CardContent>
           </Card>
 
+          {/* EQUIPO TÉCNICO */}
           <Card className="shadow-xl border-none bg-white rounded-3xl overflow-hidden">
             <CardHeader className="p-6 border-b bg-muted/5">
               <CardTitle className="text-lg flex items-center gap-3 uppercase font-black tracking-tighter">
-                <Users className="h-6 w-6 text-primary"/> Equipo Técnico
+                <Users className="h-6 w-6 text-primary"/> Equipo de Trabajo
               </CardTitle>
             </CardHeader>
             <CardContent className="p-6 space-y-6">
@@ -368,7 +346,7 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
                   <Badge key={index} className="text-xs py-2 px-5 rounded-xl bg-primary/10 text-primary gap-3 font-black border-none transition-all hover:bg-primary/20">
                     {name}
                     {formData.teamIds[index] !== user?.uid && (
-                      <button type="button" onClick={() => handleTeamRemove(name, formData.teamIds[index])} className="rounded-full bg-primary/20 hover:bg-primary/40 p-1">
+                      <button type="button" onClick={() => handleTeamRemove(formData.teamIds[index])} className="rounded-full bg-primary/20 hover:bg-primary/40 p-1">
                         <X className="h-3 w-3" />
                       </button>
                     )}
@@ -404,9 +382,10 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
             </CardContent>
           </Card>
 
+          {/* ESPECIFICACIONES TÉCNICAS */}
           <Card className="shadow-xl border-none bg-white rounded-3xl overflow-hidden">
             <CardHeader className="p-6 border-b bg-primary/5">
-              <CardTitle className="text-xl uppercase font-black text-primary tracking-tighter">Especificaciones de Red</CardTitle>
+              <CardTitle className="text-xl uppercase font-black text-primary tracking-tighter">Especificaciones Técnicas</CardTitle>
             </CardHeader>
             <CardContent className="p-6 space-y-8">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -459,6 +438,7 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
             </CardContent>
           </Card>
 
+          {/* FIRMAS */}
           <Card className="shadow-xl border-none bg-white rounded-3xl overflow-hidden">
             <CardHeader className="bg-muted/10 p-6 border-b">
               <CardTitle className="text-xs font-black uppercase text-primary tracking-widest">Protocolo de Cierre (Firmas)</CardTitle>
