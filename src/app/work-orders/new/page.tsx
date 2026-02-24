@@ -11,7 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SignaturePad } from "@/components/SignaturePad";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Search, User, MapPin, Building2, Hash, PlusCircle, CheckCircle2, X, Users, Briefcase } from "lucide-react";
+import { ArrowLeft, Search, User, MapPin, Building2, Hash, PlusCircle, CheckCircle2, X, Users, Briefcase, Phone, Mail } from "lucide-react";
 import Link from "next/link";
 import { useUser, useFirestore, useCollection, useMemoFirebase, useUserProfile } from "@/firebase";
 import { collection, doc, query, orderBy, where } from "firebase/firestore";
@@ -101,7 +101,14 @@ export default function NewWorkOrder() {
   }, [userProfile, user]);
 
   const handleSelectClient = (client: any) => {
-    setFormData({ ...formData, clientName: client.nombreCliente, clientPhone: client.telefonoCliente, clientEmail: client.emailClientes, clientId: client.id, address: client.direccionCliente || "" });
+    setFormData({ 
+      ...formData, 
+      clientName: client.nombreCliente, 
+      clientPhone: client.telefonoCliente || "", 
+      clientEmail: client.emailClientes || "", 
+      clientId: client.id, 
+      address: client.direccionCliente || "" 
+    });
     setOpenClientSearch(false);
   };
 
@@ -250,6 +257,24 @@ export default function NewWorkOrder() {
                     </Popover>
                   </div>
                 </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label className="font-black uppercase text-[10px] text-muted-foreground ml-1">Teléfono de Contacto</Label>
+                    <div className="relative">
+                      <Phone className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-primary" />
+                      <Input placeholder="Ej: +56 9 1234 5678" value={formData.clientPhone} onChange={e => setFormData({...formData, clientPhone: e.target.value})} className="h-14 pl-12 bg-muted/30 border-none rounded-2xl font-bold shadow-inner" />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="font-black uppercase text-[10px] text-muted-foreground ml-1">Correo Electrónico</Label>
+                    <div className="relative">
+                      <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-primary" />
+                      <Input placeholder="Ej: contacto@empresa.cl" value={formData.clientEmail} onChange={e => setFormData({...formData, clientEmail: e.target.value})} className="h-14 pl-12 bg-muted/30 border-none rounded-2xl font-bold shadow-inner" />
+                    </div>
+                  </div>
+                </div>
+
                 <div className="space-y-2">
                   <Label className="font-black uppercase text-[10px] text-muted-foreground ml-1">Dirección de Servicio</Label>
                   <div className="relative">

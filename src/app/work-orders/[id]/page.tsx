@@ -95,19 +95,26 @@ export default function WorkOrderView({ params }: { params: Promise<{ id: string
               <p className="font-black text-primary text-xl leading-none">{order.clientName}</p>
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 border-t border-dashed">
-              <div className="flex items-start gap-3">
-                <MapPin className="h-4 w-4 text-primary mt-0.5" />
-                <div>
-                  <p className="text-[9px] uppercase font-black text-muted-foreground">Dirección</p>
-                  <p className="text-sm font-bold">{order.address || "N/A"}</p>
-                </div>
-              </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t border-dashed">
               <div className="flex items-start gap-3">
                 <Phone className="h-4 w-4 text-primary mt-0.5" />
                 <div>
                   <p className="text-[9px] uppercase font-black text-muted-foreground">Teléfono</p>
                   <p className="text-sm font-bold">{order.clientPhone || "N/A"}</p>
+                </div>
+              </div>
+              <div className="flex items-start gap-3">
+                <Mail className="h-4 w-4 text-primary mt-0.5" />
+                <div>
+                  <p className="text-[9px] uppercase font-black text-muted-foreground">Email</p>
+                  <p className="text-sm font-bold">{order.clientEmail || "N/A"}</p>
+                </div>
+              </div>
+              <div className="flex items-start gap-3 md:col-span-2">
+                <MapPin className="h-4 w-4 text-primary mt-0.5" />
+                <div>
+                  <p className="text-[9px] uppercase font-black text-muted-foreground">Dirección</p>
+                  <p className="text-sm font-bold">{order.address || "N/A"}</p>
                 </div>
               </div>
             </div>

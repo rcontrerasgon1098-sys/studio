@@ -12,7 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SignaturePad } from "@/components/SignaturePad";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Send, Loader2, User, MapPin, Building2, Briefcase, Users, PlusCircle, X, CheckCircle2, Search } from "lucide-react";
+import { ArrowLeft, Send, Loader2, User, MapPin, Building2, Briefcase, Users, PlusCircle, X, CheckCircle2, Search, Phone, Mail } from "lucide-react";
 import Link from "next/link";
 import { useUser, useFirestore, useDoc, useMemoFirebase, useCollection, useUserProfile } from "@/firebase";
 import { doc, collection, query, where, orderBy, setDoc } from "firebase/firestore";
@@ -142,7 +142,14 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
   }, [user, isUserLoading, router]);
 
   const handleSelectClient = (client: any) => {
-    setFormData({ ...formData, clientName: client.nombreCliente, clientPhone: client.telefonoCliente, clientEmail: client.emailClientes, clientId: client.id, address: client.direccionCliente || "" });
+    setFormData({ 
+      ...formData, 
+      clientName: client.nombreCliente, 
+      clientPhone: client.telefonoCliente || "", 
+      clientEmail: client.emailClientes || "", 
+      clientId: client.id, 
+      address: client.direccionCliente || "" 
+    });
     setOpenClientSearch(false);
   };
 
@@ -355,6 +362,23 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
                         </Command>
                       </PopoverContent>
                     </Popover>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label className="font-black uppercase text-[10px] text-muted-foreground ml-1">Teléfono de Contacto</Label>
+                    <div className="relative">
+                      <Phone className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-primary" />
+                      <Input value={formData.clientPhone} onChange={e => setFormData({...formData, clientPhone: e.target.value})} className="h-14 pl-12 bg-muted/30 border-none rounded-2xl font-bold focus-visible:ring-primary shadow-inner" />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="font-black uppercase text-[10px] text-muted-foreground ml-1">Correo Electrónico</Label>
+                    <div className="relative">
+                      <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-primary" />
+                      <Input value={formData.clientEmail} onChange={e => setFormData({...formData, clientEmail: e.target.value})} className="h-14 pl-12 bg-muted/30 border-none rounded-2xl font-bold focus-visible:ring-primary shadow-inner" />
+                    </div>
                   </div>
                 </div>
 
