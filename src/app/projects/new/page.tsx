@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Briefcase, Search, Building2, CheckCircle2, LayoutList, Plus } from "lucide-react";
+import { ArrowLeft, Briefcase, Search, Building2, CheckCircle2, LayoutList, Plus, User } from "lucide-react";
 import Link from "next/link";
 import { useUser, useFirestore, useCollection, useMemoFirebase } from "@/firebase";
 import { collection, doc, setDoc, query, orderBy } from "firebase/firestore";
@@ -45,14 +45,17 @@ export default function NewProject() {
     e.preventDefault();
     if (!user || !db) return;
     
-    if (!formData.name.trim() || !formData.clientId) return;
+    if (!formData.name.trim() || !formData.clientName.trim()) {
+      toast({ variant: "destructive", title: "Faltan Datos", description: "El nombre del proyecto y el cliente son obligatorios." });
+      return;
+    }
 
     setLoading(true);
     const projectId = doc(collection(db, "projects")).id;
     const projectData = {
       ...formData,
       id: projectId,
-      status: "Active", // Cambiado a "Active" para visibilidad inmediata en Proyectos Activos
+      status: "Active",
       createdBy: user.uid,
       creatorEmail: user.email || "",
       startDate: new Date().toISOString(),
@@ -89,7 +92,7 @@ export default function NewProject() {
           </div>
           <Button 
             onClick={handleSubmit} 
-            disabled={loading || !formData.name || !formData.clientId} 
+            disabled={loading || !formData.name || !formData.clientName} 
             className="bg-primary hover:bg-primary/90 font-black h-11 px-8 rounded-xl shadow-lg transition-all active:scale-95"
           >
             {loading ? "Iniciando..." : "Crear Proyecto"}
@@ -105,10 +108,9 @@ export default function NewProject() {
             </CardTitle>
           </CardHeader>
           <CardContent className="p-8 space-y-10">
-            {/* Nombre del Proyecto */}
             <div className="space-y-4">
               <Label htmlFor="projectName" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">
-                Nombre o Identificador
+                Nombre o Identificador de la Obra
               </Label>
               <div className="relative group">
                 <Briefcase className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground group-focus-within:text-primary transition-colors" />
@@ -122,67 +124,62 @@ export default function NewProject() {
               </div>
             </div>
 
-            {/* Selección de Cliente */}
             <div className="space-y-4">
               <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">
-                Empresa Contratante
+                Empresa Contratante (Manual o Búsqueda)
               </Label>
-              <div className="flex flex-col gap-3">
-                <div className={cn(
-                  "h-20 px-6 flex items-center justify-between rounded-2xl border-2 transition-all duration-300",
-                  formData.clientId ? "border-primary bg-primary/5" : "border-dashed border-muted-foreground/20 bg-muted/10"
-                )}>
-                  {formData.clientId ? (
-                    <div className="flex items-center gap-3 w-full">
-                      <div className="h-10 w-10 rounded-xl bg-primary flex items-center justify-center text-white shrink-0">
-                        <CheckCircle2 className="h-6 w-6" />
-                      </div>
-                      <div className="flex flex-col truncate">
-                        <span className="font-black text-primary uppercase text-sm">{formData.clientName}</span>
-                        <span className="text-[10px] text-muted-foreground font-bold uppercase">Cliente Vinculado</span>
-                      </div>
+              <div className="flex gap-2">
+                <div className="relative flex-1 group">
+                  <User className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground group-focus-within:text-primary transition-colors" />
+                  <Input 
+                    placeholder="Escriba el nombre de la empresa..." 
+                    value={formData.clientName} 
+                    onChange={e => setFormData({...formData, clientName: e.target.value, clientId: ""})} 
+                    className="h-16 pl-12 font-bold text-lg bg-muted/30 border-none focus-visible:ring-2 focus-visible:ring-primary shadow-inner rounded-2xl transition-all" 
+                  />
+                  {formData.clientId && (
+                    <div className="absolute right-4 top-1/2 -translate-y-1/2">
+                      <Badge className="bg-primary text-white text-[8px] uppercase font-black">Vinculado</Badge>
                     </div>
-                  ) : (
-                    <span className="text-muted-foreground font-bold text-sm opacity-40 uppercase tracking-tighter">No se ha seleccionado cliente</span>
                   )}
-
-                  <Popover open={openClientSearch} onOpenChange={setOpenClientSearch}>
-                    <PopoverTrigger asChild>
-                      <Button variant="outline" className="h-12 px-6 rounded-xl border-2 border-primary/20 shadow-sm hover:bg-primary hover:text-white group transition-all shrink-0 font-black uppercase text-[10px] tracking-widest">
-                        <Search className="h-4 w-4 mr-2" /> {formData.clientId ? "Cambiar" : "Buscar"}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-[320px] md:w-[400px] p-0 shadow-2xl rounded-2xl border-none overflow-hidden" align="end">
-                      <Command className="rounded-2xl">
-                        <CommandInput placeholder="Filtrar clientes registrados..." className="h-14 border-none focus:ring-0" />
-                        <CommandList className="max-h-[350px]">
-                          <CommandEmpty className="p-8 text-center">
-                            <p className="text-sm font-bold text-muted-foreground">No se encontraron clientes.</p>
-                          </CommandEmpty>
-                          <CommandGroup className="p-2">
-                            {clients?.map((client) => (
-                              <CommandItem 
-                                key={client.id} 
-                                onSelect={() => handleSelectClient(client)} 
-                                className="p-4 cursor-pointer rounded-xl aria-selected:bg-primary aria-selected:text-white transition-colors"
-                              >
-                                <div className="flex items-center gap-4">
-                                  <div className="h-10 w-10 rounded-xl bg-muted/20 flex items-center justify-center group-aria-selected:bg-white/20">
-                                    <Building2 className="h-5 w-5" />
-                                  </div>
-                                  <div className="flex flex-col">
-                                    <span className="font-black text-xs uppercase">{client.nombreCliente}</span>
-                                    <span className="text-[10px] opacity-60 font-bold">{client.rutCliente}</span>
-                                  </div>
-                                </div>
-                              </CommandItem>
-                            ))}
-                          </CommandGroup>
-                        </CommandList>
-                      </Command>
-                    </PopoverContent>
-                  </Popover>
                 </div>
+
+                <Popover open={openClientSearch} onOpenChange={setOpenClientSearch}>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" size="icon" className="h-16 w-16 rounded-2xl bg-primary text-white hover:bg-primary/90 shadow-lg shrink-0">
+                      <Search className="h-6 w-6" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[320px] md:w-[400px] p-0 shadow-2xl rounded-2xl border-none overflow-hidden" align="end">
+                    <Command className="rounded-2xl">
+                      <CommandInput placeholder="Buscar clientes registrados..." className="h-14 border-none focus:ring-0" />
+                      <CommandList className="max-h-[350px]">
+                        <CommandEmpty className="p-8 text-center">
+                          <p className="text-sm font-bold text-muted-foreground">No se encontraron clientes.</p>
+                        </CommandEmpty>
+                        <CommandGroup className="p-2">
+                          {clients?.map((client) => (
+                            <CommandItem 
+                              key={client.id} 
+                              onSelect={() => handleSelectClient(client)} 
+                              className="p-4 cursor-pointer rounded-xl aria-selected:bg-primary aria-selected:text-white transition-colors"
+                            >
+                              <div className="flex items-center gap-4">
+                                <div className="h-10 w-10 rounded-xl bg-muted/20 flex items-center justify-center group-aria-selected:bg-white/20">
+                                  <Building2 className="h-5 w-5" />
+                                </div>
+                                <div className="flex flex-col">
+                                  <span className="font-black text-xs uppercase">{client.nombreCliente}</span>
+                                  <span className="text-[10px] opacity-60 font-bold">{client.rutCliente}</span>
+                                </div>
+                              </div>
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
               </div>
             </div>
           </CardContent>

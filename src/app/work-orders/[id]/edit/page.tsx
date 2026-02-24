@@ -12,7 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SignaturePad } from "@/components/SignaturePad";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Send, Loader2, User, MapPin, Building2, Briefcase, Users, PlusCircle, X, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, Send, Loader2, User, MapPin, Building2, Briefcase, Users, PlusCircle, X, CheckCircle2, Search } from "lucide-react";
 import Link from "next/link";
 import { useUser, useFirestore, useDoc, useMemoFirebase, useCollection, useUserProfile } from "@/firebase";
 import { doc, collection, query, where, orderBy, setDoc } from "firebase/firestore";
@@ -57,10 +57,14 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
   }, [db, user?.uid, isAdmin]);
   const { data: allProjects } = useCollection(projectsQuery);
 
+  const clientsQuery = useMemoFirebase(() => (db ? query(collection(db, "clients"), orderBy("nombreCliente", "asc")) : null), [db]);
+  const { data: clients } = useCollection(clientsQuery);
+
   const [loading, setLoading] = useState(false);
   const [isSendingSignature, setIsSendingSignature] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
   const [openTeamSearch, setOpenTeamSearch] = useState(false);
+  const [openClientSearch, setOpenClientSearch] = useState(false);
   
   const [formData, setFormData] = useState({
     clientName: "",
@@ -136,6 +140,11 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
       router.push("/login");
     }
   }, [user, isUserLoading, router]);
+
+  const handleSelectClient = (client: any) => {
+    setFormData({ ...formData, clientName: client.nombreCliente, clientPhone: client.telefonoCliente, clientEmail: client.emailClientes, clientId: client.id, address: client.direccionCliente || "" });
+    setOpenClientSearch(false);
+  };
 
   const handleTeamSelect = (person: any) => {
     if (!formData.teamIds.includes(person.id)) {
@@ -272,7 +281,6 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
 
       <main className="container mx-auto px-4 mt-6 max-w-3xl space-y-6">
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* PROYECTO */}
           <Card className="shadow-xl border-none rounded-3xl overflow-hidden">
             <CardHeader className="bg-primary/5 p-6 border-b">
               <CardTitle className="text-primary text-xs flex items-center gap-2 uppercase font-black tracking-widest">
@@ -300,7 +308,6 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
             </CardContent>
           </Card>
 
-          {/* CLIENTE */}
           <Card className="shadow-xl border-none bg-white rounded-3xl overflow-hidden">
             <CardHeader className="bg-primary/5 p-6 border-b">
               <CardTitle className="text-primary text-xl flex items-center gap-3 uppercase font-black tracking-tighter">
@@ -310,12 +317,45 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
             <CardContent className="p-6 space-y-6">
               <div className="space-y-4">
                 <div className="space-y-2">
-                  <Label className="font-black uppercase text-[10px] text-muted-foreground ml-1">Razón Social / Empresa</Label>
-                  <Input 
-                    value={formData.clientName}
-                    onChange={e => setFormData({...formData, clientName: e.target.value})}
-                    className="h-14 text-lg font-black bg-muted/30 border-none rounded-2xl px-6 focus-visible:ring-primary shadow-inner"
-                  />
+                  <Label className="font-black uppercase text-[10px] text-muted-foreground ml-1">Mandante / Empresa (Manual o Búsqueda)</Label>
+                  <div className="flex gap-2">
+                    <div className="relative flex-1 group">
+                      <Input 
+                        value={formData.clientName}
+                        onChange={e => setFormData({...formData, clientName: e.target.value, clientId: ""})}
+                        className="h-14 text-lg font-black bg-muted/30 border-none rounded-2xl px-6 focus-visible:ring-primary shadow-inner"
+                      />
+                      {formData.clientId && (
+                        <div className="absolute right-4 top-1/2 -translate-y-1/2">
+                          <Badge className="bg-primary text-white text-[8px] uppercase font-black">Vinculado</Badge>
+                        </div>
+                      )}
+                    </div>
+                    <Popover open={openClientSearch} onOpenChange={setOpenClientSearch}>
+                      <PopoverTrigger asChild>
+                        <Button variant="outline" size="icon" className="h-14 w-14 rounded-2xl bg-primary text-white hover:bg-primary/90 shadow-lg shrink-0"><Search className="h-6 w-6" /></Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-[300px] md:w-[400px] p-0 shadow-2xl rounded-3xl border-none overflow-hidden" align="end">
+                        <Command>
+                          <CommandInput placeholder="Filtrar clientes registrados..." className="h-14 font-bold border-none focus:ring-0" />
+                          <CommandList className="max-h-[300px]">
+                            <CommandEmpty className="p-6 text-center text-sm font-bold opacity-40">Sin resultados.</CommandEmpty>
+                            <CommandGroup heading="Clientes ICSA" className="p-2">
+                              {clients?.map((client) => (
+                                <CommandItem key={client.id} onSelect={() => handleSelectClient(client)} className="p-4 cursor-pointer rounded-2xl aria-selected:bg-primary aria-selected:text-white transition-all">
+                                  <User className="h-5 w-5 mr-3" />
+                                  <div className="flex flex-col">
+                                    <span className="font-black text-xs uppercase">{client.nombreCliente}</span>
+                                    <span className="text-[10px] opacity-60 font-bold">{client.rutCliente}</span>
+                                  </div>
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
+                  </div>
                 </div>
 
                 <div className="space-y-2">
@@ -333,7 +373,6 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
             </CardContent>
           </Card>
 
-          {/* EQUIPO TÉCNICO */}
           <Card className="shadow-xl border-none bg-white rounded-3xl overflow-hidden">
             <CardHeader className="p-6 border-b bg-muted/5">
               <CardTitle className="text-lg flex items-center gap-3 uppercase font-black tracking-tighter">
@@ -382,7 +421,6 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
             </CardContent>
           </Card>
 
-          {/* ESPECIFICACIONES TÉCNICAS */}
           <Card className="shadow-xl border-none bg-white rounded-3xl overflow-hidden">
             <CardHeader className="p-6 border-b bg-primary/5">
               <CardTitle className="text-xl uppercase font-black text-primary tracking-tighter">Especificaciones Técnicas</CardTitle>
@@ -438,7 +476,6 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
             </CardContent>
           </Card>
 
-          {/* FIRMAS */}
           <Card className="shadow-xl border-none bg-white rounded-3xl overflow-hidden">
             <CardHeader className="bg-muted/10 p-6 border-b">
               <CardTitle className="text-xs font-black uppercase text-primary tracking-widest">Protocolo de Cierre (Firmas)</CardTitle>

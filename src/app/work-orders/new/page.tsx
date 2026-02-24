@@ -35,7 +35,6 @@ export default function NewWorkOrder() {
   const [openClientSearch, setOpenClientSearch] = useState(false);
   const [openTeamSearch, setOpenTeamSearch] = useState(false);
 
-  // --- QUERIES ---
   const clientsQuery = useMemoFirebase(() => (db ? query(collection(db, "clients"), orderBy("nombreCliente", "asc")) : null), [db]);
   const { data: clients } = useCollection(clientsQuery);
 
@@ -174,7 +173,6 @@ export default function NewWorkOrder() {
 
       <main className="container mx-auto px-4 mt-6 max-w-3xl space-y-6">
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* PROYECTO */}
           <Card className="shadow-xl border-none rounded-3xl overflow-hidden">
             <CardHeader className="bg-primary/5 p-6 border-b">
               <CardTitle className="text-primary text-xs flex items-center gap-2 uppercase font-black tracking-widest">
@@ -202,7 +200,6 @@ export default function NewWorkOrder() {
             </CardContent>
           </Card>
 
-          {/* CLIENTE */}
           <Card className="shadow-xl border-none bg-white rounded-3xl overflow-hidden">
             <CardHeader className="bg-primary/5 p-6 border-b">
               <CardTitle className="text-primary text-sm flex items-center gap-3 uppercase font-black tracking-widest">
@@ -212,9 +209,21 @@ export default function NewWorkOrder() {
             <CardContent className="p-6 space-y-6">
               <div className="space-y-4">
                 <div className="space-y-2">
-                  <Label className="font-black uppercase text-[10px] text-muted-foreground ml-1">Mandante / Empresa</Label>
+                  <Label className="font-black uppercase text-[10px] text-muted-foreground ml-1">Mandante / Empresa (Manual o Búsqueda)</Label>
                   <div className="flex gap-2">
-                    <Input placeholder="Nombre de la empresa" value={formData.clientName} onChange={e => setFormData({...formData, clientName: e.target.value})} className="h-14 font-black text-lg bg-muted/30 border-none rounded-2xl px-6 flex-1 shadow-inner" />
+                    <div className="relative flex-1 group">
+                      <Input 
+                        placeholder="Nombre de la empresa" 
+                        value={formData.clientName} 
+                        onChange={e => setFormData({...formData, clientName: e.target.value, clientId: ""})} 
+                        className="h-14 font-black text-lg bg-muted/30 border-none rounded-2xl px-6 shadow-inner focus-visible:ring-primary" 
+                      />
+                      {formData.clientId && (
+                        <div className="absolute right-4 top-1/2 -translate-y-1/2">
+                          <Badge className="bg-primary text-white text-[8px] uppercase font-black">Vinculado</Badge>
+                        </div>
+                      )}
+                    </div>
                     <Popover open={openClientSearch} onOpenChange={setOpenClientSearch}>
                       <PopoverTrigger asChild>
                         <Button variant="outline" size="icon" className="h-14 w-14 rounded-2xl bg-primary text-white hover:bg-primary/90 shadow-lg shrink-0"><Search className="h-6 w-6" /></Button>
@@ -252,7 +261,6 @@ export default function NewWorkOrder() {
             </CardContent>
           </Card>
 
-          {/* EQUIPO TÉCNICO */}
           <Card className="shadow-xl border-none bg-white rounded-3xl overflow-hidden">
             <CardHeader className="p-6 border-b bg-muted/5">
               <CardTitle className="text-lg flex items-center gap-3 uppercase font-black tracking-tighter">
@@ -301,7 +309,6 @@ export default function NewWorkOrder() {
             </CardContent>
           </Card>
 
-          {/* ESPECIFICACIONES TÉCNICAS */}
           <Card className="shadow-xl border-none bg-white rounded-3xl overflow-hidden">
             <CardHeader className="p-6 bg-primary/5 border-b">
               <CardTitle className="text-xl uppercase font-black text-primary tracking-tighter">Especificaciones Técnicas</CardTitle>
@@ -354,7 +361,6 @@ export default function NewWorkOrder() {
             </CardContent>
           </Card>
 
-          {/* FIRMAS */}
           <Card className="shadow-xl border-none bg-white rounded-3xl overflow-hidden">
             <CardHeader className="bg-muted/10 p-6 border-b">
               <CardTitle className="text-xs font-black uppercase text-primary tracking-widest">Protocolo de Cierre (Firmas)</CardTitle>
