@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
@@ -10,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { 
   Plus, Search, LogOut, LayoutDashboard, 
   Eye, Download, Users, UserRound, 
-  Trash2, History, Briefcase, FolderOpen, ClipboardList, BookOpen, Pencil, Menu, ChevronRight, FileText, Info
+  Trash2, History, Briefcase, FolderOpen, ClipboardList, BookOpen, Pencil, Menu, ChevronRight, FileText, Info, Clock
 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
@@ -80,16 +79,6 @@ export default function Dashboard() {
   }, [db, user?.uid, isProfileLoading, isAdmin]);
   const { data: orders, isLoading: isOrdersLoading } = useCollection(ordersQuery);
 
-  const historyQuery = useMemoFirebase(() => {
-    if (!db || !user?.uid || isProfileLoading) return null;
-    const colRef = collection(db, "historial");
-    if (isAdmin) {
-      return query(colRef, orderBy("startDate", "desc"));
-    }
-    return query(colRef, where("createdBy", "==", user.uid), orderBy("startDate", "desc"));
-  }, [db, user?.uid, isProfileLoading, isAdmin]);
-  const { data: history, isLoading: isHistoryLoading } = useCollection(historyQuery);
-
   const activeProjects = useMemo(() => (projects || []).filter(p => p.status === 'Active' || p.status === 'Pendiente'), [projects]);
   const completedProjects = useMemo(() => (projects || []).filter(p => p.status === 'Completed' || p.status === 'Completado'), [projects]);
 
@@ -102,11 +91,6 @@ export default function Dashboard() {
     if (!orders) return [];
     return orders.filter(o => o.clientName?.toLowerCase().includes(searchTerm.toLowerCase()) || o.folio?.toString().includes(searchTerm));
   }, [orders, searchTerm]);
-
-  const filteredHistory = useMemo(() => {
-    if (!history) return [];
-    return history.filter(o => o.clientName?.toLowerCase().includes(searchTerm.toLowerCase()) || o.folio?.toString().includes(searchTerm));
-  }, [history, searchTerm]);
 
   const handleLogout = async () => {
     if (!auth) return;
@@ -138,8 +122,7 @@ export default function Dashboard() {
           { id: "dashboard", icon: LayoutDashboard, label: "Panel Resumen" },
           { id: "projects", icon: Briefcase, label: "Proyectos Activos" },
           { id: "project-history", icon: BookOpen, label: "Historial Proyectos" },
-          { id: "orders", icon: ClipboardList, label: "Órdenes de Trabajo" },
-          { id: "history", icon: FileText, label: "Archivo Digital" }
+          { id: "orders", icon: ClipboardList, label: "Órdenes de Trabajo" }
         ].map((item) => (
           <Button 
             key={item.id}
@@ -212,7 +195,7 @@ export default function Dashboard() {
       <main className="flex-1 p-4 md:p-8">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
           <h1 className="text-2xl font-black text-primary uppercase tracking-tighter">
-            {activeTab === "dashboard" ? "Resumen General" : activeTab === "projects" ? "Proyectos Activos" : activeTab === "project-history" ? "Historial de Proyectos" : activeTab === "orders" ? "Órdenes Pendientes" : "Archivo Digital"}
+            {activeTab === "dashboard" ? "Resumen General" : activeTab === "projects" ? "Proyectos Activos" : activeTab === "project-history" ? "Historial de Proyectos" : "Órdenes de Trabajo"}
           </h1>
           <div className="flex gap-2">
             <Link href="/projects/new">
@@ -280,35 +263,6 @@ export default function Dashboard() {
               <OrderTable orders={filteredOrders} isLoading={isOrdersLoading} type="ordenes" setDeleteConfirm={setDeleteConfirm} isAdmin={isAdmin} />
             </CardContent>
           </Card>
-        )}
-
-        {activeTab === "history" && (
-          <div className="space-y-6">
-            <Card className="bg-primary/5 border-none shadow-none rounded-2xl p-6 flex items-start gap-4">
-              <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                <Info className="text-primary h-5 w-5" />
-              </div>
-              <div>
-                <h3 className="font-black text-primary uppercase text-xs tracking-widest mb-1">Repositorio Histórico</h3>
-                <p className="text-xs font-medium text-muted-foreground leading-relaxed">
-                  Aquí se almacenan todas las <strong>Órdenes de Trabajo Finalizadas</strong> y las <strong>Actas de Cierre de Proyecto</strong>. 
-                  Puedes descargar los reportes PDF oficiales con firmas digitales en cualquier momento.
-                </p>
-              </div>
-            </Card>
-            
-            <Card className="shadow-sm border-none bg-white rounded-2xl overflow-hidden">
-              <CardHeader className="border-b bg-white">
-                <div className="relative max-w-md">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input placeholder="Buscar en archivo histórico..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-10 h-10 bg-muted/30 border-none rounded-xl font-bold" />
-                </div>
-              </CardHeader>
-              <CardContent className="p-0">
-                <OrderTable orders={filteredHistory} isLoading={isHistoryLoading} type="historial" setDeleteConfirm={setDeleteConfirm} isAdmin={isAdmin} />
-              </CardContent>
-            </Card>
-          </div>
         )}
       </main>
 
