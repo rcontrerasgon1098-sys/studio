@@ -11,16 +11,15 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SignaturePad } from "@/components/SignaturePad";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Search, User, MapPin, Building2, Hash, PlusCircle, CheckCircle2, X, Users, Briefcase, Phone, Mail, Loader2 } from "lucide-react";
+import { ArrowLeft, Search, User, MapPin, Building2, Hash, PlusCircle, CheckCircle2, X, Users, Briefcase, Phone, Mail, Loader2, Save, Archive } from "lucide-react";
 import Link from "next/link";
 import { useUser, useFirestore, useCollection, useMemoFirebase, useUserProfile } from "@/firebase";
-import { collection, doc, query, orderBy, where } from "firebase/firestore";
+import { collection, doc, query, orderBy, where, setDoc } from "firebase/firestore";
 import { setDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandList, CommandItem } from "@/components/ui/command";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
-import { cn } from "@/lib/utils";
 
 export default function NewWorkOrder() {
   const router = useRouter();
@@ -43,7 +42,6 @@ export default function NewWorkOrder() {
 
   const isAdmin = userProfile?.rol_t === 'admin' || userProfile?.rol_t === 'Administrador';
 
-  // Sincronizar consulta con reglas de privacidad, esperando que el perfil cargue
   const allProjectsQuery = useMemoFirebase(() => {
     if (!db || !user?.uid || isProfileLoading) return null;
     const colRef = collection(db, "projects");
@@ -132,40 +130,56 @@ export default function NewWorkOrder() {
     }));
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const onSaveAsPending = async () => {
     if (!user || !db) return;
     setLoading(true);
-
-    const isValidationComplete = !!formData.techSignatureUrl && !!formData.clientSignatureUrl && !!formData.clientReceiverRut;
-    const finalStatus = isValidationComplete ? "Completado" : "Pendiente";
     const orderId = doc(collection(db, "ordenes")).id;
-    
     const workOrderData = {
       ...formData,
       id: orderId,
       folio: folio,
-      status: finalStatus,
+      status: "Pendiente",
       createdBy: user.uid,
       startDate: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
-
-    const targetCol = finalStatus === "Completado" ? "historial" : "ordenes";
     try {
-      setDocumentNonBlocking(doc(db, targetCol, orderId), workOrderData, { merge: true });
-      toast({ title: "Orden Generada con Éxito" });
+      await setDoc(doc(db, "ordenes", orderId), workOrderData);
+      toast({ title: "Orden Guardada como Pendiente" });
       router.push("/dashboard");
     } catch (error) {
       setLoading(false);
-      toast({ variant: "destructive", title: "Falla en el Guardado", description: "Verifique su conexión e intente nuevamente." });
+      toast({ variant: "destructive", title: "Error al guardar" });
+    }
+  };
+
+  const onArchiveAndFinish = async () => {
+    if (!user || !db) return;
+    setLoading(true);
+    const orderId = doc(collection(db, "ordenes")).id;
+    const workOrderData = {
+      ...formData,
+      id: orderId,
+      folio: folio,
+      status: "Completado",
+      createdBy: user.uid,
+      startDate: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    try {
+      await setDoc(doc(db, "historial", orderId), workOrderData);
+      toast({ title: "Orden Finalizada y Archivada" });
+      router.push("/dashboard");
+    } catch (error) {
+      setLoading(false);
+      toast({ variant: "destructive", title: "Error al archivar" });
     }
   };
 
   if (isUserLoading || isProfileLoading) return <div className="min-h-screen flex items-center justify-center font-black animate-pulse text-primary uppercase tracking-tighter">Preparando Formulario...</div>;
 
   return (
-    <div className="min-h-screen bg-muted/20 pb-28 md:pb-12">
+    <div className="min-h-screen bg-muted/20 pb-40 md:pb-24">
       <header className="bg-white border-b sticky top-0 z-40 shadow-sm">
         <div className="container mx-auto px-4 h-16 flex items-center justify-between max-w-4xl">
           <div className="flex items-center gap-2">
@@ -180,7 +194,8 @@ export default function NewWorkOrder() {
       </header>
 
       <main className="container mx-auto px-4 mt-6 max-w-3xl space-y-6">
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form className="space-y-6">
+          {/* PROYECTO / OBRA */}
           <Card className="shadow-xl border-none rounded-3xl overflow-hidden">
             <CardHeader className="bg-primary/5 p-6 border-b">
               <CardTitle className="text-primary text-xs flex items-center gap-2 uppercase font-black tracking-widest">
@@ -208,6 +223,7 @@ export default function NewWorkOrder() {
             </CardContent>
           </Card>
 
+          {/* INFORMACIÓN DEL CLIENTE */}
           <Card className="shadow-xl border-none bg-white rounded-3xl overflow-hidden">
             <CardHeader className="bg-primary/5 p-6 border-b">
               <CardTitle className="text-primary text-sm flex items-center gap-3 uppercase font-black tracking-widest">
@@ -287,6 +303,7 @@ export default function NewWorkOrder() {
             </CardContent>
           </Card>
 
+          {/* EQUIPO DE TRABAJO */}
           <Card className="shadow-xl border-none bg-white rounded-3xl overflow-hidden">
             <CardHeader className="p-6 border-b bg-muted/5">
               <CardTitle className="text-lg flex items-center gap-3 uppercase font-black tracking-tighter">
@@ -335,6 +352,7 @@ export default function NewWorkOrder() {
             </CardContent>
           </Card>
 
+          {/* ESPECIFICACIONES TÉCNICAS */}
           <Card className="shadow-xl border-none bg-white rounded-3xl overflow-hidden">
             <CardHeader className="p-6 bg-primary/5 border-b">
               <CardTitle className="text-xl uppercase font-black text-primary tracking-tighter">Especificaciones Técnicas</CardTitle>
@@ -387,6 +405,7 @@ export default function NewWorkOrder() {
             </CardContent>
           </Card>
 
+          {/* FIRMAS */}
           <Card className="shadow-xl border-none bg-white rounded-3xl overflow-hidden">
             <CardHeader className="bg-muted/10 p-6 border-b">
               <CardTitle className="text-xs font-black uppercase text-primary tracking-widest">Protocolo de Cierre (Firmas)</CardTitle>
@@ -409,10 +428,27 @@ export default function NewWorkOrder() {
             </CardContent>
           </Card>
 
+          {/* BOTONES DE ACCIÓN FLOTANTES */}
           <div className="fixed bottom-0 left-0 right-0 p-4 bg-white/95 backdrop-blur-xl border-t md:relative md:bg-transparent md:border-none md:p-0 z-50 shadow-[0_-10px_40px_rgba(0,0,0,0.1)] md:shadow-none">
-            <Button type="submit" size="lg" className="bg-primary hover:bg-primary/90 w-full h-16 text-xl font-black gap-4 shadow-2xl rounded-2xl uppercase tracking-tighter transition-all active:scale-95" disabled={loading}>
-              <CheckCircle2 size={28} /> {loading ? "Procesando..." : "Finalizar y Guardar OT"}
-            </Button>
+            <div className="max-w-3xl mx-auto flex flex-col sm:flex-row gap-3">
+              <Button 
+                type="button"
+                onClick={onSaveAsPending} 
+                disabled={loading}
+                variant="secondary"
+                className="flex-1 h-16 text-lg font-black gap-3 shadow-lg rounded-2xl uppercase tracking-tighter transition-all active:scale-95"
+              >
+                <Save size={24} /> Guardar Pendiente
+              </Button>
+              <Button 
+                type="button"
+                onClick={onArchiveAndFinish} 
+                disabled={loading}
+                className="flex-[1.5] bg-primary hover:bg-primary/90 h-16 text-lg font-black gap-3 shadow-2xl rounded-2xl uppercase tracking-tighter transition-all active:scale-95"
+              >
+                {loading ? <Loader2 className="animate-spin" /> : <Archive size={24} />} Finalizar y Archivar
+              </Button>
+            </div>
           </div>
         </form>
       </main>
