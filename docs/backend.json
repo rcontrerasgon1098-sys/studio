@@ -41,7 +41,10 @@
         "description": { "type": "string" },
         "techName": { "type": "string" },
         "techSignatureUrl": { "type": "string" },
-        "clientSignatureUrl": { "type": "string" }
+        "clientSignatureUrl": { "type": "string" },
+        "clientReceiverName": { "type": "string" },
+        "clientReceiverRut": { "type": "string" },
+        "clientReceiverEmail": { "type": "string" }
       },
       "required": ["id", "folio", "clientName", "createdBy", "status"]
     }

@@ -1,3 +1,4 @@
+
 "use client";
 
 import { use, useState, useEffect } from "react";
@@ -502,14 +503,20 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
                 <SignaturePad label="Validación Técnica (ICSA)" onSave={(url) => setFormData({...formData, techSignatureUrl: url})} />
                 <SignaturePad label="Recepción Conforme (Cliente)" onSave={(url) => setFormData({...formData, clientSignatureUrl: url})} />
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-6 border-t border-dashed">
-                <div className="space-y-2">
-                  <Label className="text-[10px] font-black uppercase text-muted-foreground ml-1">Nombre del Receptor</Label>
-                  <Input value={formData.clientReceiverName} onChange={e => setFormData({...formData, clientReceiverName: e.target.value})} className="h-12 bg-muted/30 border-none rounded-xl font-bold px-4 shadow-inner" />
+              <div className="grid grid-cols-1 gap-4 pt-6 border-t border-dashed">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label className="text-[10px] font-black uppercase text-muted-foreground ml-1">Nombre del Receptor</Label>
+                    <Input value={formData.clientReceiverName} onChange={e => setFormData({...formData, clientReceiverName: e.target.value})} className="h-12 bg-muted/30 border-none rounded-xl font-bold px-4 shadow-inner" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-[10px] font-black uppercase text-muted-foreground ml-1">RUT del Receptor</Label>
+                    <Input value={formData.clientReceiverRut} onChange={e => setFormData({...formData, clientReceiverRut: e.target.value})} className="h-12 bg-muted/30 border-none rounded-xl font-bold px-4 shadow-inner" />
+                  </div>
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-[10px] font-black uppercase text-muted-foreground ml-1">RUT del Receptor</Label>
-                  <Input value={formData.clientReceiverRut} onChange={e => setFormData({...formData, clientReceiverRut: e.target.value})} className="h-12 bg-muted/30 border-none rounded-xl font-bold px-4 shadow-inner" />
+                  <Label className="text-[10px] font-black uppercase text-muted-foreground ml-1">Email del Receptor (Para envío de PDF)</Label>
+                  <Input type="email" placeholder="ejemplo@cliente.com" value={formData.clientReceiverEmail} onChange={e => setFormData({...formData, clientReceiverEmail: e.target.value})} className="h-12 bg-muted/30 border-none rounded-xl font-bold px-4 shadow-inner" />
                 </div>
               </div>
             </CardContent>

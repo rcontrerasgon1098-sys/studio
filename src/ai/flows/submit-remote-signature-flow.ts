@@ -16,6 +16,7 @@ const SubmitRemoteSignatureInputSchema = z.object({
   token: z.string(),
   receiverName: z.string(),
   receiverRut: z.string(),
+  receiverEmail: z.string().email().optional(),
   signatureUrl: z.string(), // base64
 });
 export type SubmitRemoteSignatureInput = z.infer<typeof SubmitRemoteSignatureInputSchema>;
@@ -66,6 +67,7 @@ const submitRemoteSignatureFlow = ai.defineFlow(
         ...orderData, // Copia profunda de todos los campos originales (createdBy, technicianId, teamIds, etc.)
         clientReceiverName: input.receiverName,
         clientReceiverRut: input.receiverRut,
+        clientReceiverEmail: input.receiverEmail || orderData.clientReceiverEmail || "",
         clientSignatureUrl: input.signatureUrl,
         signatureDate: new Date().toISOString(),
         status: 'Completed',

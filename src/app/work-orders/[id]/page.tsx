@@ -1,3 +1,4 @@
+
 "use client";
 
 import { use, useState, useEffect } from "react";
@@ -229,6 +230,7 @@ export default function WorkOrderView({ params }: { params: Promise<{ id: string
               <div className="text-center">
                 <p className="text-xs font-bold uppercase">{order.clientReceiverName || "N/A"}</p>
                 <p className="text-[9px] text-muted-foreground">RUT: {order.clientReceiverRut || "N/A"}</p>
+                <p className="text-[8px] text-muted-foreground italic truncate max-w-[150px]">{order.clientReceiverEmail || ""}</p>
               </div>
               <div className="relative h-32 w-full bg-muted/10 rounded-xl border border-dashed flex items-center justify-center">
                 {order.clientSignatureUrl ? (

@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { SignaturePad } from "@/components/SignaturePad";
 import { useToast } from "@/hooks/use-toast";
-import { CheckCircle2, Loader2, User, Hash, Info, MapPin, Building2, ClipboardCheck } from "lucide-react";
+import { CheckCircle2, Loader2, User, Hash, Info, MapPin, Building2, ClipboardCheck, Mail } from "lucide-react";
 import Image from "next/image";
 import { useFirestore, useDoc, useMemoFirebase } from "@/firebase";
 import { doc } from "firebase/firestore";
@@ -28,6 +28,7 @@ export default function RemoteSignaturePage({ params }: { params: Promise<{ id: 
   const [loading, setLoading] = useState(false);
   const [receiverName, setReceiverName] = useState("");
   const [receiverRut, setReceiverRut] = useState("");
+  const [receiverEmail, setReceiverEmail] = useState("");
   const [signatureUrl, setSignatureUrl] = useState("");
   const [isValidating, setIsValidating] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -52,6 +53,10 @@ export default function RemoteSignaturePage({ params }: { params: Promise<{ id: 
         setIsValidating(false);
       } else {
         setIsValidating(false);
+        // Pre-fill fields if they exist in the order
+        if (order.clientReceiverName) setReceiverName(order.clientReceiverName);
+        if (order.clientReceiverRut) setReceiverRut(order.clientReceiverRut);
+        if (order.clientReceiverEmail) setReceiverEmail(order.clientReceiverEmail);
       }
     }
   }, [order, isOrderLoading, token]);
@@ -73,12 +78,13 @@ export default function RemoteSignaturePage({ params }: { params: Promise<{ id: 
         token: token!,
         receiverName,
         receiverRut,
+        receiverEmail,
         signatureUrl,
       });
 
       if (result.success) {
         toast({ title: "Firma Exitosa", description: "La orden de trabajo ha sido firmada y procesada." });
-        // Redirect to a success view handled in the UI
+        // After successful submission, the order status will change to Completed in history
       } else {
         toast({ variant: "destructive", title: "Error", description: result.error });
       }
@@ -122,8 +128,8 @@ export default function RemoteSignaturePage({ params }: { params: Promise<{ id: 
     );
   }
 
-  // Success view if signed
-  if (!loading && order?.status === 'Completed') {
+  // Si la orden ya no está en 'ordenes' (fue movida a historial), mostramos éxito
+  if (!order && !isOrderLoading && !isValidating) {
      return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-background p-6 text-center gap-6">
         <div className="h-20 w-20 bg-accent/20 text-primary rounded-full flex items-center justify-center">
@@ -202,24 +208,39 @@ export default function RemoteSignaturePage({ params }: { params: Promise<{ id: 
             <CardDescription className="text-[10px] font-bold">Por favor, ingrese sus datos para validar la recepción conforme.</CardDescription>
           </CardHeader>
           <CardContent className="p-5 space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Nombre Completo</Label>
-                <Input 
-                  placeholder="Ej: Juan Pérez" 
-                  value={receiverName} 
-                  onChange={e => setReceiverName(e.target.value)}
-                  className="h-12 bg-muted/10 border-none shadow-sm font-bold"
-                />
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Nombre Completo</Label>
+                  <Input 
+                    placeholder="Ej: Juan Pérez" 
+                    value={receiverName} 
+                    onChange={e => setReceiverName(e.target.value)}
+                    className="h-12 bg-muted/10 border-none shadow-sm font-bold"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">RUT Receptor</Label>
+                  <Input 
+                    placeholder="12.345.678-9" 
+                    value={receiverRut} 
+                    onChange={e => setReceiverRut(e.target.value)}
+                    className="h-12 bg-muted/10 border-none shadow-sm font-bold"
+                  />
+                </div>
               </div>
               <div className="space-y-2">
-                <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">RUT Receptor</Label>
-                <Input 
-                  placeholder="12.345.678-9" 
-                  value={receiverRut} 
-                  onChange={e => setReceiverRut(e.target.value)}
-                  className="h-12 bg-muted/10 border-none shadow-sm font-bold"
-                />
+                <Label className="text-[10px] font-black uppercase tracking-widest text-muted-foreground">Email (Para envío de comprobante PDF)</Label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input 
+                    type="email"
+                    placeholder="correo@ejemplo.com" 
+                    value={receiverEmail} 
+                    onChange={e => setReceiverEmail(e.target.value)}
+                    className="h-12 bg-muted/10 border-none shadow-sm font-bold pl-10"
+                  />
+                </div>
               </div>
             </div>
 

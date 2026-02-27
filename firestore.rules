@@ -10,12 +10,14 @@ service cloud.firestore {
     }
     
     function getUserData() {
-      return get(/databases/$(database)/documents/personnel/$(request.auth.uid)).data;
+      let path = /databases/$(database)/documents/personnel/$(request.auth.uid);
+      return exists(path) ? get(path).data : null;
     }
     
     function isAdmin() {
+      let userData = getUserData();
       return isLoggedIn() && (
-        getUserData().rol_t in ['admin', 'Administrador'] || 
+        (userData != null && userData.get('rol_t', '') in ['admin', 'Administrador']) || 
         request.auth.token.email == 'admin@icsa.com'
       );
     }
@@ -61,7 +63,7 @@ service cloud.firestore {
 
     match /clients/{clientId} {
       allow read: if isLoggedIn();
-      allow write: if isAdmin() || (isLoggedIn() && getUserData().rol_t in ['supervisor', 'Supervisor', 'admin', 'Administrador']);
+      allow write: if isAdmin() || (isLoggedIn() && getUserData().get('rol_t', '') in ['supervisor', 'Supervisor', 'admin', 'Administrador']);
     }
     
     // Fallback de seguridad
