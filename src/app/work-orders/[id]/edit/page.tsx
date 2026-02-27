@@ -52,7 +52,7 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
     if (isAdmin) {
       return query(colRef, where("status", "==", "Active"));
     }
-    return query(colRef, where("status", "==", "Active"), where("createdBy", "==", user.uid));
+    return query(colRef, where("status", "==", "Active"), where("teamIds", "array-contains", user.uid));
   }, [db, user?.uid, isAdmin, isProfileLoading]);
   const { data: allProjects } = useCollection(projectsQuery);
 
@@ -135,14 +135,14 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
   }, [order, isInitialized, id, router, toast]);
 
   const handleSelectClient = (client: any) => {
-    setFormData({ 
-      ...formData, 
+    setFormData(prev => ({ 
+      ...prev, 
       clientName: client.nombreCliente, 
       clientPhone: client.telefonoCliente || "", 
       clientEmail: client.emailClientes || "", 
       clientId: client.id, 
       address: client.direccionCliente || "" 
-    });
+    }));
     setOpenClientSearch(false);
   };
 
@@ -277,7 +277,6 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
 
       <main className="container mx-auto px-4 mt-6 max-w-3xl space-y-6">
         <form className="space-y-6">
-          {/* PROYECTO DE REFERENCIA */}
           <Card className="shadow-xl border-none rounded-3xl overflow-hidden">
             <CardHeader className="bg-primary/5 p-6 border-b">
               <CardTitle className="text-primary text-xs flex items-center gap-2 uppercase font-black tracking-widest">
@@ -289,7 +288,7 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
                 <Label className="font-black uppercase text-[10px] text-muted-foreground ml-1">Vincular a un proyecto activo</Label>
                 <Select 
                   value={formData.projectId || "none"} 
-                  onValueChange={v => setFormData({...formData, projectId: v === "none" ? "" : v})}
+                  onValueChange={v => setFormData(prev => ({...prev, projectId: v === "none" ? "" : v}))}
                 >
                   <SelectTrigger className="h-14 rounded-2xl border-none bg-muted/30 font-bold">
                     <SelectValue placeholder="Sin proyecto específico" />
@@ -305,7 +304,6 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
             </CardContent>
           </Card>
 
-          {/* DATOS DEL CLIENTE */}
           <Card className="shadow-xl border-none bg-white rounded-3xl overflow-hidden">
             <CardHeader className="bg-primary/5 p-6 border-b">
               <CardTitle className="text-primary text-xl flex items-center gap-3 uppercase font-black tracking-tighter">
@@ -320,7 +318,7 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
                     <div className="relative flex-1 group">
                       <Input 
                         value={formData.clientName}
-                        onChange={e => setFormData({...formData, clientName: e.target.value, clientId: ""})}
+                        onChange={e => setFormData(prev => ({...prev, clientName: e.target.value, clientId: ""}))}
                         className="h-14 text-lg font-black bg-muted/30 border-none rounded-2xl px-6 focus-visible:ring-primary shadow-inner"
                       />
                       {formData.clientId && (
@@ -361,14 +359,14 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
                     <Label className="font-black uppercase text-[10px] text-muted-foreground ml-1">Teléfono de Contacto</Label>
                     <div className="relative">
                       <Phone className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-primary" />
-                      <Input value={formData.clientPhone} onChange={e => setFormData({...formData, clientPhone: e.target.value})} className="h-14 pl-12 bg-muted/30 border-none rounded-2xl font-bold focus-visible:ring-primary shadow-inner" />
+                      <Input value={formData.clientPhone} onChange={e => setFormData(prev => ({...prev, clientPhone: e.target.value}))} className="h-14 pl-12 bg-muted/30 border-none rounded-2xl font-bold focus-visible:ring-primary shadow-inner" />
                     </div>
                   </div>
                   <div className="space-y-2">
                     <Label className="font-black uppercase text-[10px] text-muted-foreground ml-1">Correo Electrónico</Label>
                     <div className="relative">
                       <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-primary" />
-                      <Input value={formData.clientEmail} onChange={e => setFormData({...formData, clientEmail: e.target.value})} className="h-14 pl-12 bg-muted/30 border-none rounded-2xl font-bold focus-visible:ring-primary shadow-inner" />
+                      <Input value={formData.clientEmail} onChange={e => setFormData(prev => ({...prev, clientEmail: e.target.value}))} className="h-14 pl-12 bg-muted/30 border-none rounded-2xl font-bold focus-visible:ring-primary shadow-inner" />
                     </div>
                   </div>
                 </div>
@@ -379,7 +377,7 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
                     <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-primary" />
                     <Input 
                       value={formData.address}
-                      onChange={e => setFormData({...formData, address: e.target.value})}
+                      onChange={e => setFormData(prev => ({...prev, address: e.target.value}))}
                       className="h-14 pl-12 bg-muted/30 border-none rounded-2xl font-bold focus-visible:ring-primary shadow-inner"
                     />
                   </div>
@@ -388,7 +386,6 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
             </CardContent>
           </Card>
 
-          {/* EQUIPO DE TRABAJO */}
           <Card className="shadow-xl border-none bg-white rounded-3xl overflow-hidden">
             <CardHeader className="p-6 border-b bg-muted/5">
               <CardTitle className="text-lg flex items-center gap-3 uppercase font-black tracking-tighter">
@@ -437,7 +434,6 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
             </CardContent>
           </Card>
 
-          {/* ESPECIFICACIONES TÉCNICAS */}
           <Card className="shadow-xl border-none bg-white rounded-3xl overflow-hidden">
             <CardHeader className="p-6 border-b bg-primary/5">
               <CardTitle className="text-xl uppercase font-black text-primary tracking-tighter">Especificaciones Técnicas</CardTitle>
@@ -446,18 +442,18 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label className="font-black uppercase text-[10px] text-muted-foreground ml-1">Edificio / Torre</Label>
-                  <Input value={formData.building} onChange={e => setFormData({...formData, building: e.target.value})} className="h-14 bg-muted/30 border-none rounded-2xl font-bold px-6 shadow-inner" />
+                  <Input value={formData.building} onChange={e => setFormData(prev => ({...prev, building: e.target.value}))} className="h-14 bg-muted/30 border-none rounded-2xl font-bold px-6 shadow-inner" />
                 </div>
                 <div className="space-y-2">
                   <Label className="font-black uppercase text-[10px] text-muted-foreground ml-1">Piso / Nivel</Label>
-                  <Input value={formData.floor} onChange={e => setFormData({...formData, floor: e.target.value})} className="h-14 bg-muted/30 border-none rounded-2xl font-bold px-6 shadow-inner" />
+                  <Input value={formData.floor} onChange={e => setFormData(prev => ({...prev, floor: e.target.value}))} className="h-14 bg-muted/30 border-none rounded-2xl font-bold px-6 shadow-inner" />
                 </div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="md:col-span-2 space-y-2">
                   <Label className="font-black uppercase text-[10px] text-muted-foreground ml-1">Tipo de Canal / Señal</Label>
-                  <Select value={formData.signalType} onValueChange={v => setFormData({...formData, signalType: v})}>
+                  <Select value={formData.signalType} onValueChange={v => setFormData(prev => ({...prev, signalType: v}))}>
                     <SelectTrigger className="h-14 rounded-2xl border-none bg-muted/30 font-bold">
                       <SelectValue />
                     </SelectTrigger>
@@ -471,58 +467,62 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
                 </div>
                 <div className="space-y-2">
                   <Label className="font-black uppercase text-[10px] text-muted-foreground ml-1">Cantidad (Puntos)</Label>
-                  <Input type="number" value={formData.signalCount} onChange={e => setFormData({...formData, signalCount: parseInt(e.target.value) || 0})} className="h-14 bg-muted/30 border-none rounded-2xl font-bold px-6 shadow-inner" />
+                  <Input type="number" value={formData.signalCount} onChange={e => setFormData(prev => ({...prev, signalCount: parseInt(e.target.value) || 0}))} className="h-14 bg-muted/30 border-none rounded-2xl font-bold px-6 shadow-inner" />
                 </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="flex items-center justify-between p-5 bg-muted/20 rounded-2xl border-2 border-dashed border-primary/10">
                   <Label className="font-black text-[10px] uppercase tracking-widest">Requiere Certificación</Label>
-                  <Switch checked={formData.isCert} onCheckedChange={(v) => setFormData({...formData, isCert: v})} />
+                  <Switch checked={formData.isCert} onCheckedChange={(v) => setFormData(prev => ({...prev, isCert: v}))} />
                 </div>
                 <div className="flex items-center justify-between p-5 bg-muted/20 rounded-2xl border-2 border-dashed border-primary/10">
                   <Label className="font-black text-[10px] uppercase tracking-widest">Requiere Rotulación</Label>
-                  <Switch checked={formData.isLabeled} onCheckedChange={(v) => setFormData({...formData, isLabeled: v})} />
+                  <Switch checked={formData.isLabeled} onCheckedChange={(v) => setFormData(prev => ({...prev, isLabeled: v}))} />
                 </div>
               </div>
 
               <div className="space-y-2">
                 <Label className="font-black uppercase text-[10px] text-muted-foreground ml-1">Bitácora de Trabajos Realizados</Label>
-                <Textarea value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} className="min-h-[160px] rounded-3xl bg-muted/30 border-none p-6 font-medium text-base shadow-inner resize-none" placeholder="Describa detalladamente las acciones ejecutadas..." />
+                <Textarea value={formData.description} onChange={e => setFormData(prev => ({...prev, description: e.target.value}))} className="min-h-[160px] rounded-3xl bg-muted/30 border-none p-6 font-medium text-base shadow-inner resize-none" placeholder="Describa detalladamente las acciones ejecutadas..." />
               </div>
             </CardContent>
           </Card>
 
-          {/* FIRMAS */}
           <Card className="shadow-xl border-none bg-white rounded-3xl overflow-hidden">
             <CardHeader className="bg-muted/10 p-6 border-b">
               <CardTitle className="text-xs font-black uppercase text-primary tracking-widest">Protocolo de Cierre (Firmas)</CardTitle>
             </CardHeader>
             <CardContent className="p-6 space-y-8">
               <div className="grid grid-cols-1 gap-8">
-                <SignaturePad label="Validación Técnica (ICSA)" onSave={(url) => setFormData({...formData, techSignatureUrl: url})} />
-                <SignaturePad label="Recepción Conforme (Cliente)" onSave={(url) => setFormData({...formData, clientSignatureUrl: url})} />
+                <SignaturePad 
+                  label="Validación Técnica (ICSA)" 
+                  onSave={(url) => setFormData(prev => ({...prev, techSignatureUrl: url}))} 
+                />
+                <SignaturePad 
+                  label="Recepción Conforme (Cliente)" 
+                  onSave={(url) => setFormData(prev => ({...prev, clientSignatureUrl: url}))} 
+                />
               </div>
               <div className="grid grid-cols-1 gap-4 pt-6 border-t border-dashed">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label className="text-[10px] font-black uppercase text-muted-foreground ml-1">Nombre del Receptor</Label>
-                    <Input value={formData.clientReceiverName} onChange={e => setFormData({...formData, clientReceiverName: e.target.value})} className="h-12 bg-muted/30 border-none rounded-xl font-bold px-4 shadow-inner" />
+                    <Input value={formData.clientReceiverName} onChange={e => setFormData(prev => ({...prev, clientReceiverName: e.target.value}))} className="h-12 bg-muted/30 border-none rounded-xl font-bold px-4 shadow-inner" />
                   </div>
                   <div className="space-y-2">
                     <Label className="text-[10px] font-black uppercase text-muted-foreground ml-1">RUT del Receptor</Label>
-                    <Input value={formData.clientReceiverRut} onChange={e => setFormData({...formData, clientReceiverRut: e.target.value})} className="h-12 bg-muted/30 border-none rounded-xl font-bold px-4 shadow-inner" />
+                    <Input value={formData.clientReceiverRut} onChange={e => setFormData(prev => ({...prev, clientReceiverRut: e.target.value}))} className="h-12 bg-muted/30 border-none rounded-xl font-bold px-4 shadow-inner" />
                   </div>
                 </div>
                 <div className="space-y-2">
                   <Label className="text-[10px] font-black uppercase text-muted-foreground ml-1">Email del Receptor (Para envío de PDF)</Label>
-                  <Input type="email" placeholder="ejemplo@cliente.com" value={formData.clientReceiverEmail} onChange={e => setFormData({...formData, clientReceiverEmail: e.target.value})} className="h-12 bg-muted/30 border-none rounded-xl font-bold px-4 shadow-inner" />
+                  <Input type="email" placeholder="ejemplo@cliente.com" value={formData.clientReceiverEmail} onChange={e => setFormData(prev => ({...prev, clientReceiverEmail: e.target.value}))} className="h-12 bg-muted/30 border-none rounded-xl font-bold px-4 shadow-inner" />
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          {/* BOTONES DE ACCIÓN FLOTANTES */}
           <div className="fixed bottom-0 left-0 right-0 p-4 bg-white/95 backdrop-blur-xl border-t md:relative md:bg-transparent md:border-none md:p-0 z-50 shadow-[0_-10px_40px_rgba(0,0,0,0.1)] md:shadow-none">
             <div className="max-w-3xl mx-auto flex flex-col sm:flex-row gap-3">
               <Button 
