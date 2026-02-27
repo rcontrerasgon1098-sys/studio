@@ -1,15 +1,15 @@
 
 'use server';
 /**
- * @fileOverview Flow to send a remote signature request link to a client.
+ * @fileOverview Flow to send a remote signature request link.
+ * Uses Firebase Admin to update tokens securely.
  */
 
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
 import { sendEmailSMTP } from '../services/email';
-import { doc, updateDoc, getFirestore } from 'firebase/firestore';
-import { initializeApp, getApps } from 'firebase/app';
-import { firebaseConfig } from '@/firebase/config';
+import { initializeFirebaseAdmin } from '@/lib/firebase-admin';
+import { getFirestore } from 'firebase-admin/firestore';
 
 const SendSignatureRequestInputSchema = z.object({
   orderId: z.string(),
@@ -18,15 +18,8 @@ const SendSignatureRequestInputSchema = z.object({
   folio: z.number(),
   baseUrl: z.string(),
 });
-export type SendSignatureRequestInput = z.infer<typeof SendSignatureRequestInputSchema>;
 
-const SendSignatureRequestOutputSchema = z.object({
-  success: z.boolean(),
-  error: z.string().optional(),
-});
-export type SendSignatureRequestOutput = z.infer<typeof SendSignatureRequestOutputSchema>;
-
-export async function sendSignatureRequest(input: SendSignatureRequestInput): Promise<SendSignatureRequestOutput> {
+export async function sendSignatureRequest(input: z.infer<typeof SendSignatureRequestInputSchema>) {
   return sendSignatureRequestFlow(input);
 }
 
@@ -34,30 +27,26 @@ const sendSignatureRequestFlow = ai.defineFlow(
   {
     name: 'sendSignatureRequestFlow',
     inputSchema: SendSignatureRequestInputSchema,
-    outputSchema: SendSignatureRequestOutputSchema,
+    outputSchema: z.object({ success: z.boolean(), error: z.string().optional() }),
   },
   async (input) => {
     try {
-      // 1. Generate secure token
+      initializeFirebaseAdmin();
+      const db = getFirestore();
+
+      // 1. Generar token
       const token = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
       const expiry = new Date();
-      expiry.setDate(expiry.getDate() + 7); // 7 days expiry
+      expiry.setDate(expiry.getDate() + 7);
 
-      // 2. Initialize Firebase for server-side update
-      if (!getApps().length) {
-        initializeApp(firebaseConfig);
-      }
-      const db = getFirestore();
-      const orderRef = doc(db, 'ordenes', input.orderId);
-
-      // 3. Update Order with token and status
-      await updateDoc(orderRef, {
+      // 2. Actualizar Orden con Admin SDK
+      await db.collection('ordenes').doc(input.orderId).update({
         signatureToken: token,
         tokenExpiry: expiry.toISOString(),
         status: 'Pending Signature',
       });
 
-      // 4. Send Email
+      // 3. Enviar Email
       const signatureLink = `${input.baseUrl}/firmar/${input.orderId}?token=${token}`;
       
       const htmlContent = `
@@ -68,18 +57,10 @@ const sendSignatureRequestFlow = ai.defineFlow(
           <div style="padding: 20px; line-height: 1.6; color: #333;">
             <p>Estimado/a <strong>${input.clientName}</strong>,</p>
             <p>Se ha generado una solicitud de firma remota para la Orden de Trabajo <strong>#${input.folio}</strong>.</p>
-            
-            <p>Por favor, utilice el siguiente botón para revisar el resumen de los trabajos realizados y realizar su firma digital desde su dispositivo móvil o computador:</p>
-            
             <div style="text-align: center; margin: 30px 0;">
-              <a href="${signatureLink}" style="background-color: #22577A; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-weight: bold; font-size: 16px;">Revisar y Firmar OT</a>
+              <a href="${signatureLink}" style="background-color: #22577A; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-weight: bold;">Revisar y Firmar OT</a>
             </div>
-
-            <p style="font-size: 12px; color: #888;">Este enlace es único y expirará en 7 días.</p>
-            <p>Gracias por confiar en ICSA Ingeniería Comunicaciones S.A.</p>
-          </div>
-          <div style="background-color: #f1f1f1; padding: 10px; text-align: center; font-size: 12px; color: #888;">
-            Este es un mensaje automático, por favor no responda.
+            <p style="font-size: 12px; color: #888;">Este enlace expirará en 7 días.</p>
           </div>
         </div>
       `;
@@ -92,7 +73,7 @@ const sendSignatureRequestFlow = ai.defineFlow(
 
       return { success: true };
     } catch (error: any) {
-      console.error('Error in sendSignatureRequestFlow:', error);
+      console.error('Error sending signature request:', error);
       return { success: false, error: error.message };
     }
   }

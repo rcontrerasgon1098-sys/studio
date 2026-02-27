@@ -2,14 +2,13 @@
 'use server';
 /**
  * @fileOverview Flow to close a project and generate a final summary Work Order.
- * The summary is created in 'ordenes' so it can follow the signature process.
+ * Uses Firebase Admin SDK to bypass security rules on the server.
  */
 
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
-import { doc, getDoc, getDocs, collection, query, where, updateDoc, setDoc, getFirestore } from 'firebase/firestore';
-import { initializeApp, getApps } from 'firebase/app';
-import { firebaseConfig } from '@/firebase/config';
+import { initializeFirebaseAdmin } from '@/lib/firebase-admin';
+import { getFirestore } from 'firebase-admin/firestore';
 
 const CloseProjectInputSchema = z.object({
   projectId: z.string(),
@@ -28,65 +27,58 @@ const closeProjectFlow = ai.defineFlow(
   },
   async (input) => {
     try {
-      if (!getApps().length) initializeApp(firebaseConfig);
+      initializeFirebaseAdmin();
       const db = getFirestore();
 
       // 1. Get Project Data
-      const projectRef = doc(db, 'projects', input.projectId);
-      const projectSnap = await getDoc(projectRef);
-      if (!projectSnap.exists()) throw new Error('El proyecto no existe.');
-      const projectData = projectSnap.data();
+      const projectRef = db.collection('projects').doc(input.projectId);
+      const projectSnap = await projectRef.get();
+      if (!projectSnap.exists) throw new Error('El proyecto no existe.');
+      const projectData = projectSnap.data()!;
 
       // 2. Collect all OTs related to this project (from both collections)
-      const activeOtsQuery = query(collection(db, 'ordenes'), where('projectId', '==', input.projectId));
-      const historyOtsQuery = query(collection(db, 'historial'), where('projectId', '==', input.projectId));
+      const activeOtsSnap = await db.collection('ordenes').where('projectId', '==', input.projectId).get();
+      const historyOtsSnap = await db.collection('historial').where('projectId', '==', input.projectId).get();
       
-      const [activeSnap, historySnap] = await Promise.all([
-        getDocs(activeOtsQuery),
-        getDocs(historyOtsQuery)
-      ]);
-
-      const allOts = [...activeSnap.docs, ...historySnap.docs].map(d => d.data());
+      const allOts = [...activeOtsSnap.docs, ...historyOtsSnap.docs].map(d => d.data());
       
-      // 3. Generate Summary Text (Consolidating all OT descriptions)
+      // 3. Generate Summary Text
       const summaryText = `ACTA DE CIERRE FINAL - PROYECTO: ${projectData.name.toUpperCase()}
 --------------------------------------------------
 Resumen consolidado de trabajos realizados:
-${allOts.map((ot, i) => `- Folio #${ot.folio}: ${ot.description || 'Sin descripción'}`).join('\n')}
+${allOts.map((ot) => `- Folio #${ot.folio}: ${ot.description || 'Sin descripción'}`).join('\n')}
 
 Este documento certifica la entrega total y recepción conforme de todas las etapas del proyecto mencionado.`;
 
       // 4. Update Project Status
-      await updateDoc(projectRef, {
+      await projectRef.update({
         status: 'Completed',
         endDate: new Date().toISOString(),
         summary: summaryText
       });
 
-      // 5. Create special summary Work Order in 'ordenes' (NOT history yet)
-      // This allows the client to sign the final consolidated report.
+      // 5. Create special summary Work Order in 'ordenes'
       const summaryOtId = `ACTA-${input.projectId}`;
       const summaryOtData = {
         id: summaryOtId,
         folio: Math.floor(100000 + Math.random() * 900000),
         projectId: input.projectId,
         isProjectSummary: true,
-        clientName: projectData.clientName,
+        clientName: projectData.clientName || "Sin Cliente",
         clientId: projectData.clientId || "",
         createdBy: input.closedByUid,
-        status: 'Pendiente', // Set to Pending so it can be edited/signed
+        status: 'Pendiente',
         description: summaryText,
-        startDate: projectData.startDate,
+        startDate: projectData.startDate || new Date().toISOString(),
         address: allOts[0]?.address || 'Dirección de Proyecto',
         building: allOts[0]?.building || '',
         floor: allOts[0]?.floor || '',
         updatedAt: new Date().toISOString(),
-        team: projectData.teamNames || [projectData.creatorEmail],
+        team: projectData.teamNames || [projectData.creatorEmail || "Admin"],
         teamIds: projectData.teamIds || [input.closedByUid]
       };
 
-      // We use setDoc to ensure we have a predictable ID (ACTA-projectId)
-      await setDoc(doc(db, 'ordenes', summaryOtId), summaryOtData);
+      await db.collection('ordenes').doc(summaryOtId).set(summaryOtData);
 
       return { success: true, orderId: summaryOtId };
     } catch (error: any) {
