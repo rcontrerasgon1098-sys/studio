@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { 
   Plus, Search, LogOut, LayoutDashboard, 
   Eye, Download, Users, UserRound, 
-  Trash2, History, Briefcase, FolderOpen, ClipboardList, BookOpen, Pencil, Menu, ChevronRight, FileText, Info, Clock
+  Trash2, History, Briefcase, FolderOpen, ClipboardList, BookOpen, Pencil, Menu, ChevronRight, FileText, Info, Clock, CheckCircle
 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
@@ -59,6 +59,7 @@ export default function Dashboard() {
 
   const isAdmin = userProfile?.rol_t === 'admin' || userProfile?.rol_t === 'Administrador';
 
+  // Proyectos
   const projectsQuery = useMemoFirebase(() => {
     if (!db || !user?.uid || isProfileLoading) return null;
     const colRef = collection(db, "projects");
@@ -69,6 +70,7 @@ export default function Dashboard() {
   }, [db, user?.uid, isProfileLoading, isAdmin]);
   const { data: projects, isLoading: isProjectsLoading } = useCollection(projectsQuery);
 
+  // Órdenes Activas
   const ordersQuery = useMemoFirebase(() => {
     if (!db || !user?.uid || isProfileLoading) return null;
     const colRef = collection(db, "ordenes");
@@ -79,6 +81,17 @@ export default function Dashboard() {
   }, [db, user?.uid, isProfileLoading, isAdmin]);
   const { data: orders, isLoading: isOrdersLoading } = useCollection(ordersQuery);
 
+  // Historial de Órdenes
+  const historyQuery = useMemoFirebase(() => {
+    if (!db || !user?.uid || isProfileLoading) return null;
+    const colRef = collection(db, "historial");
+    if (isAdmin) {
+      return query(colRef, orderBy("startDate", "desc"));
+    }
+    return query(colRef, where("createdBy", "==", user.uid), orderBy("startDate", "desc"));
+  }, [db, user?.uid, isProfileLoading, isAdmin]);
+  const { data: historyOrders, isLoading: isHistoryLoading } = useCollection(historyQuery);
+
   const activeProjects = useMemo(() => (projects || []).filter(p => p.status === 'Active' || p.status === 'Pendiente'), [projects]);
   const completedProjects = useMemo(() => (projects || []).filter(p => p.status === 'Completed' || p.status === 'Completado'), [projects]);
 
@@ -88,9 +101,9 @@ export default function Dashboard() {
   }, [activeProjects, completedProjects, activeTab, searchTerm]);
 
   const filteredOrders = useMemo(() => {
-    if (!orders) return [];
-    return orders.filter(o => o.clientName?.toLowerCase().includes(searchTerm.toLowerCase()) || o.folio?.toString().includes(searchTerm));
-  }, [orders, searchTerm]);
+    const list = activeTab === "order-history" ? (historyOrders || []) : (orders || []);
+    return list.filter(o => o.clientName?.toLowerCase().includes(searchTerm.toLowerCase()) || o.folio?.toString().includes(searchTerm));
+  }, [orders, historyOrders, activeTab, searchTerm]);
 
   const handleLogout = async () => {
     if (!auth) return;
@@ -122,7 +135,8 @@ export default function Dashboard() {
           { id: "dashboard", icon: LayoutDashboard, label: "Panel Resumen" },
           { id: "projects", icon: Briefcase, label: "Proyectos Activos" },
           { id: "project-history", icon: BookOpen, label: "Historial Proyectos" },
-          { id: "orders", icon: ClipboardList, label: "Órdenes de Trabajo" }
+          { id: "orders", icon: ClipboardList, label: "Órdenes Activas" },
+          { id: "order-history", icon: History, label: "Historial Órdenes" }
         ].map((item) => (
           <Button 
             key={item.id}
@@ -163,6 +177,17 @@ export default function Dashboard() {
 
   if (isUserLoading || !mounted || isProfileLoading) return <div className="min-h-screen flex items-center justify-center font-black animate-pulse bg-background text-primary">CARGANDO SISTEMA ICSA...</div>;
 
+  const getPageTitle = () => {
+    switch(activeTab) {
+      case "dashboard": return "Resumen General";
+      case "projects": return "Proyectos Activos";
+      case "project-history": return "Historial de Proyectos";
+      case "orders": return "Órdenes Activas";
+      case "order-history": return "Historial de Órdenes";
+      default: return "Panel";
+    }
+  };
+
   return (
     <div className="min-h-screen bg-muted/20 flex flex-col md:flex-row">
       <aside className="w-64 bg-primary text-white hidden md:flex flex-col shadow-xl sticky top-0 h-screen">
@@ -195,7 +220,7 @@ export default function Dashboard() {
       <main className="flex-1 p-4 md:p-8">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
           <h1 className="text-2xl font-black text-primary uppercase tracking-tighter">
-            {activeTab === "dashboard" ? "Resumen General" : activeTab === "projects" ? "Proyectos Activos" : activeTab === "project-history" ? "Historial de Proyectos" : "Órdenes de Trabajo"}
+            {getPageTitle()}
           </h1>
           <div className="flex gap-2">
             <Link href="/projects/new">
@@ -251,7 +276,7 @@ export default function Dashboard() {
           </Card>
         )}
 
-        {activeTab === "orders" && (
+        {(activeTab === "orders" || activeTab === "order-history") && (
           <Card className="shadow-sm border-none bg-white rounded-2xl overflow-hidden">
             <CardHeader className="border-b bg-white">
               <div className="relative max-w-md">
@@ -260,7 +285,13 @@ export default function Dashboard() {
               </div>
             </CardHeader>
             <CardContent className="p-0">
-              <OrderTable orders={filteredOrders} isLoading={isOrdersLoading} type="ordenes" setDeleteConfirm={setDeleteConfirm} isAdmin={isAdmin} />
+              <OrderTable 
+                orders={filteredOrders} 
+                isLoading={activeTab === "orders" ? isOrdersLoading : isHistoryLoading} 
+                type={activeTab === "orders" ? "ordenes" : "historial"} 
+                setDeleteConfirm={setDeleteConfirm} 
+                isAdmin={isAdmin} 
+              />
             </CardContent>
           </Card>
         )}
@@ -337,7 +368,7 @@ function OrderTable({ orders, isLoading, type, setDeleteConfirm, isAdmin }: { or
         </TableHeader>
         <TableBody>
           {orders.map((order) => {
-            const isCompleted = order.status === 'Completed' || order.status === 'Completado';
+            const isCompleted = order.status === 'Completed' || order.status === 'Completado' || type === 'historial';
             return (
               <TableRow key={order.id} className="hover:bg-muted/10">
                 <TableCell className="py-4 pl-6">
