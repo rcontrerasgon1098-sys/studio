@@ -1,4 +1,3 @@
-
 "use client";
 
 import { use, useState, useEffect } from "react";
@@ -286,7 +285,7 @@ export default function EditWorkOrder({ params }: { params: Promise<{ id: string
             </CardHeader>
             <CardContent className="p-6">
               <div className="space-y-2">
-                <Label className="font-black uppercase text-[10px] text-muted-foreground ml-1">Vincular a una obra activa</Label>
+                <Label className="font-black uppercase text-[10px] text-muted-foreground ml-1">Vincular a un proyecto activo</Label>
                 <Select 
                   value={formData.projectId || "none"} 
                   onValueChange={v => setFormData({...formData, projectId: v === "none" ? "" : v})}

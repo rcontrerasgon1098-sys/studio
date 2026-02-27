@@ -52,13 +52,13 @@ export default function ProjectDetail({ params }: { params: Promise<{ id: string
     }
   };
 
-  if (isProjectLoading || isProfileLoading) return <div className="min-h-screen flex items-center justify-center bg-background text-primary animate-pulse font-black uppercase tracking-tighter">Cargando Obra...</div>;
+  if (isProjectLoading || isProfileLoading) return <div className="min-h-screen flex items-center justify-center bg-background text-primary animate-pulse font-black uppercase tracking-tighter">Cargando Proyecto...</div>;
   
   if (projectError || !project) return (
     <div className="min-h-screen flex flex-col items-center justify-center p-10 text-center font-bold text-muted-foreground bg-background gap-6">
       <AlertTriangle className="h-20 w-20 text-destructive/20" />
       <div className="space-y-2">
-        <h1 className="text-xl font-black text-primary uppercase">Acceso Denegado u Obra no encontrada</h1>
+        <h1 className="text-xl font-black text-primary uppercase">Acceso Denegado o Proyecto no encontrado</h1>
         <p className="text-sm font-medium">No tienes permisos para visualizar este proyecto o el identificador no es válido.</p>
       </div>
       <Link href="/dashboard">
@@ -79,13 +79,13 @@ export default function ProjectDetail({ params }: { params: Promise<{ id: string
             </Link>
             <div className="flex flex-col">
               <h1 className="text-sm md:text-xl font-black text-primary uppercase tracking-tighter leading-none">{project.name}</h1>
-              <p className="text-[8px] font-bold text-muted-foreground uppercase tracking-widest mt-1 hidden sm:block">Control de Obra ICSA</p>
+              <p className="text-[8px] font-bold text-muted-foreground uppercase tracking-widest mt-1 hidden sm:block">Control de Proyecto ICSA</p>
             </div>
           </div>
           {!isCompleted && (
             <Button onClick={handleCloseProject} disabled={closing} className="bg-primary hover:bg-primary/90 text-white font-black h-10 px-4 rounded-xl shadow-lg uppercase text-[10px] tracking-widest">
               {closing ? <Loader2 className="animate-spin h-4 w-4" /> : <CheckCircle2 className="h-4 w-4 mr-2" />}
-              <span className="hidden sm:inline">Finalizar Obra</span>
+              <span className="hidden sm:inline">Finalizar Proyecto</span>
               <span className="sm:hidden">Cerrar</span>
             </Button>
           )}
@@ -97,7 +97,7 @@ export default function ProjectDetail({ params }: { params: Promise<{ id: string
           <Card className="lg:col-span-1 shadow-xl border-none rounded-3xl overflow-hidden h-fit">
             <CardHeader className="bg-primary/5 border-b p-6">
               <CardTitle className="text-[10px] font-black uppercase tracking-widest text-primary flex items-center gap-2">
-                <Briefcase className="h-4 w-4" /> Ficha de la Obra
+                <Briefcase className="h-4 w-4" /> Ficha del Proyecto
               </CardTitle>
             </CardHeader>
             <CardContent className="p-6 space-y-6">
@@ -163,7 +163,7 @@ export default function ProjectDetail({ params }: { params: Promise<{ id: string
             <Card className="shadow-xl border-none rounded-3xl overflow-hidden">
               <CardHeader className="bg-muted/10 border-b p-6">
                 <CardTitle className="text-xs font-black uppercase flex items-center gap-2 text-primary tracking-widest">
-                  <HistoryIcon className="h-5 w-5" /> Histórico de Obra
+                  <HistoryIcon className="h-5 w-5" /> Histórico del Proyecto
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-0 overflow-x-auto">

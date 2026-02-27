@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect } from "react";
@@ -64,7 +63,7 @@ export default function NewProject() {
 
     try {
       await setDoc(doc(db, "projects", projectId), projectData);
-      toast({ title: "Proyecto Creado", description: "La obra ha sido iniciada con éxito." });
+      toast({ title: "Proyecto Creado", description: "El proyecto ha sido iniciado con éxito." });
       router.push("/dashboard");
     } catch (error) {
       setLoading(false);
@@ -88,7 +87,7 @@ export default function NewProject() {
                 <ArrowLeft className="h-5 w-5" />
               </Button>
             </Link>
-            <h1 className="text-xl font-black uppercase tracking-tighter text-primary">Iniciar Obra</h1>
+            <h1 className="text-xl font-black uppercase tracking-tighter text-primary">Iniciar Proyecto</h1>
           </div>
           <Button 
             onClick={handleSubmit} 
@@ -110,7 +109,7 @@ export default function NewProject() {
           <CardContent className="p-8 space-y-10">
             <div className="space-y-4">
               <Label htmlFor="projectName" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">
-                Nombre o Identificador de la Obra
+                Nombre o Identificador del Proyecto
               </Label>
               <div className="relative group">
                 <Briefcase className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground group-focus-within:text-primary transition-colors" />

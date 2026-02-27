@@ -135,21 +135,21 @@ export default function Dashboard() {
       <nav className="flex-1 space-y-1 px-4">
         {[
           { id: "dashboard", icon: LayoutDashboard, label: "Panel Resumen" },
-          { id: "projects", icon: Briefcase, label: "Obras Activas" },
-          { id: "project-history", icon: BookOpen, label: "Historial Obras" },
+          { id: "projects", icon: Briefcase, label: "Proyectos Activos" },
+          { id: "project-history", icon: BookOpen, label: "Historial Proyectos" },
           { id: "orders", icon: ClipboardList, label: "Órdenes de Trabajo" },
-          { id: "history", icon: History, label: "Archivo Digital" }
+          { id: "history", icon: ArchivoDigital, label: "Archivo Digital" }
         ].map((item) => (
           <Button 
             key={item.id}
             variant="ghost" 
             className={cn(
-              "w-full justify-start gap-3 h-12 rounded-xl font-bold text-sm transition-all",
-              activeTab === item.id ? "bg-white text-primary" : "text-white/70 hover:bg-white/10 hover:text-white"
+              "w-full justify-start gap-3 h-12 rounded-xl font-bold text-sm transition-all text-left",
+              activeTab === item.id ? "bg-white text-primary shadow-md" : "text-white/70 hover:bg-white/10 hover:text-white"
             )} 
             onClick={() => { setActiveTab(item.id); setSearchTerm(""); setIsMobileMenuOpen(false); }}
           >
-            <item.icon size={20} /> {item.label}
+            <item.icon size={20} className="shrink-0" /> <span className="truncate">{item.label}</span>
           </Button>
         ))}
 
@@ -176,6 +176,8 @@ export default function Dashboard() {
       </div>
     </div>
   );
+
+  const ArchivoDigital = History; // Alias para el icono
 
   if (isUserLoading || !mounted || isProfileLoading) return <div className="min-h-screen flex items-center justify-center font-black animate-pulse bg-background text-primary">CARGANDO SISTEMA ICSA...</div>;
 
@@ -211,12 +213,12 @@ export default function Dashboard() {
       <main className="flex-1 p-4 md:p-8">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
           <h1 className="text-2xl font-black text-primary uppercase tracking-tighter">
-            {activeTab === "dashboard" ? "Resumen General" : activeTab === "projects" ? "Obras Activas" : activeTab === "project-history" ? "Historial de Obras" : activeTab === "orders" ? "Órdenes Pendientes" : "Archivo Digital"}
+            {activeTab === "dashboard" ? "Resumen General" : activeTab === "projects" ? "Proyectos Activos" : activeTab === "project-history" ? "Historial de Proyectos" : activeTab === "orders" ? "Órdenes Pendientes" : "Archivo Digital"}
           </h1>
           <div className="flex gap-2">
             <Link href="/projects/new">
               <Button className="bg-primary hover:bg-primary/90 font-bold rounded-xl h-10 shadow-md">
-                <Plus size={18} className="mr-1" /> Nueva Obra
+                <Plus size={18} className="mr-1" /> Nuevo Proyecto
               </Button>
             </Link>
             <Link href="/work-orders/new">
@@ -232,7 +234,7 @@ export default function Dashboard() {
             <Card className="shadow-sm border-none bg-white rounded-2xl overflow-hidden">
               <CardHeader className="bg-primary/5 p-4 border-b">
                 <CardTitle className="text-xs font-black uppercase text-primary tracking-widest flex items-center gap-2">
-                  <FolderOpen size={16} /> Obras en Ejecución
+                  <FolderOpen size={16} /> Proyectos en Ejecución
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-0">
@@ -258,7 +260,7 @@ export default function Dashboard() {
             <CardHeader className="border-b bg-white">
               <div className="relative max-w-md">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input placeholder="Buscar obra o cliente..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-10 h-10 bg-muted/30 border-none rounded-xl font-bold" />
+                <Input placeholder="Buscar proyecto o cliente..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-10 h-10 bg-muted/30 border-none rounded-xl font-bold" />
               </div>
             </CardHeader>
             <CardContent className="p-0">
@@ -313,15 +315,15 @@ export default function Dashboard() {
 }
 
 function ProjectTable({ projects, isLoading }: { projects: any[], isLoading: boolean }) {
-  if (isLoading) return <div className="p-12 text-center text-primary font-bold animate-pulse">Cargando Obras...</div>;
-  if (projects.length === 0) return <div className="p-12 text-center text-muted-foreground italic">Sin obras registradas</div>;
+  if (isLoading) return <div className="p-12 text-center text-primary font-bold animate-pulse">Cargando Proyectos...</div>;
+  if (projects.length === 0) return <div className="p-12 text-center text-muted-foreground italic">Sin proyectos registrados</div>;
 
   return (
     <div className="overflow-x-auto">
       <Table>
         <TableHeader>
           <TableRow className="bg-muted/30 hover:bg-muted/30">
-            <TableHead className="font-black text-[10px] uppercase py-4 pl-6">Nombre de Obra</TableHead>
+            <TableHead className="font-black text-[10px] uppercase py-4 pl-6">Nombre de Proyecto</TableHead>
             <TableHead className="font-black text-[10px] uppercase">Cliente</TableHead>
             <TableHead className="font-black text-[10px] uppercase">Estado</TableHead>
             <TableHead className="text-right font-black text-[10px] uppercase pr-6">Acción</TableHead>

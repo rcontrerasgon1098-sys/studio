@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect } from "react";
@@ -199,12 +198,12 @@ export default function NewWorkOrder() {
           <Card className="shadow-xl border-none rounded-3xl overflow-hidden">
             <CardHeader className="bg-primary/5 p-6 border-b">
               <CardTitle className="text-primary text-xs flex items-center gap-2 uppercase font-black tracking-widest">
-                <Briefcase className="h-5 w-5" /> Proyecto / Obra
+                <Briefcase className="h-5 w-5" /> Proyecto de Referencia
               </CardTitle>
             </CardHeader>
             <CardContent className="p-6">
               <div className="space-y-2">
-                <Label className="font-black uppercase text-[10px] text-muted-foreground ml-1">Vincular a una obra activa</Label>
+                <Label className="font-black uppercase text-[10px] text-muted-foreground ml-1">Vincular a un proyecto activo</Label>
                 <Select 
                   value={formData.projectId || "none"} 
                   onValueChange={v => setFormData({...formData, projectId: v === "none" ? "" : v})}
