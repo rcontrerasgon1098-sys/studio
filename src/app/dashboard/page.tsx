@@ -155,12 +155,12 @@ export default function Dashboard() {
 
         {isAdmin && (
           <div className="pt-4 mt-4 border-t border-white/10 space-y-1">
-            <Link href="/clients/new" className="block">
+            <Link href="/clients" className="block">
               <Button variant="ghost" className="w-full justify-start gap-3 h-12 text-white/70 hover:bg-white/10 hover:text-white rounded-xl font-bold">
                 <Users size={20} /> Gestión Clientes
               </Button>
             </Link>
-            <Link href="/technicians/new" className="block">
+            <Link href="/technicians" className="block">
               <Button variant="ghost" className="w-full justify-start gap-3 h-12 text-white/70 hover:bg-white/10 hover:text-white rounded-xl font-bold">
                 <UserRound size={20} /> Control Personal
               </Button>
