@@ -14,6 +14,7 @@ import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
 import { collection, query, orderBy, doc } from "firebase/firestore";
 import { deleteDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 import { useToast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
 import {
   AlertDialog,
   AlertDialogAction,
