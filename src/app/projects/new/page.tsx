@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from "react";
@@ -7,21 +8,24 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Briefcase, Search, Building2, CheckCircle2, LayoutList, Plus, User } from "lucide-react";
+import { ArrowLeft, Briefcase, Search, Building2, CheckCircle2, LayoutList, Plus, User, Users, X, PlusCircle } from "lucide-react";
 import Link from "next/link";
-import { useUser, useFirestore, useCollection, useMemoFirebase } from "@/firebase";
+import { useUser, useFirestore, useCollection, useMemoFirebase, useUserProfile } from "@/firebase";
 import { collection, doc, setDoc, query, orderBy } from "firebase/firestore";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandList, CommandItem } from "@/components/ui/command";
+import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
 export default function NewProject() {
   const router = useRouter();
   const { toast } = useToast();
   const { user, isUserLoading } = useUser();
+  const { userProfile, isProfileLoading } = useUserProfile();
   const db = useFirestore();
   const [loading, setLoading] = useState(false);
   const [openClientSearch, setOpenClientSearch] = useState(false);
+  const [openTeamSearch, setOpenTeamSearch] = useState(false);
 
   const clientsQuery = useMemoFirebase(() => {
     if (!db) return null;
@@ -29,15 +33,52 @@ export default function NewProject() {
   }, [db]);
   const { data: clients } = useCollection(clientsQuery);
 
+  const personnelQuery = useMemoFirebase(() => {
+    if (!db) return null;
+    return query(collection(db, "personnel"), orderBy("nombre_t", "asc"));
+  }, [db]);
+  const { data: allPersonnel } = useCollection(personnelQuery);
+
   const [formData, setFormData] = useState({
     name: "",
     clientId: "",
     clientName: "",
+    teamNames: [] as string[],
+    teamIds: [] as string[]
   });
+
+  useEffect(() => {
+    if (userProfile?.nombre_t && user && formData.teamIds.length === 0) {
+      setFormData(prev => ({
+        ...prev,
+        teamNames: [userProfile.nombre_t!],
+        teamIds: [user.uid]
+      }));
+    }
+  }, [userProfile, user, formData.teamIds.length]);
 
   const handleSelectClient = (client: any) => {
     setFormData({ ...formData, clientId: client.id, clientName: client.nombreCliente });
     setOpenClientSearch(false);
+  };
+
+  const handleTeamSelect = (person: any) => {
+    if (!formData.teamIds.includes(person.id)) {
+      setFormData(prev => ({
+        ...prev,
+        teamNames: [...prev.teamNames, person.nombre_t],
+        teamIds: [...prev.teamIds, person.id]
+      }));
+    }
+    setOpenTeamSearch(false);
+  };
+
+  const handleTeamRemove = (memberId: string) => {
+    setFormData(prev => ({
+      ...prev,
+      teamNames: prev.teamNames.filter((_, i) => prev.teamIds[i] !== memberId),
+      teamIds: prev.teamIds.filter(id => id !== memberId)
+    }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -58,7 +99,7 @@ export default function NewProject() {
       createdBy: user.uid,
       creatorEmail: user.email || "",
       startDate: new Date().toISOString(),
-      teamIds: [user.uid]
+      updatedAt: new Date().toISOString(),
     };
 
     try {
@@ -71,7 +112,7 @@ export default function NewProject() {
     }
   };
 
-  if (isUserLoading) return (
+  if (isUserLoading || isProfileLoading) return (
     <div className="min-h-screen flex items-center justify-center bg-background">
       <Briefcase className="h-10 w-10 text-primary animate-bounce" />
     </div>
@@ -180,6 +221,52 @@ export default function NewProject() {
                   </PopoverContent>
                 </Popover>
               </div>
+            </div>
+
+            <div className="space-y-4 pt-4 border-t">
+              <Label className="text-[10px] font-black uppercase tracking-widest text-primary flex items-center gap-2">
+                <Users className="h-4 w-4" /> Colaboradores del Proyecto
+              </Label>
+              <div className="flex flex-wrap gap-2 mb-4">
+                {formData.teamNames.map((name, index) => (
+                  <Badge key={index} className="text-[10px] py-1.5 px-4 rounded-xl bg-primary/10 text-primary gap-3 font-black border-none">
+                    {name}
+                    {formData.teamIds[index] !== user?.uid && (
+                      <button type="button" onClick={() => handleTeamRemove(formData.teamIds[index])} className="rounded-full bg-primary/20 hover:bg-primary/40 p-0.5">
+                        <X className="h-3 w-3" />
+                      </button>
+                    )}
+                  </Badge>
+                ))}
+              </div>
+              
+              <Popover open={openTeamSearch} onOpenChange={setOpenTeamSearch}>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className="w-full h-14 text-xs font-black border-dashed border-2 rounded-2xl uppercase tracking-widest border-primary/20 text-primary hover:bg-primary/5 transition-all">
+                    <PlusCircle className="h-4 w-4 mr-2" /> Añadir Supervisores o Grupos
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[320px] md:w-[400px] p-0 shadow-2xl rounded-2xl border-none overflow-hidden" align="center">
+                  <Command>
+                    <CommandInput placeholder="Buscar por nombre..." className="h-14 border-none focus:ring-0 font-bold"/>
+                    <CommandList className="max-h-[300px]">
+                      <CommandEmpty className="p-6 text-center text-sm font-bold opacity-40">Sin resultados.</CommandEmpty>
+                      <CommandGroup heading="Personal Autorizado" className="p-2">
+                        {(allPersonnel || []).map(person => (
+                          <CommandItem key={person.id} onSelect={() => handleTeamSelect(person)} className="p-4 cursor-pointer rounded-xl aria-selected:bg-primary aria-selected:text-white transition-all">
+                            <User className="mr-3 h-5 w-5" />
+                            <div className="flex flex-col">
+                              <span className="font-black uppercase text-[10px]">{person.nombre_t}</span>
+                              <span className="text-[8px] font-bold opacity-60">{person.rol_t}</span>
+                            </div>
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
+              <p className="text-[9px] text-muted-foreground italic text-center">Añadir a otros supervisores les permitirá ver este proyecto y crear OTs vinculadas.</p>
             </div>
           </CardContent>
         </Card>

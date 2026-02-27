@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, Loader2, Briefcase, Calendar, User, FileCheck, Plus, CheckCircle2, History as HistoryIcon, Clock, Eye, Pencil, AlertTriangle } from "lucide-react";
+import { ArrowLeft, Loader2, Briefcase, Calendar, User, FileCheck, Plus, CheckCircle2, History as HistoryIcon, Clock, Eye, Pencil, AlertTriangle, Users } from "lucide-react";
 import Link from "next/link";
 import { useFirebase, useDoc, useCollection, useMemoFirebase, useUserProfile } from "@/firebase";
 import { doc, collection, query, where, getDocs, writeBatch, updateDoc } from "firebase/firestore";
@@ -173,6 +173,21 @@ Este documento certifica la entrega total y recepción conforme de todas las eta
                   </div>
                 </div>
 
+                {project.teamNames && project.teamNames.length > 0 && (
+                  <div className="pt-4 border-t border-dashed">
+                    <Label className="text-[9px] uppercase font-black text-muted-foreground tracking-widest flex items-center gap-2">
+                      <Users size={12} /> Colaboradores
+                    </Label>
+                    <div className="flex flex-wrap gap-1 mt-2">
+                      {project.teamNames.map((name: string, i: number) => (
+                        <Badge key={i} variant="outline" className="text-[8px] font-bold uppercase py-0.5 px-2 border-primary/20 text-primary">
+                          {name}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 {project.endDate && (
                   <div className="p-4 bg-accent/10 rounded-2xl border border-accent/20">
                     <Label className="text-[9px] uppercase font-black text-primary tracking-widest">Fecha de Cierre</Label>
@@ -213,7 +228,7 @@ Este documento certifica la entrega total y recepción conforme de todas las eta
               <CardContent className="p-0 overflow-x-auto">
                 <OTTable orders={historyOts || []} isLoading={isHistoryLoading} />
               </CardContent>
-            </Card>
+            </div>
           </div>
         </div>
       </main>

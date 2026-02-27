@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
@@ -59,14 +60,15 @@ export default function Dashboard() {
 
   const isAdmin = userProfile?.rol_t === 'admin' || userProfile?.rol_t === 'Administrador';
 
-  // Proyectos
+  // Proyectos: Mostrar si es admin o si el usuario está en teamIds
   const projectsQuery = useMemoFirebase(() => {
     if (!db || !user?.uid || isProfileLoading) return null;
     const colRef = collection(db, "projects");
     if (isAdmin) {
       return query(colRef, orderBy("startDate", "desc"));
     }
-    return query(colRef, where("createdBy", "==", user.uid), orderBy("startDate", "desc"));
+    // Usamos array-contains para ver proyectos donde el usuario es colaborador
+    return query(colRef, where("teamIds", "array-contains", user.uid), orderBy("startDate", "desc"));
   }, [db, user?.uid, isProfileLoading, isAdmin]);
   const { data: projects, isLoading: isProjectsLoading } = useCollection(projectsQuery);
 
@@ -77,7 +79,7 @@ export default function Dashboard() {
     if (isAdmin) {
       return query(colRef, orderBy("startDate", "desc"));
     }
-    return query(colRef, where("createdBy", "==", user.uid), orderBy("startDate", "desc"));
+    return query(colRef, where("teamIds", "array-contains", user.uid), orderBy("startDate", "desc"));
   }, [db, user?.uid, isProfileLoading, isAdmin]);
   const { data: orders, isLoading: isOrdersLoading } = useCollection(ordersQuery);
 
@@ -88,7 +90,7 @@ export default function Dashboard() {
     if (isAdmin) {
       return query(colRef, orderBy("startDate", "desc"));
     }
-    return query(colRef, where("createdBy", "==", user.uid), orderBy("startDate", "desc"));
+    return query(colRef, where("teamIds", "array-contains", user.uid), orderBy("startDate", "desc"));
   }, [db, user?.uid, isProfileLoading, isAdmin]);
   const { data: historyOrders, isLoading: isHistoryLoading } = useCollection(historyQuery);
 

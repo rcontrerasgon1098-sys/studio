@@ -47,7 +47,8 @@ export default function NewWorkOrder() {
     if (isAdmin) {
       return query(colRef, where("status", "==", "Active"));
     }
-    return query(colRef, where("status", "==", "Active"), where("createdBy", "==", user.uid));
+    // Incluir proyectos donde el usuario es colaborador
+    return query(colRef, where("status", "==", "Active"), where("teamIds", "array-contains", user.uid));
   }, [db, user?.uid, isAdmin, isProfileLoading]);
   const { data: allProjects } = useCollection(allProjectsQuery);
 
@@ -87,16 +88,16 @@ export default function NewWorkOrder() {
   }, [user, isUserLoading, router]);
 
   useEffect(() => {
-    if (userProfile?.nombre_t && user) {
+    if (userProfile?.nombre_t && user && formData.teamIds.length === 0) {
       setFormData(prev => ({
         ...prev,
-        team: prev.team.includes(userProfile.nombre_t!) ? prev.team : [...prev.team, userProfile.nombre_t!],
-        teamIds: prev.teamIds.includes(user.uid) ? prev.teamIds : [...prev.teamIds, user.uid],
+        team: [userProfile.nombre_t!],
+        teamIds: [user.uid],
         techName: prev.techName || userProfile.nombre_t || "",
         techRut: prev.techRut || (userProfile as any).rut_t || ""
       }));
     }
-  }, [userProfile, user]);
+  }, [userProfile, user, formData.teamIds.length]);
 
   const handleSelectClient = (client: any) => {
     setFormData({ 
