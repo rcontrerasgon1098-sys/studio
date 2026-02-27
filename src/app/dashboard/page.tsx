@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
@@ -9,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { 
   Plus, Search, LogOut, LayoutDashboard, 
   Eye, Download, Users, UserRound, 
-  Trash2, History, Briefcase, FolderOpen, ClipboardList, BookOpen, Pencil, Menu, ChevronRight
+  Trash2, History, Briefcase, FolderOpen, ClipboardList, BookOpen, Pencil, Menu, ChevronRight, FileText, Info
 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
@@ -138,7 +139,7 @@ export default function Dashboard() {
           { id: "projects", icon: Briefcase, label: "Proyectos Activos" },
           { id: "project-history", icon: BookOpen, label: "Historial Proyectos" },
           { id: "orders", icon: ClipboardList, label: "Órdenes de Trabajo" },
-          { id: "history", icon: ArchivoDigital, label: "Archivo Digital" }
+          { id: "history", icon: FileText, label: "Archivo Digital" }
         ].map((item) => (
           <Button 
             key={item.id}
@@ -176,8 +177,6 @@ export default function Dashboard() {
       </div>
     </div>
   );
-
-  const ArchivoDigital = History; // Alias para el icono
 
   if (isUserLoading || !mounted || isProfileLoading) return <div className="min-h-screen flex items-center justify-center font-black animate-pulse bg-background text-primary">CARGANDO SISTEMA ICSA...</div>;
 
@@ -284,17 +283,32 @@ export default function Dashboard() {
         )}
 
         {activeTab === "history" && (
-          <Card className="shadow-sm border-none bg-white rounded-2xl overflow-hidden">
-            <CardHeader className="border-b bg-white">
-              <div className="relative max-w-md">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input placeholder="Buscar en archivo histórico..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-10 h-10 bg-muted/30 border-none rounded-xl font-bold" />
+          <div className="space-y-6">
+            <Card className="bg-primary/5 border-none shadow-none rounded-2xl p-6 flex items-start gap-4">
+              <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                <Info className="text-primary h-5 w-5" />
               </div>
-            </CardHeader>
-            <CardContent className="p-0">
-              <OrderTable orders={filteredHistory} isLoading={isHistoryLoading} type="historial" setDeleteConfirm={setDeleteConfirm} isAdmin={isAdmin} />
-            </CardContent>
-          </Card>
+              <div>
+                <h3 className="font-black text-primary uppercase text-xs tracking-widest mb-1">Repositorio Histórico</h3>
+                <p className="text-xs font-medium text-muted-foreground leading-relaxed">
+                  Aquí se almacenan todas las <strong>Órdenes de Trabajo Finalizadas</strong> y las <strong>Actas de Cierre de Proyecto</strong>. 
+                  Puedes descargar los reportes PDF oficiales con firmas digitales en cualquier momento.
+                </p>
+              </div>
+            </Card>
+            
+            <Card className="shadow-sm border-none bg-white rounded-2xl overflow-hidden">
+              <CardHeader className="border-b bg-white">
+                <div className="relative max-w-md">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input placeholder="Buscar en archivo histórico..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-10 h-10 bg-muted/30 border-none rounded-xl font-bold" />
+                </div>
+              </CardHeader>
+              <CardContent className="p-0">
+                <OrderTable orders={filteredHistory} isLoading={isHistoryLoading} type="historial" setDeleteConfirm={setDeleteConfirm} isAdmin={isAdmin} />
+              </CardContent>
+            </Card>
+          </div>
         )}
       </main>
 
