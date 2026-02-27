@@ -228,7 +228,7 @@ Este documento certifica la entrega total y recepción conforme de todas las eta
               <CardContent className="p-0 overflow-x-auto">
                 <OTTable orders={historyOts || []} isLoading={isHistoryLoading} />
               </CardContent>
-            </div>
+            </Card>
           </div>
         </div>
       </main>
