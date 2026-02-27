@@ -4,7 +4,21 @@
 import { firebaseConfig } from '@/firebase/config';
 import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
-import { getFirestore } from 'firebase/firestore'
+import { getFirestore, initializeFirestore } from 'firebase/firestore'
+
+// Función para obtener los SDKs configurados con optimización de conectividad
+export function getSdks(firebaseApp: FirebaseApp) {
+  // Inicializamos Firestore con auto-detección de Long Polling para evitar bloqueos de red/gRPC
+  const firestore = initializeFirestore(firebaseApp, {
+    experimentalAutoDetectLongPolling: true,
+  });
+
+  return {
+    firebaseApp,
+    auth: getAuth(firebaseApp),
+    firestore
+  };
+}
 
 // IMPORTANT: DO NOT MODIFY THIS FUNCTION
 export function initializeFirebase() {
@@ -31,14 +45,6 @@ export function initializeFirebase() {
 
   // If already initialized, return the SDKs with the already initialized App
   return getSdks(getApp());
-}
-
-export function getSdks(firebaseApp: FirebaseApp) {
-  return {
-    firebaseApp,
-    auth: getAuth(firebaseApp),
-    firestore: getFirestore(firebaseApp)
-  };
 }
 
 export * from './provider';
