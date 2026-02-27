@@ -214,7 +214,9 @@ export default function WorkOrderView({ params }: { params: Promise<{ id: string
               </div>
               <div className="relative h-32 w-full bg-muted/10 rounded-xl border border-dashed flex items-center justify-center">
                 {order.techSignatureUrl ? (
-                   <Image src={order.techSignatureUrl} alt="Firma Técnico" fill className="object-contain p-2" />
+                   <div className="relative w-full h-full">
+                     <Image src={order.techSignatureUrl} alt="Firma Técnico" fill className="object-contain p-2" />
+                   </div>
                 ) : (
                   <span className="text-[10px] uppercase font-bold opacity-20">Pendiente</span>
                 )}
@@ -234,7 +236,9 @@ export default function WorkOrderView({ params }: { params: Promise<{ id: string
               </div>
               <div className="relative h-32 w-full bg-muted/10 rounded-xl border border-dashed flex items-center justify-center">
                 {order.clientSignatureUrl ? (
-                   <Image src={order.clientSignatureUrl} alt="Firma Cliente" fill className="object-contain p-2" />
+                   <div className="relative w-full h-full">
+                     <Image src={order.clientSignatureUrl} alt="Firma Cliente" fill className="object-contain p-2" />
+                   </div>
                 ) : (
                   <span className="text-[10px] uppercase font-bold opacity-20">Pendiente</span>
                 )}

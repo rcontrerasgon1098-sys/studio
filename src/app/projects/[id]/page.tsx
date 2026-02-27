@@ -1,3 +1,4 @@
+
 "use client";
 
 import { use, useState, useEffect } from "react";
@@ -9,8 +10,7 @@ import { Label } from "@/components/ui/label";
 import { ArrowLeft, Loader2, Briefcase, Calendar, User, FileCheck, Plus, CheckCircle2, History as HistoryIcon, Clock, Eye, Pencil, AlertTriangle } from "lucide-react";
 import Link from "next/link";
 import { useFirebase, useDoc, useCollection, useMemoFirebase, useUserProfile } from "@/firebase";
-import { doc, collection, query, where } from "firebase/firestore";
-import { closeProject } from "@/ai/flows/close-project-flow";
+import { doc, collection, query, where, getDocs, writeBatch, updateDoc } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
@@ -35,18 +35,62 @@ export default function ProjectDetail({ params }: { params: Promise<{ id: string
   const { data: historyOts, isLoading: isHistoryLoading } = useCollection(historyOtsQuery);
 
   const handleCloseProject = async () => {
-    if (!user) return;
+    if (!user || !db || !project) return;
     setClosing(true);
+    
     try {
-      const result = await closeProject({ projectId: id, closedByUid: user.uid });
-      if (result.success) {
-        toast({ title: "Proyecto Finalizado", description: "Se ha generado el acta de cierre consolidada." });
-        router.refresh();
-      } else {
-        toast({ variant: "destructive", title: "Error", description: result.error });
-      }
-    } catch (e) {
-      toast({ variant: "destructive", title: "Error al cerrar proyecto" });
+      // 1. Obtener todas las OTs relacionadas (activas e históricas)
+      const activeSnap = await getDocs(query(collection(db, "ordenes"), where("projectId", "==", id)));
+      const historySnap = await getDocs(query(collection(db, "historial"), where("projectId", "==", id)));
+      
+      const allOts = [...activeSnap.docs, ...historySnap.docs].map(d => d.data());
+      
+      // 2. Generar texto del resumen
+      const summaryText = `ACTA DE CIERRE FINAL - PROYECTO: ${project.name.toUpperCase()}
+--------------------------------------------------
+Resumen consolidado de trabajos realizados:
+${allOts.map((ot) => `- Folio #${ot.folio}: ${ot.description || 'Sin descripción'}`).join('\n')}
+
+Este documento certifica la entrega total y recepción conforme de todas las etapas del proyecto mencionado.`;
+
+      const batch = writeBatch(db);
+
+      // 3. Actualizar estado del proyecto
+      batch.update(doc(db, "projects", id), {
+        status: 'Completed',
+        endDate: new Date().toISOString(),
+        summary: summaryText
+      });
+
+      // 4. Crear Acta Final como una OT pendiente
+      const summaryOtId = `ACTA-${id}`;
+      const summaryOtData = {
+        id: summaryOtId,
+        folio: Math.floor(100000 + Math.random() * 900000),
+        projectId: id,
+        isProjectSummary: true,
+        clientName: project.clientName || "Sin Cliente",
+        clientId: project.clientId || "",
+        createdBy: user.uid,
+        status: 'Pendiente',
+        description: summaryText,
+        startDate: project.startDate || new Date().toISOString(),
+        address: allOts[0]?.address || 'Dirección de Proyecto',
+        building: allOts[0]?.building || '',
+        floor: allOts[0]?.floor || '',
+        updatedAt: new Date().toISOString(),
+        team: project.teamNames || [user.email || "Admin"],
+        teamIds: project.teamIds || [user.uid]
+      };
+
+      batch.set(doc(db, "ordenes", summaryOtId), summaryOtData);
+
+      await batch.commit();
+      toast({ title: "Proyecto Finalizado", description: "Se ha generado el acta de cierre en órdenes pendientes." });
+      router.refresh();
+    } catch (e: any) {
+      console.error("Error closing project:", e);
+      toast({ variant: "destructive", title: "Error", description: "No se pudo cerrar el proyecto: " + e.message });
     } finally {
       setClosing(false);
     }
@@ -58,8 +102,8 @@ export default function ProjectDetail({ params }: { params: Promise<{ id: string
     <div className="min-h-screen flex flex-col items-center justify-center p-10 text-center font-bold text-muted-foreground bg-background gap-6">
       <AlertTriangle className="h-20 w-20 text-destructive/20" />
       <div className="space-y-2">
-        <h1 className="text-xl font-black text-primary uppercase">Acceso Denegado o Proyecto no encontrado</h1>
-        <p className="text-sm font-medium">No tienes permisos para visualizar este proyecto o el identificador no es válido.</p>
+        <h1 className="text-xl font-black text-primary uppercase">Proyecto no encontrado</h1>
+        <p className="text-sm font-medium">No se pudo cargar la información del proyecto.</p>
       </div>
       <Link href="/dashboard">
         <Button variant="outline" className="font-black uppercase text-xs tracking-widest rounded-xl">Volver al Panel</Button>
@@ -85,7 +129,7 @@ export default function ProjectDetail({ params }: { params: Promise<{ id: string
           {!isCompleted && (
             <Button onClick={handleCloseProject} disabled={closing} className="bg-primary hover:bg-primary/90 text-white font-black h-10 px-4 rounded-xl shadow-lg uppercase text-[10px] tracking-widest">
               {closing ? <Loader2 className="animate-spin h-4 w-4" /> : <CheckCircle2 className="h-4 w-4 mr-2" />}
-              <span className="hidden sm:inline">Finalizar Proyecto</span>
+              <span className="hidden sm:inline">Finalizar Obra</span>
               <span className="sm:hidden">Cerrar</span>
             </Button>
           )}
@@ -124,7 +168,7 @@ export default function ProjectDetail({ params }: { params: Promise<{ id: string
                   <div>
                     <Label className="text-[9px] uppercase font-black text-muted-foreground tracking-widest">Fecha Inicio</Label>
                     <p className="font-bold flex items-center gap-2 text-xs text-primary mt-1">
-                      <Calendar size={14} className="opacity-40" /> {new Date(project.startDate).toLocaleDateString()}
+                      <Calendar size={14} className="opacity-40" /> {project.startDate ? new Date(project.startDate).toLocaleDateString() : 'N/A'}
                     </p>
                   </div>
                 </div>
@@ -148,7 +192,7 @@ export default function ProjectDetail({ params }: { params: Promise<{ id: string
                   <Clock className="h-5 w-5" /> Órdenes en Curso
                 </CardTitle>
                 {!isCompleted && (
-                  <Link href={`/work-orders/new?projectId=${id}&clientId=${project.clientId}`}>
+                  <Link href={`/work-orders/new?projectId=${id}&clientId=${project.clientId}&clientName=${encodeURIComponent(project.clientName || '')}`}>
                     <Button variant="outline" size="sm" className="h-10 px-4 rounded-xl border-primary/20 text-primary font-black uppercase text-[10px] tracking-widest hover:bg-primary/5 transition-all">
                       <Plus size={16} className="mr-2"/> Nueva OT
                     </Button>

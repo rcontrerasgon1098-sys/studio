@@ -15,7 +15,6 @@ import { ArrowLeft, Search, User, MapPin, Building2, Hash, PlusCircle, CheckCirc
 import Link from "next/link";
 import { useUser, useFirestore, useCollection, useMemoFirebase, useUserProfile } from "@/firebase";
 import { collection, doc, query, orderBy, where, setDoc } from "firebase/firestore";
-import { setDocumentNonBlocking } from "@/firebase/non-blocking-updates";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandList, CommandItem } from "@/components/ui/command";
 import { Switch } from "@/components/ui/switch";
@@ -53,10 +52,10 @@ export default function NewWorkOrder() {
   const { data: allProjects } = useCollection(allProjectsQuery);
 
   const [formData, setFormData] = useState({
-    clientName: "",
+    clientName: searchParams.get('clientName') || "",
     clientPhone: "",
     clientEmail: "",
-    clientId: "",
+    clientId: searchParams.get('clientId') || "",
     projectId: searchParams.get('projectId') || "",
     address: "",
     building: "",
@@ -145,7 +144,7 @@ export default function NewWorkOrder() {
     };
     try {
       await setDoc(doc(db, "ordenes", orderId), workOrderData);
-      toast({ title: "Orden Guardada como Pendiente" });
+      toast({ title: "Orden Guardada", description: "La orden se encuentra como pendiente en el dashboard." });
       router.push("/dashboard");
     } catch (error) {
       setLoading(false);
@@ -168,7 +167,7 @@ export default function NewWorkOrder() {
     };
     try {
       await setDoc(doc(db, "historial", orderId), workOrderData);
-      toast({ title: "Orden Finalizada y Archivada" });
+      toast({ title: "Orden Finalizada", description: "La orden ha sido archivada con éxito." });
       router.push("/dashboard");
     } catch (error) {
       setLoading(false);
@@ -195,7 +194,6 @@ export default function NewWorkOrder() {
 
       <main className="container mx-auto px-4 mt-6 max-w-3xl space-y-6">
         <form className="space-y-6">
-          {/* PROYECTO / OBRA */}
           <Card className="shadow-xl border-none rounded-3xl overflow-hidden">
             <CardHeader className="bg-primary/5 p-6 border-b">
               <CardTitle className="text-primary text-xs flex items-center gap-2 uppercase font-black tracking-widest">
@@ -223,7 +221,6 @@ export default function NewWorkOrder() {
             </CardContent>
           </Card>
 
-          {/* INFORMACIÓN DEL CLIENTE */}
           <Card className="shadow-xl border-none bg-white rounded-3xl overflow-hidden">
             <CardHeader className="bg-primary/5 p-6 border-b">
               <CardTitle className="text-primary text-sm flex items-center gap-3 uppercase font-black tracking-widest">
@@ -303,7 +300,6 @@ export default function NewWorkOrder() {
             </CardContent>
           </Card>
 
-          {/* EQUIPO DE TRABAJO */}
           <Card className="shadow-xl border-none bg-white rounded-3xl overflow-hidden">
             <CardHeader className="p-6 border-b bg-muted/5">
               <CardTitle className="text-lg flex items-center gap-3 uppercase font-black tracking-tighter">
@@ -352,7 +348,6 @@ export default function NewWorkOrder() {
             </CardContent>
           </Card>
 
-          {/* ESPECIFICACIONES TÉCNICAS */}
           <Card className="shadow-xl border-none bg-white rounded-3xl overflow-hidden">
             <CardHeader className="p-6 bg-primary/5 border-b">
               <CardTitle className="text-xl uppercase font-black text-primary tracking-tighter">Especificaciones Técnicas</CardTitle>
@@ -405,7 +400,6 @@ export default function NewWorkOrder() {
             </CardContent>
           </Card>
 
-          {/* FIRMAS */}
           <Card className="shadow-xl border-none bg-white rounded-3xl overflow-hidden">
             <CardHeader className="bg-muted/10 p-6 border-b">
               <CardTitle className="text-xs font-black uppercase text-primary tracking-widest">Protocolo de Cierre (Firmas)</CardTitle>
@@ -434,7 +428,6 @@ export default function NewWorkOrder() {
             </CardContent>
           </Card>
 
-          {/* BOTONES DE ACCIÓN FLOTANTES */}
           <div className="fixed bottom-0 left-0 right-0 p-4 bg-white/95 backdrop-blur-xl border-t md:relative md:bg-transparent md:border-none md:p-0 z-50 shadow-[0_-10px_40px_rgba(0,0,0,0.1)] md:shadow-none">
             <div className="max-w-3xl mx-auto flex flex-col sm:flex-row gap-3">
               <Button 
